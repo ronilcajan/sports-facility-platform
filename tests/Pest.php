@@ -1,5 +1,8 @@
 <?php
 
+use App\Enums\RoleName;
+use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,6 +19,9 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
+    ->beforeEach(function () {
+        $this->seed(RolePermissionSeeder::class);
+    })
     ->in('Feature');
 
 /*
@@ -47,4 +53,15 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Create a user assigned the given role.
+ */
+function userWithRole(RoleName $role): User
+{
+    $user = User::factory()->create();
+    $user->assignRole($role->value);
+
+    return $user;
 }

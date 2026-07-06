@@ -3,16 +3,19 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\RoleName;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property int $id
@@ -32,7 +35,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
      * Get the attributes that should be cast.
@@ -46,5 +49,34 @@ class User extends Authenticatable implements PasskeyUser
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Courts this user (staff) is assigned to.
+     *
+     * @return BelongsToMany<Court, $this>
+     */
+    public function assignedCourts(): BelongsToMany
+    {
+        return $this->belongsToMany(Court::class)->withTimestamps();
+    }
+
+    /**
+     * Whether this user may manage (and see) every court, regardless of
+     * staff assignment. True for admins and super-admins.
+     */
+    public function canManageAllCourts(): bool
+    {
+        return $this->hasAnyRole([RoleName::SuperAdmin->value, RoleName::Admin->value]);
+    }
+
+    /**
+     * Whether this user is assigned to the given court.
+     */
+    public function isAssignedToCourt(Court $court): bool
+    {
+        return $this->assignedCourts()
+            ->whereKey($court->getKey())
+            ->exists();
     }
 }
