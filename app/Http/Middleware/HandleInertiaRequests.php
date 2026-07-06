@@ -41,7 +41,33 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'site' => $this->siteData(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    /**
+     * Public-site identity, navigation, and contact details shared with every
+     * page so the marketing header, footer, and metadata stay consistent.
+     *
+     * @return array<string, mixed>
+     */
+    protected function siteData(): array
+    {
+        $resolveLinks = fn (array $links): array => array_map(fn (array $link): array => [
+            'label' => $link['label'],
+            'href' => route($link['route']),
+        ], $links);
+
+        return [
+            'name' => config('site.name'),
+            'tagline' => config('site.tagline'),
+            'description' => config('site.description'),
+            'contact' => config('site.contact'),
+            'hours' => config('site.hours'),
+            'social' => config('site.social'),
+            'nav' => $resolveLinks(config('site.nav')),
+            'legal' => $resolveLinks(config('site.legal')),
         ];
     }
 }
