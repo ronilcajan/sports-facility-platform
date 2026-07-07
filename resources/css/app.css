@@ -185,6 +185,77 @@
     --color-fog: #5b6b7a;
 }
 
+/*
+  Theme-driven marketing tokens. Names are theme-agnostic; values are set per
+  theme under [data-theme]. The active theme is chosen by an operator and
+  applied to <html data-theme>. Kept separate from the shadcn dashboard tokens
+  (:root/.dark) and the legacy ink/court/volt palette.
+*/
+@theme inline {
+    --color-surface: var(--site-surface);
+    --color-surface-elevated: var(--site-surface-elevated);
+    --color-surface-inverse: var(--site-surface-inverse);
+    --color-content: var(--site-content);
+    --color-content-muted: var(--site-content-muted);
+    --color-content-inverse: var(--site-content-inverse);
+    --color-brand: var(--site-brand);
+    --color-brand-foreground: var(--site-brand-foreground);
+    --color-highlight: var(--site-highlight);
+    --color-line: var(--site-line);
+    --font-display: var(--site-font-display);
+}
+
+/* Court Navy — Spotipb-inspired dark. Default theme. */
+[data-theme='navy'] {
+    --site-surface: #0b1f38;
+    --site-surface-elevated: #12294a;
+    --site-surface-inverse: #071528;
+    --site-content: #eef3fb;
+    --site-content-muted: #9fb2cc;
+    --site-content-inverse: #eef3fb;
+    --site-brand: #3b82f6;
+    --site-brand-foreground: #ffffff;
+    --site-highlight: #7c6cf0;
+    --site-line: rgba(255, 255, 255, 0.1);
+    --site-radius: 0.9rem;
+    --site-shadow-card: 0 20px 45px -20px rgba(0, 0, 0, 0.55);
+    --site-font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Fairway — Golfngy-inspired light. */
+[data-theme='fairway'] {
+    --site-surface: #f5f4ee;
+    --site-surface-elevated: #ffffff;
+    --site-surface-inverse: #1f2a1c;
+    --site-content: #1a1a17;
+    --site-content-muted: #5c6157;
+    --site-content-inverse: #f3f5ee;
+    --site-brand: #2f5233;
+    --site-brand-foreground: #ffffff;
+    --site-highlight: #c8a86b;
+    --site-line: rgba(26, 26, 23, 0.1);
+    --site-radius: 1.25rem;
+    --site-shadow-card: 0 24px 50px -28px rgba(31, 42, 28, 0.35);
+    --site-font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Electric — FootballCoin-inspired dark-vibrant. */
+[data-theme='electric'] {
+    --site-surface: #1e1b4b;
+    --site-surface-elevated: #241a52;
+    --site-surface-inverse: #14102e;
+    --site-content: #f0eefb;
+    --site-content-muted: #b0a9d6;
+    --site-content-inverse: #f0eefb;
+    --site-brand: #10b981;
+    --site-brand-foreground: #06231a;
+    --site-highlight: #8b5cf6;
+    --site-line: rgba(255, 255, 255, 0.1);
+    --site-radius: 0.8rem;
+    --site-shadow-card: 0 22px 48px -22px rgba(0, 0, 0, 0.6);
+    --site-font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
 @layer components {
     /* The non-volley "kitchen" line: a rule broken by a gap, like a court. */
     .kitchen-line {
