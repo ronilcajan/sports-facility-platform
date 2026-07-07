@@ -7,30 +7,34 @@ defineProps<{
 </script>
 
 <template>
-    <section class="relative overflow-hidden bg-ink text-chalk">
+    <section class="relative overflow-hidden bg-surface-inverse text-content-inverse">
         <div
-            class="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-court/40 blur-3xl"
+            class="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-brand/40 blur-3xl"
             aria-hidden="true"
         />
-        <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+        <div
+            class="pointer-events-none absolute -bottom-32 -left-24 size-72 rounded-full bg-highlight/25 blur-3xl"
+            aria-hidden="true"
+        />
+        <div class="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
             <p
                 v-if="eyebrow"
-                class="text-xs font-semibold tracking-[0.2em] text-volt uppercase"
+                class="text-xs font-semibold tracking-[0.2em] text-highlight uppercase"
             >
                 {{ eyebrow }}
             </p>
             <h1
-                class="mt-4 max-w-3xl text-4xl font-extrabold tracking-tight text-balance sm:text-5xl"
+                class="mt-4 max-w-3xl font-display text-4xl font-extrabold tracking-tight text-balance sm:text-5xl"
             >
                 {{ title }}
             </h1>
             <p
                 v-if="lede"
-                class="mt-6 max-w-2xl text-lg text-chalk/70 text-pretty"
+                class="mt-6 max-w-2xl text-lg text-content-inverse/70 text-pretty"
             >
                 {{ lede }}
             </p>
         </div>
-        <div class="kitchen-line text-volt/60" aria-hidden="true" />
+        <div class="kitchen-line text-brand" aria-hidden="true" />
     </section>
 </template>

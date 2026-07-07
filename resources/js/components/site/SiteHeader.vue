@@ -15,7 +15,7 @@ const open = ref(false);
 
 <template>
     <header
-        class="sticky top-0 z-50 border-b border-ink/10 bg-chalk/85 backdrop-blur supports-[backdrop-filter]:bg-chalk/70"
+        class="sticky top-0 z-50 border-b border-line bg-surface/80 text-content backdrop-blur supports-[backdrop-filter]:bg-surface/70"
     >
         <div
             class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6"
@@ -29,7 +29,7 @@ const open = ref(false);
                     v-for="item in site.nav"
                     :key="item.href"
                     :href="item.href"
-                    class="text-sm font-medium text-ink/70 transition-colors hover:text-ink"
+                    class="text-sm font-medium text-content-muted transition-colors hover:text-content"
                 >
                     {{ item.label }}
                 </Link>
@@ -38,13 +38,13 @@ const open = ref(false);
             <div class="hidden items-center gap-3 md:flex">
                 <Link
                     :href="isAuthed ? '/dashboard' : login()"
-                    class="text-sm font-medium text-ink/70 transition-colors hover:text-ink"
+                    class="text-sm font-medium text-content-muted transition-colors hover:text-content"
                 >
                     {{ isAuthed ? 'Dashboard' : 'Log in' }}
                 </Link>
                 <Link
                     :href="courts()"
-                    class="rounded-full bg-ink px-5 py-2 text-sm font-semibold text-chalk transition-transform hover:-translate-y-0.5"
+                    class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground transition-transform hover:-translate-y-0.5"
                 >
                     Book a court
                 </Link>
@@ -52,7 +52,7 @@ const open = ref(false);
 
             <button
                 type="button"
-                class="inline-flex size-10 items-center justify-center rounded-md text-ink md:hidden"
+                class="inline-flex size-10 items-center justify-center rounded-md text-content md:hidden"
                 :aria-expanded="open"
                 aria-label="Toggle menu"
                 @click="open = !open"
@@ -71,13 +71,13 @@ const open = ref(false);
             </button>
         </div>
 
-        <div v-if="open" class="border-t border-ink/10 bg-chalk md:hidden">
+        <div v-if="open" class="border-t border-line bg-surface md:hidden">
             <nav class="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-4">
                 <Link
                     v-for="item in site.nav"
                     :key="item.href"
                     :href="item.href"
-                    class="rounded-md px-3 py-2 text-sm font-medium text-ink/80 hover:bg-ink/5"
+                    class="rounded-md px-3 py-2 text-sm font-medium text-content-muted hover:bg-content/5 hover:text-content"
                     @click="open = false"
                 >
                     {{ item.label }}
@@ -85,13 +85,13 @@ const open = ref(false);
                 <div class="mt-3 flex flex-col gap-2">
                     <Link
                         :href="isAuthed ? '/dashboard' : login()"
-                        class="rounded-md px-3 py-2 text-sm font-medium text-ink/80 hover:bg-ink/5"
+                        class="rounded-md px-3 py-2 text-sm font-medium text-content-muted hover:bg-content/5 hover:text-content"
                     >
                         {{ isAuthed ? 'Dashboard' : 'Log in' }}
                     </Link>
                     <Link
                         :href="courts()"
-                        class="rounded-full bg-ink px-5 py-2 text-center text-sm font-semibold text-chalk"
+                        class="rounded-full bg-brand px-5 py-2 text-center text-sm font-semibold text-brand-foreground"
                     >
                         Book a court
                     </Link>
