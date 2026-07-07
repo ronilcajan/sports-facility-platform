@@ -35,6 +35,6 @@ defineProps<{
                 {{ lede }}
             </p>
         </div>
-        <div class="kitchen-line text-brand" aria-hidden="true" />
+        <div class="kitchen-line text-highlight" aria-hidden="true" />
     </section>
 </template>

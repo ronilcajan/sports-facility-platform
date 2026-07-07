@@ -29,9 +29,11 @@
                 background-color: oklch(0.145 0 0);
             }
 
-            html[data-theme='navy'] { background-color: #0b1f38; }
-            html[data-theme='fairway'] { background-color: #f5f4ee; }
-            html[data-theme='electric'] { background-color: #1e1b4b; }
+            {{-- Public marketing theme background. Guarded with :not(.dark) so it
+                 never overrides a signed-in user's personal dark-mode dashboard. --}}
+            html[data-theme='navy']:not(.dark) { background-color: #0b1f38; }
+            html[data-theme='fairway']:not(.dark) { background-color: #f5f4ee; }
+            html[data-theme='electric']:not(.dark) { background-color: #1e1b4b; }
         </style>
 
         <link rel="icon" href="/favicon.ico" sizes="any">

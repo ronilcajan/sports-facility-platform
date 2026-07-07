@@ -7,6 +7,12 @@ test('get returns the default when the key is absent', function (): void {
     expect(SiteSetting::get('active_theme', 'navy'))->toBe('navy');
 });
 
+test('get caches the absent state so it does not re-query every call', function (): void {
+    SiteSetting::get('active_theme', 'navy');
+
+    expect(Cache::has('site_setting:active_theme'))->toBeTrue();
+});
+
 test('set persists a value that get returns', function (): void {
     SiteSetting::set('active_theme', 'fairway');
 

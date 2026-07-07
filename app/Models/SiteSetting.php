@@ -20,12 +20,15 @@ class SiteSetting extends Model
      */
     public static function get(string $key, mixed $default = null): mixed
     {
+        // Cache an empty-string sentinel for the absent case: rememberForever
+        // treats a cached null as a miss and would re-query every request, so
+        // storing '' keeps the "not set" state genuinely cached.
         $value = Cache::rememberForever(
             "site_setting:{$key}",
-            fn (): mixed => static::query()->where('key', $key)->value('value'),
+            fn (): string => (string) (static::query()->where('key', $key)->value('value') ?? ''),
         );
 
-        return $value ?? $default;
+        return $value === '' ? $default : $value;
     }
 
     /**
