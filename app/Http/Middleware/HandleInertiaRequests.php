@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\SiteTheme;
+use App\Models\SiteSetting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -68,6 +70,7 @@ class HandleInertiaRequests extends Middleware
             'social' => config('site.social'),
             'nav' => $resolveLinks(config('site.nav')),
             'legal' => $resolveLinks(config('site.legal')),
+            'activeTheme' => SiteSetting::get('active_theme', SiteTheme::default()->value),
         ];
     }
 }

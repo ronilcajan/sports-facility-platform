@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"  @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $siteTheme ?? 'navy' }}" @class(['dark' => ($appearance ?? 'system') == 'dark'])>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -28,6 +28,10 @@
             html.dark {
                 background-color: oklch(0.145 0 0);
             }
+
+            html[data-theme='navy'] { background-color: #0b1f38; }
+            html[data-theme='fairway'] { background-color: #f5f4ee; }
+            html[data-theme='electric'] { background-color: #1e1b4b; }
         </style>
 
         <link rel="icon" href="/favicon.ico" sizes="any">
