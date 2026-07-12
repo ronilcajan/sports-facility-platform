@@ -39,4 +39,5 @@ export type PublicCourt = {
     description: string | null;
     base_price: string;
     slot_duration_minutes: number;
+    primary_image_url?: string | null;
 };

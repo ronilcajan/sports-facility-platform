@@ -24,11 +24,7 @@ defineProps<{ content: PricingContent }>();
 <template>
     <Head title="Pricing" />
 
-    <PageHero
-        eyebrow="Pricing"
-        :title="content.title"
-        :lede="content.lede"
-    />
+    <PageHero eyebrow="Pricing" :title="content.title" :lede="content.lede" />
 
     <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
         <div class="grid gap-6 lg:grid-cols-3">
@@ -38,30 +34,40 @@ defineProps<{ content: PricingContent }>();
                 class="flex flex-col rounded-2xl border p-8"
                 :class="
                     tier.featured
-                        ? 'border-ink bg-ink text-chalk shadow-xl'
-                        : 'border-ink/10 bg-white text-ink'
+                        ? 'border-brand bg-brand text-brand-foreground shadow-xl'
+                        : 'border-line bg-surface-elevated text-content'
                 "
             >
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-bold">{{ tier.name }}</h2>
                     <span
                         v-if="tier.featured"
-                        class="rounded-full bg-volt px-3 py-1 text-xs font-semibold text-ink"
+                        class="rounded-full bg-highlight px-3 py-1 text-xs font-semibold text-brand-foreground"
                     >
                         Most popular
                     </span>
                 </div>
                 <p
                     class="mt-1 text-sm"
-                    :class="tier.featured ? 'text-chalk/60' : 'text-fog'"
+                    :class="
+                        tier.featured
+                            ? 'text-brand-foreground/75'
+                            : 'text-content-muted'
+                    "
                 >
                     {{ tier.note }}
                 </p>
                 <div class="mt-6 flex items-baseline gap-2">
-                    <span class="text-4xl font-extrabold">{{ tier.price }}</span>
+                    <span class="text-4xl font-extrabold">{{
+                        tier.price
+                    }}</span>
                     <span
                         class="text-sm"
-                        :class="tier.featured ? 'text-chalk/60' : 'text-fog'"
+                        :class="
+                            tier.featured
+                                ? 'text-brand-foreground/75'
+                                : 'text-content-muted'
+                        "
                     >
                         {{ tier.unit }}
                     </span>
@@ -74,18 +80,18 @@ defineProps<{ content: PricingContent }>();
                     >
                         <span
                             class="inline-block size-1.5 shrink-0 rounded-full"
-                            :class="tier.featured ? 'bg-volt' : 'bg-court'"
+                            :class="tier.featured ? 'bg-highlight' : 'bg-brand'"
                         />
                         {{ feature }}
                     </li>
                 </ul>
                 <Link
                     :href="courtsRoute()"
-                    class="mt-8 rounded-full px-5 py-3 text-center text-sm font-semibold transition-transform hover:-translate-y-0.5"
+                    class="mt-8 rounded-full px-5 py-3 text-center text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5"
                     :class="
                         tier.featured
-                            ? 'bg-volt text-ink'
-                            : 'bg-ink text-chalk'
+                            ? 'bg-surface text-content hover:bg-surface-elevated'
+                            : 'bg-brand text-brand-foreground hover:bg-brand/90'
                     "
                 >
                     Book a court

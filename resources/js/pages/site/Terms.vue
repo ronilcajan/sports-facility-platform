@@ -18,12 +18,13 @@ defineProps<{ content: LegalContent }>();
 
     <div class="mx-auto max-w-3xl px-4 py-20 sm:px-6 sm:py-24">
         <div class="space-y-10">
-            <section
-                v-for="section in content.sections"
-                :key="section.heading"
-            >
-                <h2 class="text-xl font-bold text-ink">{{ section.heading }}</h2>
-                <p class="mt-3 text-pretty text-ink/80">{{ section.body }}</p>
+            <section v-for="section in content.sections" :key="section.heading">
+                <h2 class="text-xl font-bold text-content">
+                    {{ section.heading }}
+                </h2>
+                <p class="mt-3 text-pretty text-content-muted">
+                    {{ section.body }}
+                </p>
             </section>
         </div>
     </div>

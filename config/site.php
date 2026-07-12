@@ -45,8 +45,6 @@ return [
         ['label' => 'Pricing', 'route' => 'site.pricing'],
         ['label' => 'Gallery', 'route' => 'site.gallery'],
         ['label' => 'About', 'route' => 'site.about'],
-        ['label' => 'FAQs', 'route' => 'site.faqs'],
-        ['label' => 'Contact', 'route' => 'site.contact'],
     ],
 
     'legal' => [

@@ -55,14 +55,24 @@ function save(): void {
                 "
                 @click="preview(theme.value)"
             >
-                <span class="block text-base font-semibold">{{ theme.label }}</span>
-                <span class="mt-1 block text-sm text-muted-foreground">{{ theme.description }}</span>
+                <span class="block text-base font-semibold">{{
+                    theme.label
+                }}</span>
+                <span class="mt-1 block text-sm text-muted-foreground">{{
+                    theme.description
+                }}</span>
             </button>
         </div>
 
         <div class="mt-6 flex items-center gap-3">
-            <Button :disabled="form.processing" @click="save">Save theme</Button>
-            <span v-if="form.recentlySuccessful" class="text-sm text-muted-foreground">Saved.</span>
+            <Button :disabled="form.processing" @click="save"
+                >Save theme</Button
+            >
+            <span
+                v-if="form.recentlySuccessful"
+                class="text-sm text-muted-foreground"
+                >Saved.</span
+            >
         </div>
     </div>
 </template>

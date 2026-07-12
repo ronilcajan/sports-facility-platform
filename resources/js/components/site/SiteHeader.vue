@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import SiteWordmark from '@/components/site/SiteWordmark.vue';
 import { useSite } from '@/composables/useSite';
-import { login } from '@/routes';
+import { login, register } from '@/routes';
 import { courts } from '@/routes/site';
 
 const site = useSite();
@@ -15,55 +15,88 @@ const open = ref(false);
 
 <template>
     <header
-        class="sticky top-0 z-50 border-b border-line bg-surface/80 text-content backdrop-blur supports-[backdrop-filter]:bg-surface/70"
+        class="sticky top-0 z-50 border-b border-line bg-surface/90 text-content backdrop-blur-md transition-all duration-300"
     >
         <div
-            class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6"
+            class="mx-auto flex h-20 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6"
         >
-            <Link :href="'/'" class="shrink-0" aria-label="Home">
+            <!-- Logo Section -->
+            <Link
+                :href="'/'"
+                class="shrink-0 transition-opacity hover:opacity-90"
+                aria-label="Home"
+            >
                 <SiteWordmark />
             </Link>
 
-            <nav class="hidden items-center gap-7 md:flex" aria-label="Primary">
+            <!-- Desktop Navigation Section -->
+            <nav class="hidden items-center gap-8 md:flex" aria-label="Primary">
+                <Link
+                    :href="'/'"
+                    class="text-sm font-semibold text-content-muted transition-colors hover:text-brand"
+                >
+                    Home
+                </Link>
                 <Link
                     v-for="item in site.nav"
                     :key="item.href"
                     :href="item.href"
-                    class="text-sm font-medium text-content-muted transition-colors hover:text-content"
+                    class="text-sm font-semibold text-content-muted transition-colors hover:text-brand"
                 >
                     {{ item.label }}
                 </Link>
             </nav>
 
-            <div class="hidden items-center gap-3 md:flex">
-                <Link
-                    :href="isAuthed ? '/dashboard' : login()"
-                    class="text-sm font-medium text-content-muted transition-colors hover:text-content"
-                >
-                    {{ isAuthed ? 'Dashboard' : 'Log in' }}
-                </Link>
+            <!-- Desktop Right Actions -->
+            <div class="hidden items-center gap-6 md:flex">
+                <template v-if="isAuthed">
+                    <Link
+                        :href="'/dashboard'"
+                        class="text-sm font-semibold text-content transition-colors hover:text-brand"
+                    >
+                        Dashboard
+                    </Link>
+                </template>
+                <template v-else>
+                    <Link
+                        :href="login()"
+                        class="text-sm font-semibold text-content-muted transition-colors hover:text-brand"
+                    >
+                        Log In
+                    </Link>
+                    <span class="h-4 w-px bg-line"></span>
+                    <Link
+                        :href="register()"
+                        class="text-sm font-semibold text-content-muted transition-colors hover:text-brand"
+                    >
+                        Register
+                    </Link>
+                </template>
+
                 <Link
                     :href="courts()"
-                    class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground transition-transform hover:-translate-y-0.5"
+                    class="relative inline-flex items-center justify-center rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-lg shadow-brand/20 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-brand/35"
                 >
-                    Book a court
+                    Book a Court Now
                 </Link>
             </div>
 
+            <!-- Mobile Hamburger Button -->
             <button
                 type="button"
-                class="inline-flex size-10 items-center justify-center rounded-md text-content md:hidden"
+                class="inline-flex size-11 items-center justify-center rounded-full border border-line bg-surface-elevated/50 text-content transition-colors hover:bg-surface-elevated md:hidden"
                 :aria-expanded="open"
                 aria-label="Toggle menu"
                 @click="open = !open"
             >
                 <span class="sr-only">Menu</span>
                 <svg
-                    class="size-6"
+                    class="size-5 transition-transform duration-300"
+                    :class="{ 'rotate-90': open }"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    stroke-width="2"
+                    stroke-width="2.5"
                 >
                     <path v-if="!open" d="M4 7h16M4 12h16M4 17h16" />
                     <path v-else d="M6 6l12 12M18 6L6 18" />
@@ -71,32 +104,77 @@ const open = ref(false);
             </button>
         </div>
 
-        <div v-if="open" class="border-t border-line bg-surface md:hidden">
-            <nav class="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-4">
-                <Link
-                    v-for="item in site.nav"
-                    :key="item.href"
-                    :href="item.href"
-                    class="rounded-md px-3 py-2 text-sm font-medium text-content-muted hover:bg-content/5 hover:text-content"
-                    @click="open = false"
-                >
-                    {{ item.label }}
-                </Link>
-                <div class="mt-3 flex flex-col gap-2">
+        <!-- Mobile Menu Dropdown -->
+        <transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="-translate-y-4 opacity-0"
+            enter-to-class="translate-y-0 opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="translate-y-0 opacity-100"
+            leave-to-class="-translate-y-4 opacity-0"
+        >
+            <div
+                v-if="open"
+                class="border-t border-line bg-surface/98 backdrop-blur-lg md:hidden"
+            >
+                <nav class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6">
                     <Link
-                        :href="isAuthed ? '/dashboard' : login()"
-                        class="rounded-md px-3 py-2 text-sm font-medium text-content-muted hover:bg-content/5 hover:text-content"
+                        :href="'/'"
+                        class="rounded-xl px-4 py-3 text-base font-semibold text-content-muted transition-colors hover:bg-brand/10 hover:text-brand"
+                        @click="open = false"
                     >
-                        {{ isAuthed ? 'Dashboard' : 'Log in' }}
+                        Home
                     </Link>
                     <Link
-                        :href="courts()"
-                        class="rounded-full bg-brand px-5 py-2 text-center text-sm font-semibold text-brand-foreground"
+                        v-for="item in site.nav"
+                        :key="item.href"
+                        :href="item.href"
+                        class="rounded-xl px-4 py-3 text-base font-semibold text-content-muted transition-colors hover:bg-brand/10 hover:text-brand"
+                        @click="open = false"
                     >
-                        Book a court
+                        {{ item.label }}
                     </Link>
-                </div>
-            </nav>
-        </div>
+
+                    <div class="my-3 h-px bg-line"></div>
+
+                    <div class="flex flex-col gap-3">
+                        <template v-if="isAuthed">
+                            <Link
+                                :href="'/dashboard'"
+                                class="rounded-xl px-4 py-3 text-base font-semibold text-content transition-colors hover:bg-brand/10 hover:text-brand"
+                                @click="open = false"
+                            >
+                                Dashboard
+                            </Link>
+                        </template>
+                        <template v-else>
+                            <div class="grid grid-cols-2 gap-3 px-2">
+                                <Link
+                                    :href="login()"
+                                    class="rounded-xl border border-line py-3 text-center text-sm font-semibold text-content-muted transition-colors hover:bg-surface-elevated"
+                                    @click="open = false"
+                                >
+                                    Log In
+                                </Link>
+                                <Link
+                                    :href="register()"
+                                    class="rounded-xl border border-line py-3 text-center text-sm font-semibold text-content-muted transition-colors hover:bg-surface-elevated"
+                                    @click="open = false"
+                                >
+                                    Register
+                                </Link>
+                            </div>
+                        </template>
+                        <Link
+                            :href="courts()"
+                            class="rounded-full bg-brand py-3.5 text-center text-base font-bold text-brand-foreground shadow-lg shadow-brand/15 transition-colors hover:bg-brand/90"
+                            @click="open = false"
+                        >
+                            Book a Court Now
+                        </Link>
+                    </div>
+                </nav>
+            </div>
+        </transition>
     </header>
 </template>

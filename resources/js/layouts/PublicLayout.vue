@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/sonner';
 </script>
 
 <template>
-    <div class="flex min-h-svh flex-col bg-chalk text-ink antialiased">
+    <div class="flex min-h-svh flex-col bg-surface text-content antialiased">
         <SiteHeader />
         <main class="flex-1">
             <slot />

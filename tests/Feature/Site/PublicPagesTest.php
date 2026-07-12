@@ -10,8 +10,6 @@ test('public pages are reachable by guests', function (string $routeName) {
     'site.courts',
     'site.pricing',
     'site.gallery',
-    'site.faqs',
-    'site.contact',
     'site.privacy',
     'site.terms',
 ]);
@@ -38,18 +36,36 @@ test('courts page lists every bookable court', function () {
         ->assertInertia(fn ($page) => $page->has('courts', 4));
 });
 
-test('contact form accepts a valid submission', function () {
-    $this->post(route('site.contact.store'), [
-        'name' => 'Jordan Rivera',
-        'email' => 'jordan@example.com',
-        'message' => 'I would like to book a court for a group of eight this weekend.',
-    ])->assertRedirect();
-});
+test('court details page renders correctly with its images', function () {
+    $court = Court::factory()->available()->create([
+        'name' => 'Center Court',
+        'is_active' => true,
+    ]);
 
-test('contact form validates its fields', function () {
-    $this->post(route('site.contact.store'), [
-        'name' => '',
-        'email' => 'not-an-email',
-        'message' => 'too short',
-    ])->assertSessionHasErrors(['name', 'email', 'message']);
+    // Create a primary image record in db
+    $court->images()->create([
+        'path' => 'courts/court_pickleball.png',
+        'is_primary' => true,
+        'sort_order' => 0,
+    ]);
+
+    // Create a secondary image record in db
+    $court->images()->create([
+        'path' => 'courts/hero_pickleball.png',
+        'is_primary' => false,
+        'sort_order' => 1,
+    ]);
+
+    $this->get(route('site.courts.show', $court))
+        ->assertOk()
+        ->assertInertia(
+            fn ($page) => $page
+                ->component('site/CourtShow')
+                ->has('court')
+                ->where('court.name', 'Center Court')
+                ->where('court.primary_image_url', asset('storage/courts/court_pickleball.png'))
+                ->has('court.images', 2)
+                ->where('court.images.0', asset('storage/courts/court_pickleball.png'))
+                ->where('court.images.1', asset('storage/courts/hero_pickleball.png'))
+        );
 });

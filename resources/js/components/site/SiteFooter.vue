@@ -26,7 +26,9 @@ const year = 2026;
                 </div>
 
                 <div>
-                    <h3 class="text-xs font-semibold tracking-widest text-content-inverse/40 uppercase">
+                    <h3
+                        class="text-xs font-semibold tracking-widest text-content-inverse/40 uppercase"
+                    >
                         Explore
                     </h3>
                     <ul class="mt-4 space-y-2 text-sm">
@@ -42,7 +44,9 @@ const year = 2026;
                 </div>
 
                 <div>
-                    <h3 class="text-xs font-semibold tracking-widest text-content-inverse/40 uppercase">
+                    <h3
+                        class="text-xs font-semibold tracking-widest text-content-inverse/40 uppercase"
+                    >
                         Hours
                     </h3>
                     <ul class="mt-4 space-y-2 text-sm">
@@ -51,17 +55,25 @@ const year = 2026;
                             :key="row.day"
                             class="flex flex-col"
                         >
-                            <span class="text-content-inverse/50">{{ row.day }}</span>
-                            <span class="text-content-inverse/80">{{ row.value }}</span>
+                            <span class="text-content-inverse/50">{{
+                                row.day
+                            }}</span>
+                            <span class="text-content-inverse/80">{{
+                                row.value
+                            }}</span>
                         </li>
                     </ul>
                 </div>
 
                 <div>
-                    <h3 class="text-xs font-semibold tracking-widest text-content-inverse/40 uppercase">
+                    <h3
+                        class="text-xs font-semibold tracking-widest text-content-inverse/40 uppercase"
+                    >
                         Visit
                     </h3>
-                    <address class="mt-4 space-y-2 text-sm text-content-inverse/70 not-italic">
+                    <address
+                        class="mt-4 space-y-2 text-sm text-content-inverse/70 not-italic"
+                    >
                         <p>{{ site.contact.address_line }}</p>
                         <p>
                             <a

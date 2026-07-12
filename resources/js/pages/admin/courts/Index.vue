@@ -67,7 +67,9 @@ function destroy(court: Court): void {
                         <th class="px-4 py-3 font-medium">Status</th>
                         <th class="px-4 py-3 font-medium">Price</th>
                         <th class="px-4 py-3 font-medium">Staff</th>
-                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                        <th class="px-4 py-3 text-right font-medium">
+                            Actions
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -81,7 +83,9 @@ function destroy(court: Court): void {
                             {{ court.sport_type.replace('-', ' ') }}
                         </td>
                         <td class="px-4 py-3">
-                            <Badge :variant="statusVariant[court.status] as never">
+                            <Badge
+                                :variant="statusVariant[court.status] as never"
+                            >
                                 {{ court.status }}
                             </Badge>
                         </td>
@@ -90,7 +94,11 @@ function destroy(court: Court): void {
                         <td class="px-4 py-3">
                             <div class="flex justify-end gap-2">
                                 <Button variant="outline" size="sm" as-child>
-                                    <Link :href="CourtController.edit(court.id).url">
+                                    <Link
+                                        :href="
+                                            CourtController.edit(court.id).url
+                                        "
+                                    >
                                         Edit
                                     </Link>
                                 </Button>

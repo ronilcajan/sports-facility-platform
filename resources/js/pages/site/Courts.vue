@@ -1,10 +1,20 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import PageHero from '@/components/site/PageHero.vue';
 import SiteCourtCard from '@/components/site/SiteCourtCard.vue';
+import BookingModal from '@/components/site/BookingModal.vue';
 import type { PublicCourt } from '@/types';
 
 defineProps<{ courts: PublicCourt[] }>();
+
+const activeCourt = ref<PublicCourt | null>(null);
+const isBookingOpen = ref(false);
+
+function handleBook(court: PublicCourt) {
+    activeCourt.value = court;
+    isBookingOpen.value = true;
+}
 </script>
 
 <template>
@@ -25,13 +35,21 @@ defineProps<{ courts: PublicCourt[] }>();
                 v-for="court in courts"
                 :key="court.id"
                 :court="court"
+                @book="handleBook"
             />
         </div>
         <div
             v-else
-            class="rounded-2xl border border-dashed border-ink/15 p-16 text-center text-fog"
+            class="rounded-2xl border border-dashed border-line p-16 text-center text-content-muted"
         >
             No courts are open for booking right now. Please check back soon.
         </div>
     </div>
+
+    <!-- Booking Modal Component overlay -->
+    <BookingModal
+        :court="activeCourt"
+        :is-open="isBookingOpen"
+        @close="isBookingOpen = false"
+    />
 </template>

@@ -66,7 +66,12 @@ function submit(): void {
     <form class="max-w-2xl space-y-6" @submit.prevent="submit">
         <div class="grid gap-2">
             <Label for="name">Name</Label>
-            <Input id="name" v-model="form.name" required placeholder="Center Court" />
+            <Input
+                id="name"
+                v-model="form.name"
+                required
+                placeholder="Center Court"
+            />
             <InputError :message="form.errors.name" />
         </div>
 

@@ -110,24 +110,6 @@ return [
         ],
     ],
 
-    'faqs' => [
-        'title' => 'Questions, answered',
-        'lede' => 'Everything you need to know before your first game.',
-        'items' => [
-            ['q' => 'Do I need a membership to play?', 'a' => 'No. Anyone can book a court as a guest — no membership, no sign-up fee. Creating a free account just lets you see your booking history and check in faster.'],
-            ['q' => 'How many people can play on one court?', 'a' => 'Up to four. The court price is per hour, not per person, so doubles costs the same as singles.'],
-            ['q' => 'Can I book for a group or event?', 'a' => 'Absolutely. Reserve multiple courts for the same time slot, or reach out through the contact page for tournaments and private events.'],
-            ['q' => 'What if I need to cancel?', 'a' => 'Prime Time bookings include a free reschedule up to the cancellation window shown at checkout. Off-peak bookings can be moved subject to availability.'],
-            ['q' => 'Do you rent paddles and balls?', 'a' => 'Yes — demo paddles and fresh balls are available at the pro shop, and we sell the latest gear on site.'],
-            ['q' => 'Are beginners welcome?', 'a' => 'Very. We run beginner clinics every week and open play sessions grouped by level. You will find your game here.'],
-        ],
-    ],
-
-    'contact' => [
-        'title' => 'Come say hello',
-        'lede' => 'Questions about booking, events, or coaching? Send us a note and we will get back within one business day.',
-    ],
-
     'privacy' => [
         'title' => 'Privacy Policy',
         'updated' => 'Last updated July 6, 2026',

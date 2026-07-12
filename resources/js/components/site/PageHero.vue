@@ -7,7 +7,9 @@ defineProps<{
 </script>
 
 <template>
-    <section class="relative overflow-hidden bg-surface-inverse text-content-inverse">
+    <section
+        class="relative overflow-hidden bg-surface-inverse text-content-inverse"
+    >
         <div
             class="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-brand/40 blur-3xl"
             aria-hidden="true"
@@ -30,7 +32,7 @@ defineProps<{
             </h1>
             <p
                 v-if="lede"
-                class="mt-6 max-w-2xl text-lg text-content-inverse/70 text-pretty"
+                class="mt-6 max-w-2xl text-lg text-pretty text-content-inverse/70"
             >
                 {{ lede }}
             </p>

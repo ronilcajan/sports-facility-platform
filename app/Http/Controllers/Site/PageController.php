@@ -39,6 +39,29 @@ class PageController extends Controller
         ]);
     }
 
+    /**
+     * Show a detailed page for a specific court.
+     */
+    public function show(Court $court): Response
+    {
+        $court->load(['primaryImage', 'images']);
+
+        return Inertia::render('site/CourtShow', [
+            'court' => [
+                'id' => $court->id,
+                'name' => $court->name,
+                'slug' => $court->slug,
+                'sport_type' => $court->sport_type->label(),
+                'description' => $court->description,
+                'base_price' => $court->base_price,
+                'slot_duration_minutes' => $court->slot_duration_minutes,
+                'primary_image_url' => $court->primaryImage ? asset('storage/'.$court->primaryImage->path) : null,
+                'images' => $court->images->map(fn ($img) => asset('storage/'.$img->path)),
+            ],
+            'relatedCourts' => $this->bookableCourts()->reject(fn ($c) => $c['id'] === $court->id)->take(3)->values(),
+        ]);
+    }
+
     public function pricing(): Response
     {
         return Inertia::render('site/Pricing', [
@@ -50,13 +73,6 @@ class PageController extends Controller
     {
         return Inertia::render('site/Gallery', [
             'content' => config('site_content.gallery'),
-        ]);
-    }
-
-    public function faqs(): Response
-    {
-        return Inertia::render('site/Faqs', [
-            'content' => config('site_content.faqs'),
         ]);
     }
 
@@ -82,6 +98,7 @@ class PageController extends Controller
     private function bookableCourts(?int $limit = null): Collection
     {
         return Court::query()
+            ->with('primaryImage')
             ->where('status', CourtStatus::Available)
             ->where('is_active', true)
             ->orderBy('name')
@@ -95,6 +112,7 @@ class PageController extends Controller
                 'description' => $court->description,
                 'base_price' => $court->base_price,
                 'slot_duration_minutes' => $court->slot_duration_minutes,
+                'primary_image_url' => $court->primaryImage ? asset('storage/'.$court->primaryImage->path) : null,
             ]);
     }
 }

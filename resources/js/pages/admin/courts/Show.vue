@@ -4,12 +4,7 @@ import CourtController from '@/actions/App/Http/Controllers/Admin/CourtControlle
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface StaffMember {
     id: number;
@@ -52,10 +47,14 @@ defineOptions({
             <Heading
                 variant="small"
                 :title="props.court.name"
-                :description="props.court.description ?? 'No description provided.'"
+                :description="
+                    props.court.description ?? 'No description provided.'
+                "
             />
             <Button as-child>
-                <Link :href="CourtController.edit(props.court.id).url">Edit</Link>
+                <Link :href="CourtController.edit(props.court.id).url"
+                    >Edit</Link
+                >
             </Button>
         </div>
 
@@ -95,7 +94,10 @@ defineOptions({
                     <CardTitle>Assigned staff</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ul v-if="props.court.staff.length" class="space-y-2 text-sm">
+                    <ul
+                        v-if="props.court.staff.length"
+                        class="space-y-2 text-sm"
+                    >
                         <li
                             v-for="member in props.court.staff"
                             :key="member.id"

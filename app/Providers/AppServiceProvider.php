@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enums\RoleName;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -60,5 +61,9 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+
+        if (! function_exists('pcntl_fork') && class_exists(DevCommands::class)) {
+            DevCommands::except('logs');
+        }
     }
 }

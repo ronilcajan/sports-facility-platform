@@ -25,11 +25,7 @@ const toneClass: Record<GalleryItem['tone'], string> = {
 <template>
     <Head title="Gallery" />
 
-    <PageHero
-        eyebrow="Gallery"
-        :title="content.title"
-        :lede="content.lede"
-    />
+    <PageHero eyebrow="Gallery" :title="content.title" :lede="content.lede" />
 
     <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
         <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -42,7 +38,9 @@ const toneClass: Record<GalleryItem['tone'], string> = {
                 <!-- Abstract court-surface motif in place of a photo. -->
                 <div
                     class="pointer-events-none absolute inset-5 rounded-md border-2 opacity-40"
-                    :class="item.tone === 'volt' ? 'border-ink' : 'border-chalk'"
+                    :class="
+                        item.tone === 'volt' ? 'border-ink' : 'border-chalk'
+                    "
                     aria-hidden="true"
                 />
                 <div
@@ -54,11 +52,13 @@ const toneClass: Record<GalleryItem['tone'], string> = {
                     class="relative text-lg font-bold transition-transform group-hover:-translate-y-0.5"
                 >
                     {{ item.label }}
-                    <span class="sr-only"> — placeholder image {{ i + 1 }}</span>
+                    <span class="sr-only">
+                        — placeholder image {{ i + 1 }}</span
+                    >
                 </figcaption>
             </figure>
         </div>
-        <p class="mt-8 text-sm text-fog">
+        <p class="mt-8 text-sm text-content-muted">
             Photography coming soon — these tiles stand in for real facility
             shots.
         </p>

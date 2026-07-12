@@ -219,7 +219,8 @@
     --site-line: rgba(255, 255, 255, 0.1);
     --site-radius: 0.9rem;
     --site-shadow-card: 0 20px 45px -20px rgba(0, 0, 0, 0.55);
-    --site-font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --site-font-display:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Fairway — Golfngy-inspired light. */
@@ -236,7 +237,8 @@
     --site-line: rgba(26, 26, 23, 0.1);
     --site-radius: 1.25rem;
     --site-shadow-card: 0 24px 50px -28px rgba(31, 42, 28, 0.35);
-    --site-font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --site-font-display:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Electric — FootballCoin-inspired dark-vibrant. */
@@ -253,7 +255,8 @@
     --site-line: rgba(255, 255, 255, 0.1);
     --site-radius: 0.8rem;
     --site-shadow-card: 0 22px 48px -22px rgba(0, 0, 0, 0.6);
-    --site-font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --site-font-display:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer components {
