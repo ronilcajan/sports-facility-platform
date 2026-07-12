@@ -16,9 +16,9 @@ interface GalleryContent {
 defineProps<{ content: GalleryContent }>();
 
 const toneClass: Record<GalleryItem['tone'], string> = {
-    court: 'bg-court text-chalk',
-    ink: 'bg-ink text-chalk',
-    volt: 'bg-volt text-ink',
+    court: 'bg-surface-elevated text-content border border-line',
+    ink: 'bg-surface-inverse text-content-inverse',
+    volt: 'bg-brand text-brand-foreground',
 };
 </script>
 
@@ -39,13 +39,19 @@ const toneClass: Record<GalleryItem['tone'], string> = {
                 <div
                     class="pointer-events-none absolute inset-5 rounded-md border-2 opacity-40"
                     :class="
-                        item.tone === 'volt' ? 'border-ink' : 'border-chalk'
+                        item.tone === 'volt'
+                            ? 'border-brand-foreground/35'
+                            : 'border-content/35'
                     "
                     aria-hidden="true"
                 />
                 <div
                     class="pointer-events-none absolute inset-x-5 top-1/2 h-0.5 opacity-40"
-                    :class="item.tone === 'volt' ? 'bg-ink' : 'bg-chalk'"
+                    :class="
+                        item.tone === 'volt'
+                            ? 'bg-brand-foreground/35'
+                            : 'bg-content/35'
+                    "
                     aria-hidden="true"
                 />
                 <figcaption

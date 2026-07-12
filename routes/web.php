@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Site\BookingController;
 use App\Http\Controllers\Site\PageController;
 use Illuminate\Support\Facades\Route;
 
@@ -11,6 +12,7 @@ Route::get('/pricing', [PageController::class, 'pricing'])->name('site.pricing')
 Route::get('/gallery', [PageController::class, 'gallery'])->name('site.gallery');
 Route::get('/privacy', [PageController::class, 'privacy'])->name('site.privacy');
 Route::get('/terms', [PageController::class, 'terms'])->name('site.terms');
+Route::post('/bookings', [BookingController::class, 'store'])->name('site.bookings.store');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');

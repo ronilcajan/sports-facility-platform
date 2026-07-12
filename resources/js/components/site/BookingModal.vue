@@ -36,8 +36,52 @@ const errors = ref({
     time: '',
 });
 
+const bookingDetails = ref<{
+    id: number;
+    reference_code: string;
+    name: string;
+    date: string;
+    time_slots: string[];
+    total_price: string;
+    receipt_url: string;
+} | null>(null);
+
 // Step of the Booking Flow: 'form' | 'submitting' | 'confirmed'
 const step = ref<'form' | 'submitting' | 'confirmed'>('form');
+const currentWizardStep = ref(1);
+
+// Receipt Upload State
+const receiptFile = ref<File | null>(null);
+const receiptPreviewUrl = ref<string | null>(null);
+const receiptError = ref('');
+
+function handleReceiptUpload(e: Event) {
+    const target = e.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) {
+        return;
+    }
+    if (!file.type.startsWith('image/')) {
+        receiptError.value =
+            'Please select a valid image file (PNG, JPG, WEBP).';
+        return;
+    }
+    receiptError.value = '';
+    receiptFile.value = file;
+
+    // Generate preview
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        receiptPreviewUrl.value = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeReceipt() {
+    receiptFile.value = null;
+    receiptPreviewUrl.value = null;
+    receiptError.value = '';
+}
 
 // Loading text simulation sequence
 const loadingText = ref('Verifying court schedule availability...');
@@ -134,6 +178,11 @@ watch(
     (newVal) => {
         if (newVal) {
             step.value = 'form';
+            currentWizardStep.value = 1;
+            receiptFile.value = null;
+            receiptPreviewUrl.value = null;
+            receiptError.value = '';
+            bookingDetails.value = null;
             errors.value = {
                 name: '',
                 email: '',
@@ -189,10 +238,39 @@ function close() {
     }
 }
 
-// Inline validations
-function validate(): boolean {
+// Step 1 Validation
+function validateStep1(): boolean {
+    errors.value.date = '';
+    errors.value.time = '';
     let isValid = true;
-    errors.value = { name: '', email: '', phone: '', date: '', time: '' };
+
+    if (!form.value.date) {
+        errors.value.date = 'Booking date is required.';
+        isValid = false;
+    } else {
+        const selected = new Date(form.value.date + 'T00:00:00');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (selected < today) {
+            errors.value.date = 'Date cannot be in the past.';
+            isValid = false;
+        }
+    }
+
+    if (!form.value.time || form.value.time.length === 0) {
+        errors.value.time = 'At least one preferred time slot is required.';
+        isValid = false;
+    }
+
+    return isValid;
+}
+
+// Step 2 Validation
+function validateStep2(): boolean {
+    errors.value.name = '';
+    errors.value.email = '';
+    errors.value.phone = '';
+    let isValid = true;
 
     if (!form.value.name.trim()) {
         errors.value.name = 'Full name is required.';
@@ -219,30 +297,34 @@ function validate(): boolean {
         isValid = false;
     }
 
-    if (!form.value.date) {
-        errors.value.date = 'Booking date is required.';
-        isValid = false;
-    } else {
-        const selected = new Date(form.value.date + 'T00:00:00');
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (selected < today) {
-            errors.value.date = 'Date cannot be in the past.';
-            isValid = false;
-        }
-    }
-
-    if (!form.value.time || form.value.time.length === 0) {
-        errors.value.time = 'At least one preferred time slot is required.';
-        isValid = false;
-    }
-
     return isValid;
 }
 
-// Simulated checkout process
+function nextStep() {
+    if (currentWizardStep.value === 1) {
+        if (validateStep1()) {
+            currentWizardStep.value = 2;
+        }
+    } else if (currentWizardStep.value === 2) {
+        if (validateStep2()) {
+            currentWizardStep.value = 3;
+        }
+    }
+}
+
+function prevStep() {
+    if (currentWizardStep.value > 1) {
+        currentWizardStep.value--;
+    }
+}
+
+// Persist booking to database
 function handleSubmit() {
-    if (!validate()) {
+    if (!validateStep1() || !validateStep2()) {
+        return;
+    }
+    if (!receiptFile.value) {
+        receiptError.value = 'Payment receipt is required.';
         return;
     }
 
@@ -250,22 +332,138 @@ function handleSubmit() {
     loadingStep.value = 1;
     loadingText.value = 'Verifying court schedule availability...';
 
-    // Step 2 loading text
+    // Construct form data with the receipt image file
+    const formData = new FormData();
+    formData.append('court_id', String(props.court?.id));
+    formData.append('name', form.value.name);
+    formData.append('email', form.value.email);
+    formData.append('phone', form.value.phone);
+    formData.append('date', form.value.date);
+    form.value.time.forEach((t) => formData.append('time[]', t));
+    formData.append('notes', form.value.notes);
+    formData.append('receipt', receiptFile.value);
+
+    // Send HTTP POST request to Laravel backend
+    const uploadPromise = fetch('/bookings', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            Accept: 'application/json',
+        },
+        body: formData,
+    }).then(async (res) => {
+        if (!res.ok) {
+            const errData = await res.json();
+            throw errData;
+        }
+        return res.json();
+    });
+
+    // Step 2 loading text sequence
     setTimeout(() => {
         loadingStep.value = 2;
-        loadingText.value = 'Securing court reservation slot...';
+        loadingText.value = 'Verifying uploaded payment receipt...';
     }, 900);
 
-    // Step 3 loading text
+    // Step 3 loading text sequence
     setTimeout(() => {
         loadingStep.value = 3;
         loadingText.value = 'Generating booking confirmation QR code...';
     }, 1800);
 
-    // Confirmation screen
-    setTimeout(() => {
-        step.value = 'confirmed';
-    }, 2700);
+    // Transition to confirmed after minimum animation time (2.7s) and upload complete
+    Promise.all([
+        uploadPromise,
+        new Promise((resolve) => setTimeout(resolve, 2700)),
+    ])
+        .then(([resData]) => {
+            bookingDetails.value = resData.booking;
+            step.value = 'confirmed';
+        })
+        .catch((err) => {
+            step.value = 'form';
+            if (err && err.errors) {
+                if (err.errors.name) {
+                    errors.value.name = err.errors.name[0];
+                }
+                if (err.errors.email) {
+                    errors.value.email = err.errors.email[0];
+                }
+                if (err.errors.phone) {
+                    errors.value.phone = err.errors.phone[0];
+                }
+                if (err.errors.date) {
+                    errors.value.date = err.errors.date[0];
+                    currentWizardStep.value = 1;
+                }
+                if (err.errors.time) {
+                    errors.value.time = err.errors.time[0];
+                    currentWizardStep.value = 1;
+                }
+                if (err.errors.receipt) {
+                    receiptError.value = err.errors.receipt[0];
+                    currentWizardStep.value = 3;
+                }
+            } else {
+                receiptError.value =
+                    err?.message ||
+                    'An unexpected error occurred. Please try again.';
+                currentWizardStep.value = 3;
+            }
+        });
+}
+
+function downloadVoucher() {
+    if (!bookingDetails.value && !props.court) {
+        return;
+    }
+
+    const reference = bookingDetails.value
+        ? bookingDetails.value.reference_code
+        : 'DY-RESRV-MOCK';
+    const courtName = props.court ? props.court.name : 'N/A';
+    const playerName = bookingDetails.value
+        ? bookingDetails.value.name
+        : form.value.name;
+    const date = bookingDetails.value
+        ? bookingDetails.value.date
+        : form.value.date;
+    const times = bookingDetails.value
+        ? bookingDetails.value.time_slots.join(', ')
+        : form.value.time.join(', ');
+    const duration = bookingDetails.value
+        ? bookingDetails.value.time_slots.length *
+          (props.court?.slot_duration_minutes || 60)
+        : calculatedDuration.value;
+    const price = bookingDetails.value
+        ? bookingDetails.value.total_price
+        : calculatedPrice.value;
+
+    const content = `=========================================
+      COURT RESERVATION VOUCHER
+=========================================
+Booking Reference : ${reference}
+Court Name        : ${courtName}
+Player Name       : ${playerName}
+Reservation Date  : ${date}
+Preferred Time    : ${times}
+Duration          : ${duration} minutes
+Total Amount      : $${price}
+Status            : CONFIRMED
+=========================================
+Show this voucher upon arrival at the
+facility shop. Thank you for booking!
+=========================================`;
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Voucher-${reference}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 </script>
 
@@ -310,139 +508,97 @@ function handleSubmit() {
                     </svg>
                 </button>
 
-                <!-- Stage 1: Booking Form -->
+                <!-- Stage 1: Booking Wizard -->
                 <div v-if="step === 'form'" class="p-6 sm:p-8">
-                    <header class="mb-6">
-                        <span
-                            class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
-                            >Court Booking</span
-                        >
-                        <h2
-                            class="mt-1 font-display text-2xl font-black tracking-tight"
-                        >
-                            Reserve a Court
-                        </h2>
-                        <div
-                            v-if="court"
-                            class="mt-3 flex items-center gap-3 rounded-xl border border-line bg-surface-elevated/40 p-3"
-                        >
-                            <div
-                                class="size-12 shrink-0 overflow-hidden rounded-lg border border-line bg-surface-inverse"
+                    <!-- Wizard Progress Header -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between">
+                            <span
+                                class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
+                                >Step {{ currentWizardStep }} of 3</span
                             >
-                                <img
-                                    :src="
-                                        court.primary_image_url ||
-                                        '/images/court_pickleball.png'
-                                    "
-                                    :alt="court.name"
-                                    class="h-full w-full object-cover"
-                                />
-                            </div>
-                            <div>
-                                <h4 class="text-sm font-extrabold">
-                                    {{ court.name }}
-                                </h4>
-                                <p class="text-xs text-content-muted">
-                                    {{ court.sport_type }} • Cushion Court
-                                </p>
-                            </div>
-                            <div class="ml-auto text-right">
-                                <span
-                                    class="block text-xs text-[9px] font-bold text-content-muted uppercase"
-                                    >Rate</span
-                                >
-                                <span class="text-sm font-extrabold text-brand"
-                                    >${{ court.base_price }}</span
-                                >
-                                <span class="text-xs text-content-muted"
-                                    >/{{ court.slot_duration_minutes }}m</span
-                                >
-                            </div>
+                            <span
+                                class="text-xs font-semibold text-content-muted"
+                            >
+                                {{
+                                    currentWizardStep === 1
+                                        ? 'Schedule Selection'
+                                        : currentWizardStep === 2
+                                          ? 'User Details'
+                                          : 'Payment Details'
+                                }}
+                            </span>
                         </div>
-                    </header>
+                        <!-- Horizontal progress bar tracker -->
+                        <div class="mt-3 flex items-center gap-2">
+                            <div
+                                v-for="stepNum in 3"
+                                :key="stepNum"
+                                class="h-1.5 flex-1 rounded-full transition-all duration-300"
+                                :class="[
+                                    stepNum < currentWizardStep
+                                        ? 'bg-brand'
+                                        : stepNum === currentWizardStep
+                                          ? 'animate-pulse bg-brand'
+                                          : 'bg-line',
+                                ]"
+                            ></div>
+                        </div>
+                    </div>
 
                     <form @submit.prevent="handleSubmit" class="space-y-4">
-                        <!-- Name & Contact -->
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <label
-                                    for="booking-name"
-                                    class="mb-1.5 block text-xs font-bold text-content-muted uppercase"
-                                    >Full Name</label
+                        <!-- Step 1: Schedule Selection -->
+                        <div v-if="currentWizardStep === 1" class="space-y-4">
+                            <header class="mb-4">
+                                <h3
+                                    class="font-display text-lg font-bold tracking-tight text-content"
                                 >
-                                <input
-                                    id="booking-name"
-                                    type="text"
-                                    v-model="form.name"
-                                    placeholder="Enter your name"
-                                    class="w-full rounded-xl border bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-                                    :class="{
-                                        'border-destructive focus:border-destructive focus:ring-destructive':
-                                            errors.name,
-                                    }"
-                                />
-                                <p
-                                    v-if="errors.name"
-                                    class="mt-1 text-xs font-semibold text-destructive"
+                                    Select Date & Time
+                                </h3>
+                                <div
+                                    v-if="court"
+                                    class="mt-3 flex items-center gap-3 rounded-xl border border-line bg-surface-elevated/40 p-3"
                                 >
-                                    {{ errors.name }}
-                                </p>
-                            </div>
-                            <div>
-                                <label
-                                    for="booking-phone"
-                                    class="mb-1.5 block text-xs font-bold text-content-muted uppercase"
-                                    >Phone Number</label
-                                >
-                                <input
-                                    id="booking-phone"
-                                    type="tel"
-                                    v-model="form.phone"
-                                    placeholder="(512) 555-0199"
-                                    class="w-full rounded-xl border bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-                                    :class="{
-                                        'border-destructive focus:border-destructive focus:ring-destructive':
-                                            errors.phone,
-                                    }"
-                                />
-                                <p
-                                    v-if="errors.phone"
-                                    class="mt-1 text-xs font-semibold text-destructive"
-                                >
-                                    {{ errors.phone }}
-                                </p>
-                            </div>
-                        </div>
+                                    <div
+                                        class="size-12 shrink-0 overflow-hidden rounded-lg border border-line bg-surface-inverse"
+                                    >
+                                        <img
+                                            :src="
+                                                court.primary_image_url ||
+                                                '/images/court_pickleball.png'
+                                            "
+                                            :alt="court.name"
+                                            class="h-full w-full object-cover"
+                                        />
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-extrabold">
+                                            {{ court.name }}
+                                        </h4>
+                                        <p class="text-xs text-content-muted">
+                                            {{ court.sport_type }} • Cushion
+                                            Court
+                                        </p>
+                                    </div>
+                                    <div class="ml-auto text-right">
+                                        <span
+                                            class="block text-[9px] font-bold text-content-muted uppercase"
+                                            >Rate</span
+                                        >
+                                        <span
+                                            class="text-sm font-extrabold text-brand"
+                                            >${{ court.base_price }}</span
+                                        >
+                                        <span class="text-xs text-content-muted"
+                                            >/{{
+                                                court.slot_duration_minutes
+                                            }}m</span
+                                        >
+                                    </div>
+                                </div>
+                            </header>
 
-                        <!-- Email -->
-                        <div>
-                            <label
-                                for="booking-email"
-                                class="mb-1.5 block text-xs font-bold text-content-muted uppercase"
-                                >Email Address</label
-                            >
-                            <input
-                                id="booking-email"
-                                type="email"
-                                v-model="form.email"
-                                placeholder="your.email@example.com"
-                                class="w-full rounded-xl border bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-                                :class="{
-                                    'border-destructive focus:border-destructive focus:ring-destructive':
-                                        errors.email,
-                                }"
-                            />
-                            <p
-                                v-if="errors.email"
-                                class="mt-1 text-xs font-semibold text-destructive"
-                            >
-                                {{ errors.email }}
-                            </p>
-                        </div>
-
-                        <!-- Date & Time Slot -->
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div class="col-span-full">
+                            <div>
                                 <label
                                     for="booking-date"
                                     class="mb-1.5 block text-xs font-bold text-content-muted uppercase"
@@ -453,7 +609,7 @@ function handleSubmit() {
                                     type="date"
                                     :min="todayDateString"
                                     v-model="form.date"
-                                    class="w-full rounded-xl border bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                                    class="w-full rounded-xl border border-line bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                                     :class="{
                                         'border-destructive focus:border-destructive focus:ring-destructive':
                                             errors.date,
@@ -467,7 +623,7 @@ function handleSubmit() {
                                 </p>
                             </div>
 
-                            <div class="col-span-full">
+                            <div>
                                 <label
                                     class="mb-1.5 block text-xs font-bold text-content-muted uppercase"
                                     >Select Time Slots</label
@@ -527,50 +683,478 @@ function handleSubmit() {
                                     {{ errors.time }}
                                 </p>
                             </div>
-                        </div>
 
-                        <!-- Notes -->
-                        <div>
-                            <label
-                                for="booking-notes"
-                                class="mb-1.5 block text-xs font-bold text-content-muted uppercase"
-                                >Additional Notes (Optional)</label
+                            <!-- Running Fee Summary for Step 1 -->
+                            <div
+                                class="mt-6 flex items-center justify-between border-t border-line pt-4"
                             >
-                            <textarea
-                                id="booking-notes"
-                                v-model="form.notes"
-                                placeholder="E.g., rental paddles needed, coaching inquiries, etc."
-                                rows="2"
-                                class="w-full resize-none rounded-xl border bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-                            ></textarea>
+                                <div>
+                                    <span
+                                        class="block text-[9px] font-semibold text-content-muted uppercase"
+                                        >Duration & Estimate</span
+                                    >
+                                    <span class="text-xs text-content-muted"
+                                        >{{ calculatedDuration }} minutes •
+                                        <strong class="text-sm text-content"
+                                            >${{ calculatedPrice }}</strong
+                                        ></span
+                                    >
+                                </div>
+                                <div class="flex gap-2">
+                                    <button
+                                        type="button"
+                                        class="rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-content-muted transition-colors hover:bg-surface-elevated"
+                                        @click="close"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5 hover:bg-brand/95"
+                                        @click="nextStep"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Submit Section -->
+                        <!-- Step 2: User Details -->
                         <div
-                            class="flex items-center justify-between gap-4 border-t border-line pt-4"
+                            v-else-if="currentWizardStep === 2"
+                            class="space-y-4"
                         >
-                            <div>
-                                <span
-                                    class="block text-[10px] font-semibold tracking-wider text-content-muted uppercase"
-                                    >Total Cost</span
+                            <header class="mb-4">
+                                <h3
+                                    class="font-display text-lg font-bold tracking-tight text-content"
                                 >
-                                <span class="text-2xl font-black text-content"
-                                    >${{ calculatedPrice }}</span
-                                >
+                                    Your Details
+                                </h3>
+                                <p class="text-xs text-content-muted">
+                                    Please provide your contact information to
+                                    reserve the court.
+                                </p>
+                            </header>
+
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label
+                                        for="booking-name"
+                                        class="mb-1.5 block text-xs font-bold text-content-muted uppercase"
+                                        >Full Name</label
+                                    >
+                                    <input
+                                        id="booking-name"
+                                        type="text"
+                                        v-model="form.name"
+                                        placeholder="Enter your name"
+                                        class="w-full rounded-xl border border-line bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                                        :class="{
+                                            'border-destructive focus:border-destructive':
+                                                errors.name,
+                                        }"
+                                    />
+                                    <p
+                                        v-if="errors.name"
+                                        class="mt-1 text-xs font-semibold text-destructive"
+                                    >
+                                        {{ errors.name }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <label
+                                        for="booking-phone"
+                                        class="mb-1.5 block text-xs font-bold text-content-muted uppercase"
+                                        >Phone Number</label
+                                    >
+                                    <input
+                                        id="booking-phone"
+                                        type="tel"
+                                        v-model="form.phone"
+                                        placeholder="(512) 555-0199"
+                                        class="w-full rounded-xl border border-line bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                                        :class="{
+                                            'border-destructive focus:border-destructive':
+                                                errors.phone,
+                                        }"
+                                    />
+                                    <p
+                                        v-if="errors.phone"
+                                        class="mt-1 text-xs font-semibold text-destructive"
+                                    >
+                                        {{ errors.phone }}
+                                    </p>
+                                </div>
                             </div>
-                            <div class="flex gap-3">
+
+                            <div>
+                                <label
+                                    for="booking-email"
+                                    class="mb-1.5 block text-xs font-bold text-content-muted uppercase"
+                                    >Email Address</label
+                                >
+                                <input
+                                    id="booking-email"
+                                    type="email"
+                                    v-model="form.email"
+                                    placeholder="your.email@example.com"
+                                    class="w-full rounded-xl border border-line bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                                    :class="{
+                                        'border-destructive focus:border-destructive':
+                                            errors.email,
+                                    }"
+                                />
+                                <p
+                                    v-if="errors.email"
+                                    class="mt-1 text-xs font-semibold text-destructive"
+                                >
+                                    {{ errors.email }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label
+                                    for="booking-notes"
+                                    class="mb-1.5 block text-xs font-bold text-content-muted uppercase"
+                                    >Additional Notes (Optional)</label
+                                >
+                                <textarea
+                                    id="booking-notes"
+                                    v-model="form.notes"
+                                    placeholder="E.g., rental paddles needed, coaching inquiries, etc."
+                                    rows="3"
+                                    class="w-full resize-none rounded-xl border border-line bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                                ></textarea>
+                            </div>
+
+                            <div
+                                class="mt-6 flex items-center justify-between border-t border-line pt-4"
+                            >
                                 <button
                                     type="button"
                                     class="rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-content-muted transition-colors hover:bg-surface-elevated"
-                                    @click="close"
+                                    @click="prevStep"
                                 >
-                                    Cancel
+                                    Back
+                                </button>
+                                <button
+                                    type="button"
+                                    class="rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5 hover:bg-brand/95"
+                                    @click="nextStep"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Payment -->
+                        <div
+                            v-else-if="currentWizardStep === 3"
+                            class="space-y-4"
+                        >
+                            <header class="mb-2">
+                                <h3
+                                    class="font-display text-lg font-bold tracking-tight text-content"
+                                >
+                                    Complete Payment
+                                </h3>
+                            </header>
+
+                            <!-- Booking Summary Sub-card -->
+                            <div
+                                class="space-y-2 rounded-xl border border-line bg-surface-elevated/30 p-4 text-sm"
+                            >
+                                <h4
+                                    class="text-xs font-bold tracking-wider text-content-muted uppercase"
+                                >
+                                    Booking Summary
+                                </h4>
+                                <div class="flex justify-between gap-4">
+                                    <span class="text-content-muted"
+                                        >Selected Court:</span
+                                    >
+                                    <span class="font-bold text-content">{{
+                                        court?.name
+                                    }}</span>
+                                </div>
+                                <div class="flex justify-between gap-4">
+                                    <span class="text-content-muted"
+                                        >Date & Time:</span
+                                    >
+                                    <span
+                                        class="text-right font-bold text-content"
+                                        >{{ form.date }} at
+                                        {{ form.time.join(', ') }}</span
+                                    >
+                                </div>
+                                <div class="flex justify-between gap-4">
+                                    <span class="text-content-muted"
+                                        >Total Duration:</span
+                                    >
+                                    <span class="font-bold text-content"
+                                        >{{ calculatedDuration }} minutes</span
+                                    >
+                                </div>
+                                <div
+                                    class="mt-1 flex justify-between gap-4 border-t border-line pt-2"
+                                >
+                                    <span class="font-bold text-content"
+                                        >Total Amount:</span
+                                    >
+                                    <span
+                                        class="text-base font-black text-brand"
+                                        >${{ calculatedPrice }}</span
+                                    >
+                                </div>
+                            </div>
+
+                            <!-- GCash Details Section -->
+                            <div
+                                class="space-y-3 rounded-xl border border-line bg-surface-elevated/60 p-4"
+                            >
+                                <h4
+                                    class="text-xs font-bold tracking-wider text-brand uppercase"
+                                >
+                                    Administrator GCash Details
+                                </h4>
+                                <div
+                                    class="grid grid-cols-2 items-center gap-4"
+                                >
+                                    <div class="space-y-2 text-xs">
+                                        <div>
+                                            <span
+                                                class="block text-[9px] font-bold text-content-muted uppercase"
+                                                >Account Name</span
+                                            >
+                                            <span
+                                                class="font-extrabold text-content"
+                                                >Dinkyard Sports Corp</span
+                                            >
+                                        </div>
+                                        <div>
+                                            <span
+                                                class="block text-[9px] font-bold text-content-muted uppercase"
+                                                >GCash Number</span
+                                            >
+                                            <span
+                                                class="font-mono font-extrabold text-content"
+                                                >0917-555-0142</span
+                                            >
+                                        </div>
+                                        <p
+                                            class="text-[10px] leading-relaxed text-content-muted"
+                                        >
+                                            Send the total fee using GCash, then
+                                            save/upload the receipt below.
+                                        </p>
+                                    </div>
+                                    <!-- Mock GCash QR Code Visual -->
+                                    <div
+                                        class="flex flex-col items-center justify-center rounded-xl border border-line bg-surface p-2"
+                                    >
+                                        <svg
+                                            class="size-20 text-content-inverse"
+                                            viewBox="0 0 100 100"
+                                            fill="currentColor"
+                                        >
+                                            <rect
+                                                x="5"
+                                                y="5"
+                                                width="20"
+                                                height="20"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="4"
+                                            />
+                                            <rect
+                                                x="10"
+                                                y="10"
+                                                width="10"
+                                                height="10"
+                                            />
+                                            <rect
+                                                x="75"
+                                                y="5"
+                                                width="20"
+                                                height="20"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="4"
+                                            />
+                                            <rect
+                                                x="80"
+                                                y="10"
+                                                width="10"
+                                                height="10"
+                                            />
+                                            <rect
+                                                x="5"
+                                                y="75"
+                                                width="20"
+                                                height="20"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="4"
+                                            />
+                                            <rect
+                                                x="10"
+                                                y="80"
+                                                width="10"
+                                                height="10"
+                                            />
+                                            <rect
+                                                x="35"
+                                                y="35"
+                                                width="30"
+                                                height="30"
+                                                fill="none"
+                                                stroke="var(--color-brand)"
+                                                stroke-width="4"
+                                            />
+                                            <circle
+                                                cx="50"
+                                                cy="50"
+                                                r="5"
+                                                fill="var(--color-brand)"
+                                            />
+                                            <rect
+                                                x="40"
+                                                y="10"
+                                                width="15"
+                                                height="5"
+                                            />
+                                            <rect
+                                                x="75"
+                                                y="40"
+                                                width="15"
+                                                height="15"
+                                            />
+                                        </svg>
+                                        <span
+                                            class="mt-1 text-[8px] font-bold tracking-wider text-content-muted uppercase"
+                                            >GCash Pay QR</span
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Receipt Upload Zone -->
+                            <div>
+                                <label
+                                    class="mb-1.5 block text-xs font-bold text-content-muted uppercase"
+                                    >Upload Payment Receipt</label
+                                >
+
+                                <div
+                                    v-if="!receiptPreviewUrl"
+                                    class="relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-line bg-surface-elevated/10 p-5 transition-colors hover:bg-surface-elevated/20"
+                                >
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        class="absolute inset-0 cursor-pointer opacity-0"
+                                        @change="handleReceiptUpload"
+                                    />
+                                    <svg
+                                        class="mb-1.5 size-7 text-content-muted"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                                        />
+                                    </svg>
+                                    <span
+                                        class="text-xs font-semibold text-content"
+                                        >Click to upload receipt image</span
+                                    >
+                                    <span
+                                        class="mt-0.5 text-[9px] text-content-muted"
+                                        >PNG, JPG or WEBP (Max 5MB)</span
+                                    >
+                                </div>
+
+                                <!-- Uploaded file preview -->
+                                <div
+                                    v-else
+                                    class="flex items-center gap-3 rounded-xl border border-line bg-surface-elevated/40 p-3"
+                                >
+                                    <div
+                                        class="size-14 shrink-0 overflow-hidden rounded-lg border border-line bg-surface-inverse"
+                                    >
+                                        <img
+                                            :src="receiptPreviewUrl"
+                                            alt="Receipt Preview"
+                                            class="h-full w-full object-cover"
+                                        />
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p
+                                            class="truncate text-xs font-extrabold text-content"
+                                        >
+                                            {{ receiptFile?.name }}
+                                        </p>
+                                        <p
+                                            class="mt-0.5 text-[10px] text-content-muted"
+                                        >
+                                            {{
+                                                Math.round(
+                                                    (receiptFile?.size ?? 0) /
+                                                        1024,
+                                                )
+                                            }}
+                                            KB
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="rounded-full border border-line p-2 text-content-muted hover:bg-surface-elevated hover:text-destructive"
+                                        @click="removeReceipt"
+                                        aria-label="Remove uploaded receipt"
+                                    >
+                                        <svg
+                                            class="size-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="2.5"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <p
+                                    v-if="receiptError"
+                                    class="mt-1 text-xs font-semibold text-destructive"
+                                >
+                                    {{ receiptError }}
+                                </p>
+                            </div>
+
+                            <!-- Confirm Actions -->
+                            <div
+                                class="mt-6 flex items-center justify-between border-t border-line pt-4"
+                            >
+                                <button
+                                    type="button"
+                                    class="rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-content-muted transition-colors hover:bg-surface-elevated"
+                                    @click="prevStep"
+                                >
+                                    Back
                                 </button>
                                 <button
                                     type="submit"
-                                    class="rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5 hover:bg-brand/95 hover:shadow-brand/35"
+                                    class="rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5 hover:bg-brand/95"
                                 >
-                                    Confirm Reservation
+                                    Confirm Booking
                                 </button>
                             </div>
                         </div>
@@ -639,7 +1223,7 @@ function handleSubmit() {
                 <!-- Stage 3: Confirmed Voucher Ticket -->
                 <div
                     v-else-if="step === 'confirmed'"
-                    class="flex flex-col items-center bg-chalk/30 p-6 text-center sm:p-8"
+                    class="flex flex-col items-center bg-surface-elevated/40 p-6 text-center sm:p-8"
                 >
                     <div
                         class="mb-4 flex size-14 animate-bounce items-center justify-center rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 shadow-inner"
@@ -724,7 +1308,11 @@ function handleSubmit() {
                                 >
                                 <span
                                     class="mt-0.5 block truncate font-bold text-content"
-                                    >{{ form.name }}</span
+                                    >{{
+                                        bookingDetails
+                                            ? bookingDetails.name
+                                            : form.name
+                                    }}</span
                                 >
                             </div>
                             <div>
@@ -734,7 +1322,11 @@ function handleSubmit() {
                                 >
                                 <span
                                     class="mt-0.5 block font-bold text-content"
-                                    >{{ form.date }}</span
+                                    >{{
+                                        bookingDetails
+                                            ? bookingDetails.date
+                                            : form.date
+                                    }}</span
                                 >
                             </div>
                             <div>
@@ -744,7 +1336,13 @@ function handleSubmit() {
                                 >
                                 <span
                                     class="mt-0.5 block font-bold text-brand text-content"
-                                    >{{ form.time.join(', ') }}</span
+                                    >{{
+                                        bookingDetails
+                                            ? bookingDetails.time_slots.join(
+                                                  ', ',
+                                              )
+                                            : form.time.join(', ')
+                                    }}</span
                                 >
                             </div>
                             <div>
@@ -754,8 +1352,17 @@ function handleSubmit() {
                                 >
                                 <span
                                     class="mt-0.5 block font-bold text-content"
-                                    >{{ calculatedDuration }} minutes • ${{
-                                        calculatedPrice
+                                    >{{
+                                        bookingDetails
+                                            ? bookingDetails.time_slots.length *
+                                              (court?.slot_duration_minutes ||
+                                                  60)
+                                            : calculatedDuration
+                                    }}
+                                    minutes • ${{
+                                        bookingDetails
+                                            ? bookingDetails.total_price
+                                            : calculatedPrice
                                     }}</span
                                 >
                             </div>
@@ -767,10 +1374,10 @@ function handleSubmit() {
                         >
                             <!-- Curved ticket punches at the dividing line -->
                             <div
-                                class="absolute -top-3 -left-3 z-10 size-6 shrink-0 rounded-full border border-line bg-chalk"
+                                class="absolute -top-3 -left-3 z-10 size-6 shrink-0 rounded-full border border-line bg-surface"
                             ></div>
                             <div
-                                class="absolute -top-3 -right-3 z-10 size-6 shrink-0 rounded-full border border-line bg-chalk"
+                                class="absolute -top-3 -right-3 z-10 size-6 shrink-0 rounded-full border border-line bg-surface"
                             ></div>
 
                             <!-- Styled QR Code SVG with neon details -->
@@ -921,8 +1528,10 @@ function handleSubmit() {
                             </div>
                             <span
                                 class="mt-3 font-mono text-[10px] tracking-widest text-content-muted uppercase"
-                                >DY-RESRV-{{
-                                    Math.floor(100000 + Math.random() * 900000)
+                                >{{
+                                    bookingDetails
+                                        ? bookingDetails.reference_code
+                                        : 'DY-RESRV-MOCK'
                                 }}</span
                             >
                         </div>
@@ -933,9 +1542,9 @@ function handleSubmit() {
                         <button
                             type="button"
                             class="flex-1 rounded-full border border-line py-3 text-sm font-semibold text-content transition-colors hover:bg-surface-elevated"
-                            onclick="window.print()"
+                            @click="downloadVoucher"
                         >
-                            Print Voucher
+                            Download Voucher
                         </button>
                         <button
                             type="button"
