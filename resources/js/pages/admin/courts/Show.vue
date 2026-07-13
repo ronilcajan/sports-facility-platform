@@ -6,6 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+import CourtImageManager from '@/components/admin/CourtImageManager.vue';
+
+interface ImageItem {
+    id: number;
+    path: string;
+    url: string;
+    is_primary: boolean;
+    sort_order: number;
+}
+
 interface StaffMember {
     id: number;
     name: string;
@@ -23,6 +33,7 @@ interface Court {
     buffer_minutes: number;
     is_active: boolean;
     staff: StaffMember[];
+    images: ImageItem[];
 }
 
 const props = defineProps<{
@@ -115,5 +126,18 @@ defineOptions({
                 </CardContent>
             </Card>
         </div>
+
+        <!-- Court Hero Display Image & Promotional Images Section -->
+        <Card>
+            <CardHeader>
+                <CardTitle>Court Display & Promotional Media</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <CourtImageManager
+                    :court-id="props.court.id"
+                    :images="props.court.images || []"
+                />
+            </CardContent>
+        </Card>
     </div>
 </template>

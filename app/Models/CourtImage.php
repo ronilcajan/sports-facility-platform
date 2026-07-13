@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int $id
@@ -35,6 +36,25 @@ class CourtImage extends Model
             'is_primary' => 'boolean',
             'sort_order' => 'integer',
         ];
+    }
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = ['url'];
+
+    /**
+     * Get the full URL for the image path.
+     */
+    public function getUrlAttribute(): string
+    {
+        if (str_starts_with($this->path, 'http://') || str_starts_with($this->path, 'https://')) {
+            return $this->path;
+        }
+
+        return Storage::url($this->path);
     }
 
     /**

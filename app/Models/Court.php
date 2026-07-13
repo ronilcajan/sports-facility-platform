@@ -90,6 +90,26 @@ class Court extends Model
     }
 
     /**
+     * Bookings associated with this court.
+     *
+     * @return HasMany<Booking, $this>
+     */
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    /**
+     * Unavailable blackout dates/slots for this court.
+     *
+     * @return HasMany<CourtUnavailability, $this>
+     */
+    public function unavailabilities(): HasMany
+    {
+        return $this->hasMany(CourtUnavailability::class);
+    }
+
+    /**
      * Limit the query to courts the given user is allowed to see.
      *
      * Admins and super-admins see every court; staff see only courts they are

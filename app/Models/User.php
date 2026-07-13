@@ -7,6 +7,7 @@ use App\Enums\RoleName;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -78,5 +79,31 @@ class User extends Authenticatable implements PasskeyUser
         return $this->assignedCourts()
             ->whereKey($court->getKey())
             ->exists();
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole(RoleName::SuperAdmin->value);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->hasRole(RoleName::Admin->value) || $this->isSuperAdmin();
+    }
+
+    public function isStaff(): bool
+    {
+        return $this->hasRole(RoleName::Staff->value);
+    }
+
+    /**
+     * Scope query to users with the Staff role.
+     *
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function scopeStaff(Builder $query): Builder
+    {
+        return $query->role(RoleName::Staff->value);
     }
 }

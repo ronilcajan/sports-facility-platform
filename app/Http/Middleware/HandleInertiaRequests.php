@@ -41,7 +41,19 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? [
+                    'id' => $request->user()->id,
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    'roles' => $request->user()->getRoleNames(),
+                    'can_manage_all_courts' => $request->user()->canManageAllCourts(),
+                    'is_staff' => $request->user()->isStaff(),
+                    'assigned_courts' => $request->user()->assignedCourts->map(fn ($c) => [
+                        'id' => $c->id,
+                        'name' => $c->name,
+                        'slug' => $c->slug,
+                    ]),
+                ] : null,
             ],
             'site' => $this->siteData(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

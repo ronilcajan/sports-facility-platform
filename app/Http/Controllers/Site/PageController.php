@@ -55,8 +55,8 @@ class PageController extends Controller
                 'description' => $court->description,
                 'base_price' => $court->base_price,
                 'slot_duration_minutes' => $court->slot_duration_minutes,
-                'primary_image_url' => $court->primaryImage ? asset('storage/'.$court->primaryImage->path) : null,
-                'images' => $court->images->map(fn ($img) => asset('storage/'.$img->path)),
+                'primary_image_url' => $court->primaryImage ? (str_starts_with($court->primaryImage->path, 'http') ? $court->primaryImage->path : asset('storage/'.$court->primaryImage->path)) : null,
+                'images' => $court->images->map(fn ($img) => str_starts_with($img->path, 'http') ? $img->path : asset('storage/'.$img->path)),
             ],
             'relatedCourts' => $this->bookableCourts()->reject(fn ($c) => $c['id'] === $court->id)->take(3)->values(),
         ]);
@@ -112,7 +112,7 @@ class PageController extends Controller
                 'description' => $court->description,
                 'base_price' => $court->base_price,
                 'slot_duration_minutes' => $court->slot_duration_minutes,
-                'primary_image_url' => $court->primaryImage ? asset('storage/'.$court->primaryImage->path) : null,
+                'primary_image_url' => $court->primaryImage ? (str_starts_with($court->primaryImage->path, 'http') ? $court->primaryImage->path : asset('storage/'.$court->primaryImage->path)) : null,
             ]);
     }
 }

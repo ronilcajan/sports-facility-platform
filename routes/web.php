@@ -3,6 +3,7 @@
 use App\Http\Controllers\Site\BookingController;
 use App\Http\Controllers\Site\PageController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', [PageController::class, 'home'])->name('home');
 Route::get('/about', [PageController::class, 'about'])->name('site.about');
@@ -15,8 +16,21 @@ Route::get('/terms', [PageController::class, 'terms'])->name('site.terms');
 Route::post('/bookings', [BookingController::class, 'store'])->name('site.bookings.store');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::get('/dashboard', function () {
+        $user = request()->user();
+
+        if ($user->canManageAllCourts()) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        if ($user->isStaff()) {
+            return redirect()->route('staff.dashboard');
+        }
+
+        return Inertia::render('Dashboard');
+    })->name('dashboard');
 });
 
 require __DIR__.'/admin.php';
+require __DIR__.'/staff.php';
 require __DIR__.'/settings.php';

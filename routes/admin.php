@@ -1,6 +1,12 @@
 <?php
 
 use App\Enums\RoleName;
+use App\Http\Controllers\Admin\AdminBookingController;
+use App\Http\Controllers\Admin\AdminCourtImageController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminReportController;
+use App\Http\Controllers\Admin\AdminStaffController;
+use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AppearanceController;
 use App\Http\Controllers\Admin\CourtController;
 use App\Http\Controllers\Admin\CourtStaffController;
@@ -14,13 +20,44 @@ Route::middleware([
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
+        Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+
         Route::resource('courts', CourtController::class);
 
+        // Court Images Management (Upload primary hero display image & promotional images)
+        Route::post('courts/{court}/images', [AdminCourtImageController::class, 'store'])
+            ->name('courts.images.store');
+        Route::patch('courts/{court}/images/{image}/primary', [AdminCourtImageController::class, 'setPrimary'])
+            ->name('courts.images.primary');
+        Route::delete('courts/{court}/images/{image}', [AdminCourtImageController::class, 'destroy'])
+            ->name('courts.images.destroy');
+
+        // Staff Assignment Quick Endpoints
         Route::post('courts/{court}/staff', [CourtStaffController::class, 'store'])
             ->name('courts.staff.store');
         Route::delete('courts/{court}/staff/{user}', [CourtStaffController::class, 'destroy'])
             ->name('courts.staff.destroy');
 
+        // Bookings Management
+        Route::get('bookings', [AdminBookingController::class, 'index'])->name('bookings.index');
+        Route::get('bookings/{booking}', [AdminBookingController::class, 'show'])->name('bookings.show');
+        Route::patch('bookings/{booking}/status', [AdminBookingController::class, 'updateStatus'])->name('bookings.update-status');
+        Route::delete('bookings/{booking}', [AdminBookingController::class, 'destroy'])->name('bookings.destroy');
+
+        // Staff Accounts Management
+        Route::get('staff', [AdminStaffController::class, 'index'])->name('staff.index');
+        Route::post('staff', [AdminStaffController::class, 'store'])->name('staff.store');
+        Route::put('staff/{user}', [AdminStaffController::class, 'update'])->name('staff.update');
+        Route::delete('staff/{user}', [AdminStaffController::class, 'destroy'])->name('staff.destroy');
+
+        // Users & Customer History Management
+        Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
+        Route::get('users/{user}', [AdminUserController::class, 'show'])->name('users.show');
+
+        // System Reports
+        Route::get('reports', [AdminReportController::class, 'index'])->name('reports.index');
+
+        // Appearance Settings
         Route::get('appearance', [AppearanceController::class, 'index'])->name('appearance.index');
         Route::put('appearance', [AppearanceController::class, 'update'])->name('appearance.update');
     });

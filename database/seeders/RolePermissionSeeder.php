@@ -16,13 +16,22 @@ class RolePermissionSeeder extends Seeder
      *
      * @var array<int, string>
      */
-    private array $courtPermissions = [
+    private array $allPermissions = [
         'courts.viewAny',
         'courts.view',
         'courts.create',
         'courts.update',
         'courts.delete',
         'courts.assignStaff',
+        'bookings.viewAny',
+        'bookings.view',
+        'bookings.create',
+        'bookings.update',
+        'bookings.delete',
+        'schedules.manage',
+        'reports.view',
+        'users.viewAny',
+        'users.view',
     ];
 
     /**
@@ -32,7 +41,7 @@ class RolePermissionSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        foreach ($this->courtPermissions as $permission) {
+        foreach ($this->allPermissions as $permission) {
             Permission::findOrCreate($permission);
         }
 
@@ -45,9 +54,17 @@ class RolePermissionSeeder extends Seeder
         // the concrete permissions so its capabilities are inspectable.
         $superAdmin->syncPermissions(Permission::all());
 
-        $admin->syncPermissions($this->courtPermissions);
+        $admin->syncPermissions($this->allPermissions);
 
-        $staff->syncPermissions(['courts.viewAny', 'courts.view']);
+        $staff->syncPermissions([
+            'courts.viewAny',
+            'courts.view',
+            'bookings.viewAny',
+            'bookings.view',
+            'bookings.update',
+            'schedules.manage',
+            'reports.view',
+        ]);
 
         // Customer holds no management permissions in this sub-project.
 

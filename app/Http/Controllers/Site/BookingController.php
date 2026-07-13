@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Site\StoreBookingRequest;
 use App\Models\Booking;
 use App\Models\Court;
+use App\Notifications\BookingStatusNotification;
 use Illuminate\Http\JsonResponse;
 
 class BookingController extends Controller
@@ -35,8 +36,13 @@ class BookingController extends Controller
             'notes' => $request->validated('notes'),
             'total_price' => $totalPrice,
             'receipt_path' => $receiptPath,
-            'status' => 'confirmed',
+            'status' => 'pending',
         ]);
+
+        // Send notification to staff assigned to this court
+        foreach ($court->staff as $staffMember) {
+            $staffMember->notify(new BookingStatusNotification($booking, 'created'));
+        }
 
         return response()->json([
             'success' => true,
