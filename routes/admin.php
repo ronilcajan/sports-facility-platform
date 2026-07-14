@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminReportController;
 use App\Http\Controllers\Admin\AdminStaffController;
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AdminVenueController;
 use App\Http\Controllers\Admin\AppearanceController;
 use App\Http\Controllers\Admin\CourtController;
 use App\Http\Controllers\Admin\CourtStaffController;
@@ -44,20 +45,29 @@ Route::middleware([
         Route::patch('bookings/{booking}/status', [AdminBookingController::class, 'updateStatus'])->name('bookings.update-status');
         Route::delete('bookings/{booking}', [AdminBookingController::class, 'destroy'])->name('bookings.destroy');
 
-        // Staff Accounts Management
-        Route::get('staff', [AdminStaffController::class, 'index'])->name('staff.index');
-        Route::post('staff', [AdminStaffController::class, 'store'])->name('staff.store');
-        Route::put('staff/{user}', [AdminStaffController::class, 'update'])->name('staff.update');
-        Route::delete('staff/{user}', [AdminStaffController::class, 'destroy'])->name('staff.destroy');
-
-        // Users & Customer History Management
+        // Users & Customer Management (CRUD)
         Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
+        Route::post('users', [AdminUserController::class, 'store'])->name('users.store');
         Route::get('users/{user}', [AdminUserController::class, 'show'])->name('users.show');
+        Route::put('users/{user}', [AdminUserController::class, 'update'])->name('users.update');
+        Route::delete('users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
 
-        // System Reports
-        Route::get('reports', [AdminReportController::class, 'index'])->name('reports.index');
+        // Venues Management (CRUD for SuperAdmin, CRU for Admin)
+        Route::resource('venues', AdminVenueController::class)->except(['show']);
 
-        // Appearance Settings
-        Route::get('appearance', [AppearanceController::class, 'index'])->name('appearance.index');
-        Route::put('appearance', [AppearanceController::class, 'update'])->name('appearance.update');
+        // Super Admin Only (Staff, Reports, Appearance)
+        Route::middleware(['role:'.RoleName::SuperAdmin->value])->group(function () {
+            // Staff Accounts Management
+            Route::get('staff', [AdminStaffController::class, 'index'])->name('staff.index');
+            Route::post('staff', [AdminStaffController::class, 'store'])->name('staff.store');
+            Route::put('staff/{user}', [AdminStaffController::class, 'update'])->name('staff.update');
+            Route::delete('staff/{user}', [AdminStaffController::class, 'destroy'])->name('staff.destroy');
+
+            // System Reports
+            Route::get('reports', [AdminReportController::class, 'index'])->name('reports.index');
+
+            // Appearance Settings
+            Route::get('appearance', [AppearanceController::class, 'index'])->name('appearance.index');
+            Route::put('appearance', [AppearanceController::class, 'update'])->name('appearance.update');
+        });
     });

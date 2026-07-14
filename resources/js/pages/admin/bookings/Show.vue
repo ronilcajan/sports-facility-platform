@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, Link, useForm, setLayoutProps } from '@inertiajs/vue3';
 import { CalendarDays, ArrowLeft, CheckCircle, XCircle, User, Phone, Mail, FileText, DollarSign } from '@lucide/vue';
 
 interface Booking {
@@ -24,11 +23,13 @@ const props = defineProps<{
     booking: Booking;
 }>();
 
-const breadcrumbs = [
-    { title: 'Super Admin Overview', href: '/admin/dashboard' },
-    { title: 'All Bookings', href: '/admin/bookings' },
-    { title: `Booking #${props.booking.id}`, href: `/admin/bookings/${props.booking.id}` },
-];
+setLayoutProps({
+    breadcrumbs: [
+        { title: 'Super Admin Overview', href: '/admin/dashboard' },
+        { title: 'All Bookings', href: '/admin/bookings' },
+        { title: `Booking #${props.booking.id}`, href: `/admin/bookings/${props.booking.id}` },
+    ],
+});
 
 const statusForm = useForm({
     status: props.booking.status,
@@ -46,8 +47,7 @@ function updateStatus(newStatus: string) {
 <template>
     <Head :title="`Booking #${booking.id} Details`" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6 max-w-4xl mx-auto">
+    <div class="p-6 space-y-6 max-w-4xl mx-auto">
             <div class="flex items-center justify-between">
                 <Link href="/admin/bookings" class="text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1">
                     <ArrowLeft class="w-4 h-4" /> Back to Bookings
@@ -131,5 +131,4 @@ function updateStatus(newStatus: string) {
                 </div>
             </div>
         </div>
-    </AppLayout>
 </template>

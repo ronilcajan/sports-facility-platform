@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Head, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { ref, computed } from 'vue';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import ReservationCalendar from '@/components/dashboard/ReservationCalendar.vue';
 import { Calendar, Plus, Trash2, ShieldAlert } from '@lucide/vue';
 
@@ -38,12 +37,22 @@ const props = defineProps<{
     unavailabilities: UnavailabilitySlot[];
 }>();
 
-const breadcrumbs = [
-    { title: 'Court Staff Dashboard', href: '/staff/dashboard' },
-    { title: 'Court Schedule & Maintenance', href: '/staff/schedules' },
-];
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Court Staff Dashboard', href: '/staff/dashboard' },
+            { title: 'Court Schedule & Maintenance', href: '/staff/schedules' },
+        ],
+    },
+});
 
 const isAddModalOpen = ref(false);
+
+const page = usePage();
+const user = computed(() => page.props.auth?.user as any);
+const canManageSchedule = computed(() => {
+    return user.value?.is_super_admin || user.value?.is_admin;
+});
 
 const addForm = useForm({
     court_id: props.selectedCourt?.id || (props.assignedCourts[0]?.id ?? ''),
@@ -55,6 +64,7 @@ const addForm = useForm({
 });
 
 function submitAdd() {
+    if (!canManageSchedule.value) return;
     addForm.post('/staff/schedules', {
         onSuccess: () => {
             addForm.reset();
@@ -66,6 +76,7 @@ function submitAdd() {
 const deleteForm = useForm({});
 
 function deleteUnavailability(id: number) {
+    if (!canManageSchedule.value) return;
     if (confirm('Remove this unavailable date entry?')) {
         deleteForm.delete(`/staff/schedules/${id}`, {
             preserveScroll: true,
@@ -77,8 +88,7 @@ function deleteUnavailability(id: number) {
 <template>
     <Head title="Court Schedules & Blackout Dates - Court Staff" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6 max-w-7xl mx-auto">
+    <div class="p-6 space-y-6 max-w-7xl mx-auto">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Court Schedule & Unavailable Dates</h1>
@@ -86,6 +96,7 @@ function deleteUnavailability(id: number) {
                 </div>
 
                 <button
+                    v-if="canManageSchedule"
                     @click="isAddModalOpen = true"
                     class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow transition-colors flex items-center gap-2"
                 >
@@ -143,7 +154,7 @@ function deleteUnavailability(id: number) {
                                 <th class="py-2.5 px-3">Date</th>
                                 <th class="py-2.5 px-3">Duration</th>
                                 <th class="py-2.5 px-3">Reason</th>
-                                <th class="py-2.5 px-3 text-right">Action</th>
+                                <th v-if="canManageSchedule" class="py-2.5 px-3 text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -151,7 +162,7 @@ function deleteUnavailability(id: number) {
                                 <td class="py-3 px-3 font-bold text-neutral-900 dark:text-white">{{ u.date }}</td>
                                 <td class="py-3 px-3 text-neutral-600 dark:text-neutral-300">{{ u.all_day ? 'Full Day Closed' : u.start_time + ' - ' + u.end_time }}</td>
                                 <td class="py-3 px-3 text-neutral-500">{{ u.reason || 'Maintenance' }}</td>
-                                <td class="py-3 px-3 text-right">
+                                <td v-if="canManageSchedule" class="py-3 px-3 text-right">
                                     <button @click="deleteUnavailability(u.id)" class="p-1 text-rose-500 hover:text-rose-700">
                                         <Trash2 class="w-4 h-4" />
                                     </button>
@@ -159,12 +170,11 @@ function deleteUnavailability(id: number) {
                             </tr>
 
                             <tr v-if="unavailabilities.length === 0">
-                                <td colSpan="4" class="py-6 text-center text-xs text-neutral-400">No active blackout slots recorded.</td>
+                                <td :colSpan="canManageSchedule ? 4 : 3" class="py-6 text-center text-xs text-neutral-400">No active blackout slots recorded.</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-    </AppLayout>
 </template>

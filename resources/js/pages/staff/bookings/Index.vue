@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Head, Link, useForm, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { ref, computed } from 'vue';
+import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import { CalendarDays, Search, CheckCircle, XCircle, ArrowUpRight, FileText } from '@lucide/vue';
 
 interface Booking {
@@ -29,10 +28,14 @@ const props = defineProps<{
     filters: { search?: string; court_id?: string; status?: string; date?: string };
 }>();
 
-const breadcrumbs = [
-    { title: 'Court Staff Dashboard', href: '/staff/dashboard' },
-    { title: 'Court Bookings', href: '/staff/bookings' },
-];
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Court Staff Dashboard', href: '/staff/dashboard' },
+            { title: 'Court Bookings', href: '/staff/bookings' },
+        ],
+    },
+});
 
 const search = ref(props.filters.search || '');
 const court_id = ref(props.filters.court_id || '');
@@ -48,11 +51,18 @@ function applyFilters() {
     }, { preserveState: true, replace: true });
 }
 
+const page = usePage();
+const user = computed(() => page.props.auth?.user as any);
+const canUpdate = computed(() => {
+    return user.value?.is_super_admin || user.value?.is_admin;
+});
+
 const actionForm = useForm({
     status: '',
 });
 
 function updateStatus(bookingId: number, newStatus: string) {
+    if (!canUpdate.value) return;
     actionForm.status = newStatus;
     actionForm.patch(`/staff/bookings/${bookingId}/status`, {
         preserveScroll: true,
@@ -63,8 +73,7 @@ function updateStatus(bookingId: number, newStatus: string) {
 <template>
     <Head title="Assigned Court Bookings - Court Staff" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6 max-w-7xl mx-auto">
+    <div class="p-6 space-y-6 max-w-7xl mx-auto">
             <div>
                 <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Assigned Court Bookings</h1>
                 <p class="text-xs text-neutral-500">Manage, approve, reject, or filter booking requests for your assigned court(s).</p>
@@ -168,22 +177,24 @@ function updateStatus(bookingId: number, newStatus: string) {
                             </td>
                             <td class="py-3 px-3 text-right">
                                 <div class="flex items-center justify-end gap-1">
-                                    <button
-                                        v-if="b.status !== 'approved' && b.status !== 'confirmed'"
-                                        @click="updateStatus(b.id, 'approved')"
-                                        class="p-1 text-emerald-600 hover:text-emerald-700"
-                                        title="Approve Request"
-                                    >
-                                        <CheckCircle class="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        v-if="b.status !== 'rejected'"
-                                        @click="updateStatus(b.id, 'rejected')"
-                                        class="p-1 text-rose-600 hover:text-rose-700"
-                                        title="Reject Request"
-                                    >
-                                        <XCircle class="w-4 h-4" />
-                                    </button>
+                                    <template v-if="canUpdate">
+                                        <button
+                                            v-if="b.status !== 'approved' && b.status !== 'confirmed'"
+                                            @click="updateStatus(b.id, 'approved')"
+                                            class="p-1 text-emerald-600 hover:text-emerald-700"
+                                            title="Approve Request"
+                                        >
+                                            <CheckCircle class="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            v-if="b.status !== 'rejected'"
+                                            @click="updateStatus(b.id, 'rejected')"
+                                            class="p-1 text-rose-600 hover:text-rose-700"
+                                            title="Reject Request"
+                                        >
+                                            <XCircle class="w-4 h-4" />
+                                        </button>
+                                    </template>
                                     <Link :href="`/staff/bookings/${b.id}`" class="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
                                         <ArrowUpRight class="w-4 h-4" />
                                     </Link>
@@ -198,5 +209,4 @@ function updateStatus(bookingId: number, newStatus: string) {
                 </table>
             </div>
         </div>
-    </AppLayout>
 </template>

@@ -32,6 +32,14 @@ class RolePermissionSeeder extends Seeder
         'reports.view',
         'users.viewAny',
         'users.view',
+        'users.create',
+        'users.update',
+        'users.delete',
+        'venues.viewAny',
+        'venues.view',
+        'venues.create',
+        'venues.update',
+        'venues.delete',
     ];
 
     /**
@@ -54,15 +62,19 @@ class RolePermissionSeeder extends Seeder
         // the concrete permissions so its capabilities are inspectable.
         $superAdmin->syncPermissions(Permission::all());
 
-        $admin->syncPermissions($this->allPermissions);
+        // Admin gets everything except venues.delete (CRU for venues)
+        $admin->syncPermissions(array_filter(
+            $this->allPermissions,
+            fn (string $p): bool => $p !== 'venues.delete',
+        ));
 
         $staff->syncPermissions([
             'courts.viewAny',
             'courts.view',
+            'courts.create',
             'bookings.viewAny',
             'bookings.view',
-            'bookings.update',
-            'schedules.manage',
+            'bookings.create',
             'reports.view',
         ]);
 

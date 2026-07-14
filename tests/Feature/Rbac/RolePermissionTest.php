@@ -41,12 +41,12 @@ test('admin has all court management permissions', function () {
         ->and($admin->can('courts.assignStaff'))->toBeTrue();
 });
 
-test('staff has only view permissions', function () {
+test('staff has only view and create permissions', function () {
     $staff = userWithRole(RoleName::Staff);
 
     expect($staff->can('courts.viewAny'))->toBeTrue()
         ->and($staff->can('courts.view'))->toBeTrue()
-        ->and($staff->can('courts.create'))->toBeFalse()
+        ->and($staff->can('courts.create'))->toBeTrue()
         ->and($staff->can('courts.delete'))->toBeFalse();
 });
 

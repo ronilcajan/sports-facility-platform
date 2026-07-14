@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\RoleName;
 use App\Models\Booking;
 use App\Models\User;
 
@@ -12,7 +13,9 @@ class BookingPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->canManageAllCourts() || $user->checkPermissionTo('bookings.viewAny');
+        return $user->canManageAllCourts()
+            || $user->checkPermissionTo('bookings.viewAny')
+            || $user->hasRole(RoleName::Customer->value);
     }
 
     /**
@@ -20,6 +23,10 @@ class BookingPolicy
      */
     public function view(User $user, Booking $booking): bool
     {
+        if ($user->hasRole(RoleName::Customer->value)) {
+            return $booking->user_id === $user->id;
+        }
+
         return ($user->canManageAllCourts() || $user->checkPermissionTo('bookings.view'))
             && ($user->canManageAllCourts() || $user->isAssignedToCourt($booking->court));
     }
@@ -29,7 +36,9 @@ class BookingPolicy
      */
     public function create(User $user): bool
     {
-        return $user->canManageAllCourts() || $user->checkPermissionTo('bookings.create');
+        return $user->canManageAllCourts()
+            || $user->checkPermissionTo('bookings.create')
+            || $user->hasRole(RoleName::Customer->value);
     }
 
     /**
@@ -37,6 +46,10 @@ class BookingPolicy
      */
     public function update(User $user, Booking $booking): bool
     {
+        if ($user->hasRole(RoleName::Customer->value)) {
+            return $booking->user_id === $user->id;
+        }
+
         return ($user->canManageAllCourts() || $user->checkPermissionTo('bookings.update'))
             && ($user->canManageAllCourts() || $user->isAssignedToCourt($booking->court));
     }
@@ -46,6 +59,10 @@ class BookingPolicy
      */
     public function delete(User $user, Booking $booking): bool
     {
+        if ($user->hasRole(RoleName::Customer->value)) {
+            return $booking->user_id === $user->id;
+        }
+
         return $user->canManageAllCourts() || $user->checkPermissionTo('bookings.delete');
     }
 }

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import { CalendarDays, Search, Filter, CheckCircle, XCircle, Trash2, ArrowUpRight, FileText } from '@lucide/vue';
 
 interface Booking {
@@ -32,10 +31,14 @@ const props = defineProps<{
     filters: { search?: string; court_id?: string; status?: string; date?: string };
 }>();
 
-const breadcrumbs = [
-    { title: 'Super Admin Overview', href: '/admin/dashboard' },
-    { title: 'All Bookings', href: '/admin/bookings' },
-];
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Super Admin Overview', href: '/admin/dashboard' },
+            { title: 'All Bookings', href: '/admin/bookings' },
+        ],
+    },
+});
 
 const search = ref(props.filters.search || '');
 const court_id = ref(props.filters.court_id || '');
@@ -82,8 +85,7 @@ function deleteBooking(bookingId: number) {
 <template>
     <Head title="Manage All Bookings - Super Admin" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6 max-w-7xl mx-auto">
+    <div class="p-6 space-y-6 max-w-7xl mx-auto">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">All Facility Bookings</h1>
@@ -231,5 +233,4 @@ function deleteBooking(bookingId: number) {
                 </table>
             </div>
         </div>
-    </AppLayout>
 </template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { computed } from 'vue';
+import { Head, Link, useForm, setLayoutProps, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, CheckCircle, XCircle, User, CalendarDays, FileText } from '@lucide/vue';
 
 interface Booking {
@@ -22,11 +22,19 @@ const props = defineProps<{
     booking: Booking;
 }>();
 
-const breadcrumbs = [
-    { title: 'Court Staff Dashboard', href: '/staff/dashboard' },
-    { title: 'Court Bookings', href: '/staff/bookings' },
-    { title: `Booking #${props.booking.id}`, href: `/staff/bookings/${props.booking.id}` },
-];
+setLayoutProps({
+    breadcrumbs: [
+        { title: 'Court Staff Dashboard', href: '/staff/dashboard' },
+        { title: 'Court Bookings', href: '/staff/bookings' },
+        { title: `Booking #${props.booking.id}`, href: `/staff/bookings/${props.booking.id}` },
+    ],
+});
+
+const page = usePage();
+const user = computed(() => page.props.auth?.user as any);
+const canUpdate = computed(() => {
+    return user.value?.is_super_admin || user.value?.is_admin;
+});
 
 const statusForm = useForm({
     status: props.booking.status,
@@ -34,6 +42,7 @@ const statusForm = useForm({
 });
 
 function updateStatus(newStatus: string) {
+    if (!canUpdate.value) return;
     statusForm.status = newStatus;
     statusForm.patch(`/staff/bookings/${props.booking.id}/status`, {
         preserveScroll: true,
@@ -44,8 +53,7 @@ function updateStatus(newStatus: string) {
 <template>
     <Head :title="`Booking #${booking.id} - Staff View`" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6 max-w-4xl mx-auto">
+    <div class="p-6 space-y-6 max-w-4xl mx-auto">
             <Link href="/staff/bookings" class="text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1">
                 <ArrowLeft class="w-4 h-4" /> Back to Court Bookings
             </Link>
@@ -57,7 +65,7 @@ function updateStatus(newStatus: string) {
                         <h1 class="text-xl font-bold text-neutral-900 dark:text-white">Customer Reservation Details</h1>
                     </div>
 
-                    <div class="flex items-center gap-2">
+                    <div v-if="canUpdate" class="flex items-center gap-2">
                         <button
                             @click="updateStatus('approved')"
                             class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow transition-colors flex items-center gap-1"
@@ -123,5 +131,4 @@ function updateStatus(newStatus: string) {
                 </div>
             </div>
         </div>
-    </AppLayout>
 </template>

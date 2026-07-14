@@ -1,8 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import { BarChart3, Calendar, DollarSign, Dumbbell, CheckCircle, XCircle } from '@lucide/vue';
+
+interface CourtBreakdownItem {
+    id: number;
+    name: string;
+    sport_type: string;
+    total_bookings: number;
+    approved_count: number;
+    revenue: number;
+}
 
 interface Reports {
     startDate: string;
@@ -12,24 +20,21 @@ interface Reports {
     approvedBookings: number;
     rejectedBookings: number;
     cancelledBookings: number;
-    courtBreakdown: {
-        id: number;
-        name: string;
-        sport_type: string;
-        total_bookings: number;
-        approved_count: number;
-        revenue: number;
-    }[];
+    courtBreakdown: CourtBreakdownItem[];
 }
 
 const props = defineProps<{
     reports: Reports;
 }>();
 
-const breadcrumbs = [
-    { title: 'Super Admin Overview', href: '/admin/dashboard' },
-    { title: 'System Analytics & Reports', href: '/admin/reports' },
-];
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Super Admin Overview', href: '/admin/dashboard' },
+            { title: 'System Analytics & Reports', href: '/admin/reports' },
+        ],
+    },
+});
 
 const start_date = ref(props.reports.startDate);
 const end_date = ref(props.reports.endDate);
@@ -42,8 +47,7 @@ function filterReports() {
 <template>
     <Head title="System Reports - Super Admin" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6 max-w-7xl mx-auto">
+    <div class="p-6 space-y-6 max-w-7xl mx-auto">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">System Reports & Financial Analytics</h1>
@@ -114,5 +118,4 @@ function filterReports() {
                 </div>
             </div>
         </div>
-    </AppLayout>
 </template>

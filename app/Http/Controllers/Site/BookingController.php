@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Models\Court;
 use App\Notifications\BookingStatusNotification;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class BookingController extends Controller
 {
@@ -56,5 +57,43 @@ class BookingController extends Controller
                 'receipt_url' => asset('storage/'.$booking->receipt_path),
             ],
         ], 201);
+    }
+
+    /**
+     * Update the client's own booking details.
+     */
+    public function update(Request $request, Booking $booking): JsonResponse
+    {
+        $this->authorize('update', $booking);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'max:20'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $booking->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => __('Booking details updated successfully.'),
+            'booking' => $booking,
+        ]);
+    }
+
+    /**
+     * Cancel/delete the client's own booking.
+     */
+    public function destroy(Booking $booking): JsonResponse
+    {
+        $this->authorize('delete', $booking);
+
+        $booking->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => __('Booking cancelled successfully.'),
+        ]);
     }
 }

@@ -72,7 +72,7 @@ class StaffScheduleController extends Controller
         ]);
 
         $court = Court::findOrFail($validated['court_id']);
-        $this->authorize('view', $court);
+        $this->authorize('manage', [CourtUnavailability::class, $court]);
 
         CourtUnavailability::create([
             'court_id' => $court->id,

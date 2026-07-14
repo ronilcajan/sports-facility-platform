@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Head, Link, useForm, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { ref, computed } from 'vue';
+import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import NotificationMenu from '@/components/dashboard/NotificationMenu.vue';
 import {
     Calendar,
@@ -65,19 +64,30 @@ const props = defineProps<{
     unreadNotifications: any[];
 }>();
 
-const breadcrumbs = [
-    { title: 'Court Staff Dashboard', href: '/staff/dashboard' },
-];
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Court Staff Dashboard', href: '/staff/dashboard' },
+        ],
+    },
+});
 
 function selectCourt(courtId: number) {
     router.get('/staff/dashboard', { court_id: courtId }, { preserveState: true });
 }
+
+const page = usePage();
+const user = computed(() => page.props.auth?.user as any);
+const canUpdate = computed(() => {
+    return user.value?.is_super_admin || user.value?.is_admin;
+});
 
 const actionForm = useForm({
     status: '',
 });
 
 function updateStatus(bookingId: number, status: string) {
+    if (!canUpdate.value) return;
     actionForm.status = status;
     actionForm.patch(`/staff/bookings/${bookingId}/status`, {
         preserveScroll: true,
@@ -88,8 +98,7 @@ function updateStatus(bookingId: number, status: string) {
 <template>
     <Head title="Court Staff Dashboard" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6 max-w-7xl mx-auto">
+    <div class="p-6 space-y-6 max-w-7xl mx-auto">
             <!-- Header bar with Notification Bell & Court Switcher -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
                 <div class="space-y-1">
@@ -212,7 +221,7 @@ function updateStatus(bookingId: number, status: string) {
                                         </a>
                                     </div>
 
-                                    <div class="flex items-center gap-2">
+                                    <div v-if="canUpdate" class="flex items-center gap-2">
                                         <button
                                             @click="updateStatus(booking.id, 'approved')"
                                             class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
@@ -307,5 +316,4 @@ function updateStatus(bookingId: number, status: string) {
                 </div>
             </template>
         </div>
-    </AppLayout>
 </template>

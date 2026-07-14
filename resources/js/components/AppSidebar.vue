@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { usePage, Link } from '@inertiajs/vue3';
-import { BookOpen, Calendar, CalendarDays, BarChart3, Users, UserCheck, Shield, LayoutGrid, Palette, Dumbbell } from '@lucide/vue';
+import { BookOpen, Building, Calendar, CalendarDays, BarChart3, Users, UserCheck, Shield, LayoutGrid, Palette, Dumbbell } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -33,11 +33,16 @@ const mainNavItems = computed<NavItem[]>(() => {
     }
 
     if (user.value.can_manage_all_courts) {
-        return [
+        const items = [
             {
-                title: 'Super Admin Overview',
+                title: user.value.is_super_admin ? 'Super Admin Overview' : 'Admin Overview',
                 href: '/admin/dashboard',
                 icon: Shield,
+            },
+            {
+                title: 'Venues Management',
+                href: '/admin/venues',
+                icon: Building,
             },
             {
                 title: 'Courts Management',
@@ -49,27 +54,38 @@ const mainNavItems = computed<NavItem[]>(() => {
                 href: '/admin/bookings',
                 icon: CalendarDays,
             },
-            {
+        ];
+
+        if (user.value.is_super_admin) {
+            items.push({
                 title: 'Court Staff',
                 href: '/admin/staff',
                 icon: UserCheck,
-            },
-            {
-                title: 'User Accounts',
-                href: '/admin/users',
-                icon: Users,
-            },
-            {
-                title: 'System Reports',
-                href: '/admin/reports',
-                icon: BarChart3,
-            },
-            {
-                title: 'Appearance',
-                href: '/admin/appearance',
-                icon: Palette,
-            },
-        ];
+            });
+        }
+
+        items.push({
+            title: 'User Accounts',
+            href: '/admin/users',
+            icon: Users,
+        });
+
+        if (user.value.is_super_admin) {
+            items.push(
+                {
+                    title: 'System Reports',
+                    href: '/admin/reports',
+                    icon: BarChart3,
+                },
+                {
+                    title: 'Appearance',
+                    href: '/admin/appearance',
+                    icon: Palette,
+                },
+            );
+        }
+
+        return items;
     }
 
     if (user.value.is_staff) {

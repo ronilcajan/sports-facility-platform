@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\RoleName;
 use App\Enums\SiteTheme;
 use App\Models\SiteSetting;
 use Illuminate\Http\Request;
@@ -46,6 +47,8 @@ class HandleInertiaRequests extends Middleware
                     'name' => $request->user()->name,
                     'email' => $request->user()->email,
                     'roles' => $request->user()->getRoleNames(),
+                    'is_super_admin' => $request->user()->hasRole(RoleName::SuperAdmin->value),
+                    'is_admin' => $request->user()->hasRole(RoleName::Admin->value),
                     'can_manage_all_courts' => $request->user()->canManageAllCourts(),
                     'is_staff' => $request->user()->isStaff(),
                     'assigned_courts' => $request->user()->assignedCourts->map(fn ($c) => [

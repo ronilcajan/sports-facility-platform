@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import { BarChart3 } from '@lucide/vue';
 
 interface CourtItem {
@@ -26,10 +25,14 @@ const props = defineProps<{
     reports: Reports | null;
 }>();
 
-const breadcrumbs = [
-    { title: 'Court Staff Dashboard', href: '/staff/dashboard' },
-    { title: 'Court Performance Reports', href: '/staff/reports' },
-];
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Court Staff Dashboard', href: '/staff/dashboard' },
+            { title: 'Court Performance Reports', href: '/staff/reports' },
+        ],
+    },
+});
 
 const start_date = ref(props.reports?.startDate || '');
 const end_date = ref(props.reports?.endDate || '');
@@ -47,8 +50,7 @@ function filterReports() {
 <template>
     <Head title="Assigned Court Performance Reports - Court Staff" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6 max-w-7xl mx-auto">
+    <div class="p-6 space-y-6 max-w-7xl mx-auto">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Assigned Court Performance Report</h1>
@@ -99,5 +101,4 @@ function filterReports() {
                 No report data available for assigned court.
             </div>
         </div>
-    </AppLayout>
 </template>

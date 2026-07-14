@@ -3,14 +3,14 @@
 use App\Enums\RoleName;
 use App\Models\SiteSetting;
 
-test('an admin can view the appearance page', function (): void {
-    $this->actingAs(userWithRole(RoleName::Admin))
+test('a super admin can view the appearance page', function (): void {
+    $this->actingAs(userWithRole(RoleName::SuperAdmin))
         ->get(route('admin.appearance.index'))
         ->assertOk();
 });
 
-test('an admin can update the active theme', function (): void {
-    $this->actingAs(userWithRole(RoleName::Admin))
+test('a super admin can update the active theme', function (): void {
+    $this->actingAs(userWithRole(RoleName::SuperAdmin))
         ->put(route('admin.appearance.update'), ['theme' => 'fairway'])
         ->assertRedirect();
 
@@ -19,23 +19,23 @@ test('an admin can update the active theme', function (): void {
 });
 
 test('an invalid theme is rejected', function (): void {
-    $this->actingAs(userWithRole(RoleName::Admin))
+    $this->actingAs(userWithRole(RoleName::SuperAdmin))
         ->put(route('admin.appearance.update'), ['theme' => 'chartreuse'])
         ->assertSessionHasErrors('theme');
 });
 
-test('staff and customers cannot manage appearance', function (RoleName $role): void {
+test('admin, staff, and customers cannot manage appearance', function (RoleName $role): void {
     $this->actingAs(userWithRole($role))
         ->get(route('admin.appearance.index'))
         ->assertForbidden();
-})->with([RoleName::Staff, RoleName::Customer]);
+})->with([RoleName::Admin, RoleName::Staff, RoleName::Customer]);
 
 test('guests are redirected to login', function (): void {
     $this->get(route('admin.appearance.index'))->assertRedirect(route('login'));
 });
 
 test('the appearance page receives themes and the active theme', function (): void {
-    $this->actingAs(userWithRole(RoleName::Admin))
+    $this->actingAs(userWithRole(RoleName::SuperAdmin))
         ->get(route('admin.appearance.index'))
         ->assertInertia(fn ($page) => $page
             ->component('admin/appearance/Index')

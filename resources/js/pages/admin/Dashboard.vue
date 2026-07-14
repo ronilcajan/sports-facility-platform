@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import {
     Shield,
     Dumbbell,
@@ -49,6 +48,7 @@ interface RecentBooking {
     date: string;
     time_slots: string[];
     total_price: string;
+    receipt_url?: string | null;
     status: string;
     created_at: string;
 }
@@ -60,9 +60,13 @@ const props = defineProps<{
     recentBookings: RecentBooking[];
 }>();
 
-const breadcrumbs = [
-    { title: 'Super Admin Overview', href: '/admin/dashboard' },
-];
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Super Admin Overview', href: '/admin/dashboard' },
+        ],
+    },
+});
 
 const statusForm = useForm({
     status: '',
@@ -79,8 +83,7 @@ function quickUpdateStatus(bookingId: number, status: string) {
 <template>
     <Head title="Super Admin Dashboard" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-8 max-w-7xl mx-auto">
+    <div class="p-6 space-y-8 max-w-7xl mx-auto">
             <!-- Header Banner -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-950 via-neutral-900 to-neutral-900 text-white p-6 rounded-2xl border border-emerald-900/50 shadow-xl">
                 <div class="space-y-1">
@@ -395,5 +398,4 @@ function quickUpdateStatus(bookingId: number, status: string) {
                 </div>
             </div>
         </div>
-    </AppLayout>
 </template>

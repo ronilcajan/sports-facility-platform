@@ -26,7 +26,7 @@ test('court staff can access staff dashboard for assigned court', function () {
         );
 });
 
-test('court staff can approve booking for assigned court', function () {
+test('court staff cannot approve booking for assigned court', function () {
     $staff = User::factory()->create();
     $staff->assignRole(RoleName::Staff->value);
 
@@ -36,6 +36,24 @@ test('court staff can approve booking for assigned court', function () {
     $booking = Booking::factory()->create(['court_id' => $court->id, 'status' => 'pending']);
 
     $this->actingAs($staff)
+        ->patch(route('staff.bookings.update-status', $booking->id), [
+            'status' => 'approved',
+        ])
+        ->assertForbidden();
+
+    expect($booking->fresh()->status)->toBe('pending');
+});
+
+test('admin can approve booking for assigned court via staff route', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole(RoleName::Admin->value);
+
+    $court = Court::factory()->create();
+    $admin->assignedCourts()->attach($court);
+
+    $booking = Booking::factory()->create(['court_id' => $court->id, 'status' => 'pending']);
+
+    $this->actingAs($admin)
         ->patch(route('staff.bookings.update-status', $booking->id), [
             'status' => 'approved',
         ])
@@ -62,7 +80,7 @@ test('court staff cannot view or update booking for unassigned court', function 
         ->assertForbidden();
 });
 
-test('court staff can create blackout schedule entry for assigned court', function () {
+test('court staff cannot create blackout schedule entry for assigned court', function () {
     $staff = User::factory()->create();
     $staff->assignRole(RoleName::Staff->value);
 
@@ -70,6 +88,23 @@ test('court staff can create blackout schedule entry for assigned court', functi
     $staff->assignedCourts()->attach($court);
 
     $this->actingAs($staff)
+        ->post(route('staff.schedules.store'), [
+            'court_id' => $court->id,
+            'date' => '2026-08-01',
+            'all_day' => true,
+            'reason' => 'Annual Maintenance',
+        ])
+        ->assertForbidden();
+});
+
+test('admin can create blackout schedule entry for assigned court via staff route', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole(RoleName::Admin->value);
+
+    $court = Court::factory()->create();
+    $admin->assignedCourts()->attach($court);
+
+    $this->actingAs($admin)
         ->post(route('staff.schedules.store'), [
             'court_id' => $court->id,
             'date' => '2026-08-01',

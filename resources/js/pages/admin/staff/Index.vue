@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import { UserCheck, Plus, Dumbbell, Trash2, CheckCircle2, Shield } from '@lucide/vue';
 
 interface StaffUser {
@@ -22,10 +21,14 @@ const props = defineProps<{
     courts: CourtItem[];
 }>();
 
-const breadcrumbs = [
-    { title: 'Super Admin Overview', href: '/admin/dashboard' },
-    { title: 'Court Staff Accounts', href: '/admin/staff' },
-];
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Super Admin Overview', href: '/admin/dashboard' },
+            { title: 'Court Staff Accounts', href: '/admin/staff' },
+        ],
+    },
+});
 
 const isCreateModalOpen = ref(false);
 
@@ -82,8 +85,7 @@ function deleteStaff(staffId: number) {
 <template>
     <Head title="Court Staff Management - Super Admin" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6 max-w-7xl mx-auto">
+    <div class="p-6 space-y-6 max-w-7xl mx-auto">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Court Staff Accounts & Assignments</h1>
@@ -204,5 +206,4 @@ function deleteStaff(staffId: number) {
                 </table>
             </div>
         </div>
-    </AppLayout>
 </template>

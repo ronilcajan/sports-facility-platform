@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, Link, setLayoutProps } from '@inertiajs/vue3';
 import { ArrowLeft, User, CalendarDays } from '@lucide/vue';
 
 interface UserDetail {
@@ -29,18 +28,19 @@ const props = defineProps<{
     bookings: PaginatedBookings;
 }>();
 
-const breadcrumbs = [
-    { title: 'Super Admin Overview', href: '/admin/dashboard' },
-    { title: 'User Accounts', href: '/admin/users' },
-    { title: props.user.name, href: `/admin/users/${props.user.id}` },
-];
+setLayoutProps({
+    breadcrumbs: [
+        { title: 'Super Admin Overview', href: '/admin/dashboard' },
+        { title: 'User Accounts', href: '/admin/users' },
+        { title: props.user.name, href: `/admin/users/${props.user.id}` },
+    ],
+});
 </script>
 
 <template>
     <Head :title="`${user.name} - User Profile & History`" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6 max-w-5xl mx-auto">
+    <div class="p-6 space-y-6 max-w-5xl mx-auto">
             <Link href="/admin/users" class="text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1">
                 <ArrowLeft class="w-4 h-4" /> Back to Users
             </Link>
@@ -96,5 +96,4 @@ const breadcrumbs = [
                 </div>
             </div>
         </div>
-    </AppLayout>
 </template>
