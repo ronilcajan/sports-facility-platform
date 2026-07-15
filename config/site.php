@@ -41,7 +41,7 @@ return [
      | Laravel route name so links stay correct if paths change.
      */
     'nav' => [
-        ['label' => 'Courts', 'route' => 'site.courts'],
+        ['label' => 'Venue', 'route' => 'site.courts'],
         ['label' => 'Pricing', 'route' => 'site.pricing'],
         ['label' => 'Gallery', 'route' => 'site.gallery'],
         ['label' => 'About', 'route' => 'site.about'],

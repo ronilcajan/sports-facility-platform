@@ -14,14 +14,14 @@ use Inertia\Response;
 class PageController extends Controller
 {
     /**
-     * The marketing homepage.
+     * The marketing homepage displaying venues first.
      */
     public function home(): Response
     {
         return Inertia::render('site/Home', [
             'content' => config('site_content.home'),
+            'venues' => $this->venueCatalog(),
             'featuredCourts' => $this->bookableCourts(3),
-            'venues' => Venue::where('is_active', true)->withCount('courts')->get(),
         ]);
     }
 
@@ -33,31 +33,15 @@ class PageController extends Controller
     }
 
     /**
-     * Public court listing, supporting Venue selection & dynamic filtering.
+     * Public venue & court listing — Venue-First layout.
      */
     public function courts(Request $request): Response
     {
         $venueId = $request->query('venue') ? (int) $request->query('venue') : null;
 
-        $venues = Venue::where('is_active', true)
-            ->withCount(['courts' => function ($q) {
-                $q->where('status', CourtStatus::Available)->where('is_active', true);
-            }])
-            ->get()
-            ->map(fn (Venue $venue) => [
-                'id' => $venue->id,
-                'name' => $venue->name,
-                'slug' => $venue->slug,
-                'description' => $venue->description,
-                'address' => $venue->address,
-                'phone' => $venue->phone,
-                'email' => $venue->email,
-                'courts_count' => $venue->courts_count,
-            ]);
-
         return Inertia::render('site/Courts', [
+            'venues' => $this->venueCatalog(),
             'courts' => $this->bookableCourts(null, $venueId),
-            'venues' => $venues,
             'selectedVenueId' => $venueId,
         ]);
     }
@@ -105,6 +89,57 @@ class PageController extends Controller
         ]);
     }
 
+    /**
+     * Show a detailed page for a specific Venue including all its courts and court images.
+     */
+    public function venueShow(Venue $venue): Response
+    {
+        $venue->load(['courts' => function ($q) {
+            $q->where('status', CourtStatus::Available)
+                ->where('is_active', true)
+                ->with(['primaryImage', 'images'])
+                ->orderBy('name');
+        }]);
+
+        $bookableCourts = $venue->courts->map(fn (Court $court) => [
+            'id' => $court->id,
+            'name' => $court->name,
+            'slug' => $court->slug,
+            'sport_type' => $court->sport_type->label(),
+            'description' => $court->description,
+            'base_price' => $court->base_price,
+            'slot_duration_minutes' => $court->slot_duration_minutes,
+            'primary_image_url' => $court->primaryImage ? (str_starts_with($court->primaryImage->path, 'http') ? $court->primaryImage->path : asset('storage/'.$court->primaryImage->path)) : null,
+            'images' => $court->images->map(fn ($img) => str_starts_with($img->path, 'http') ? $img->path : asset('storage/'.$img->path)),
+            'venue' => [
+                'id' => $venue->id,
+                'name' => $venue->name,
+                'slug' => $venue->slug,
+                'address' => $venue->address,
+            ],
+        ]);
+
+        $allCourtImages = $bookableCourts->pluck('images')->flatten()->unique()->values();
+        $coverImage = $bookableCourts->firstWhere('primary_image_url', '!==', null)['primary_image_url'] ?? asset('images/hero_pickleball.png');
+
+        return Inertia::render('site/VenueShow', [
+            'venue' => [
+                'id' => $venue->id,
+                'name' => $venue->name,
+                'slug' => $venue->slug,
+                'description' => $venue->description,
+                'address' => $venue->address,
+                'phone' => $venue->phone,
+                'email' => $venue->email,
+                'cover_image_url' => $coverImage,
+                'courts_count' => $bookableCourts->count(),
+                'courts' => $bookableCourts->values(),
+                'images' => $allCourtImages,
+            ],
+            'venues' => $this->venueCatalog(),
+        ]);
+    }
+
     public function pricing(): Response
     {
         return Inertia::render('site/Pricing', [
@@ -131,6 +166,58 @@ class PageController extends Controller
         return Inertia::render('site/Terms', [
             'content' => config('site_content.terms'),
         ]);
+    }
+
+    /**
+     * Venue catalog with assigned active courts.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function venueCatalog(): Collection
+    {
+        return Venue::query()
+            ->where('is_active', true)
+            ->with(['courts' => function ($q) {
+                $q->where('status', CourtStatus::Available)
+                    ->where('is_active', true)
+                    ->with('primaryImage')
+                    ->orderBy('name');
+            }])
+            ->orderBy('name')
+            ->get()
+            ->map(function (Venue $venue) {
+                $bookableCourts = $venue->courts->map(fn (Court $court) => [
+                    'id' => $court->id,
+                    'name' => $court->name,
+                    'slug' => $court->slug,
+                    'sport_type' => $court->sport_type->label(),
+                    'description' => $court->description,
+                    'base_price' => $court->base_price,
+                    'slot_duration_minutes' => $court->slot_duration_minutes,
+                    'primary_image_url' => $court->primaryImage ? (str_starts_with($court->primaryImage->path, 'http') ? $court->primaryImage->path : asset('storage/'.$court->primaryImage->path)) : null,
+                    'venue' => [
+                        'id' => $venue->id,
+                        'name' => $venue->name,
+                        'slug' => $venue->slug,
+                        'address' => $venue->address,
+                    ],
+                ]);
+
+                $firstImage = $bookableCourts->firstWhere('primary_image_url', '!==', null)['primary_image_url'] ?? null;
+
+                return [
+                    'id' => $venue->id,
+                    'name' => $venue->name,
+                    'slug' => $venue->slug,
+                    'description' => $venue->description,
+                    'address' => $venue->address,
+                    'phone' => $venue->phone,
+                    'email' => $venue->email,
+                    'cover_image_url' => $firstImage ?: asset('images/hero_pickleball.png'),
+                    'courts_count' => $bookableCourts->count(),
+                    'courts' => $bookableCourts->values(),
+                ];
+            });
     }
 
     /**

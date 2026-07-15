@@ -23,7 +23,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RolePermissionSeeder::class);
 
-        // Seed 3 Distinct Venues (One-to-Many Venue->Courts)
+        // Seed 3 Distinct Venues (Each having Court A, Court B, Court C)
         $venue1 = Venue::firstOrCreate(
             ['slug' => 'metro-sports-center'],
             [
@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
             ['slug' => 'bayside-pickleball-club'],
             [
                 'name' => 'Bayside Pickleball Club',
-                'description' => 'Oceanfront facility with 2 covered tournament courts and lounge area.',
+                'description' => 'Oceanfront facility with 3 covered tournament courts and lounge area.',
                 'address' => '789 Harbor Road, Bayside',
                 'phone' => '(555) 987-6543',
                 'email' => 'contact@baysidepickleball.com',
@@ -85,14 +85,14 @@ class DatabaseSeeder extends Seeder
         );
         $customer->assignRole(RoleName::Customer->value);
 
-        // Venue 1 Courts (3 Courts: Court 1, Court 2, Court 3)
-        $court1 = Court::firstOrCreate(
-            ['slug' => 'court-1'],
+        // Venue 1 Courts: Court A, Court B, Court C
+        $v1_courtA = Court::firstOrCreate(
+            ['slug' => 'metro-court-a'],
             [
                 'venue_id' => $venue1->id,
-                'name' => 'Court 1 - Outdoor Pro',
+                'name' => 'Court A',
                 'sport_type' => SportType::Pickleball,
-                'description' => 'Court 1 at Metro Sports Center - Premium outdoor pickleball court.',
+                'description' => 'Court A at Metro Sports Center - Outdoor Pro Court.',
                 'status' => CourtStatus::Available,
                 'base_price' => 25.00,
                 'slot_duration_minutes' => 60,
@@ -101,13 +101,13 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $court2 = Court::firstOrCreate(
-            ['slug' => 'court-2'],
+        $v1_courtB = Court::firstOrCreate(
+            ['slug' => 'metro-court-b'],
             [
                 'venue_id' => $venue1->id,
-                'name' => 'Court 2 - Covered Canopy',
+                'name' => 'Court B',
                 'sport_type' => SportType::Pickleball,
-                'description' => 'Court 2 at Metro Sports Center - Covered pro-grade pickleball court.',
+                'description' => 'Court B at Metro Sports Center - Covered Canopy Court.',
                 'status' => CourtStatus::Available,
                 'base_price' => 30.00,
                 'slot_duration_minutes' => 60,
@@ -116,13 +116,13 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $court3 = Court::firstOrCreate(
-            ['slug' => 'court-3'],
+        $v1_courtC = Court::firstOrCreate(
+            ['slug' => 'metro-court-c'],
             [
                 'venue_id' => $venue1->id,
-                'name' => 'Court 3 - Stadium Indoor',
+                'name' => 'Court C',
                 'sport_type' => SportType::Pickleball,
-                'description' => 'Court 3 at Metro Sports Center - Stadium lighting indoor court.',
+                'description' => 'Court C at Metro Sports Center - Stadium Indoor Court.',
                 'status' => CourtStatus::Available,
                 'base_price' => 35.00,
                 'slot_duration_minutes' => 60,
@@ -131,14 +131,14 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Venue 2 Courts (2 Courts: Court 4, Court 5)
-        $court4 = Court::firstOrCreate(
-            ['slug' => 'court-4'],
+        // Venue 2 Courts: Court A, Court B, Court C
+        $v2_courtA = Court::firstOrCreate(
+            ['slug' => 'bayside-court-a'],
             [
                 'venue_id' => $venue2->id,
-                'name' => 'Court 4 - Oceanview Deck',
+                'name' => 'Court A',
                 'sport_type' => SportType::Tennis,
-                'description' => 'Court 4 at Bayside Club - Full-size oceanfront hard court.',
+                'description' => 'Court A at Bayside Club - Full-size oceanfront hard court.',
                 'status' => CourtStatus::Available,
                 'base_price' => 40.00,
                 'slot_duration_minutes' => 60,
@@ -147,13 +147,13 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $court5 = Court::firstOrCreate(
-            ['slug' => 'court-5'],
+        $v2_courtB = Court::firstOrCreate(
+            ['slug' => 'bayside-court-b'],
             [
                 'venue_id' => $venue2->id,
-                'name' => 'Court 5 - Sunset Pickleball',
+                'name' => 'Court B',
                 'sport_type' => SportType::Pickleball,
-                'description' => 'Court 5 at Bayside Club - Floodlit evening match court.',
+                'description' => 'Court B at Bayside Club - Floodlit evening match court.',
                 'status' => CourtStatus::Available,
                 'base_price' => 28.00,
                 'slot_duration_minutes' => 60,
@@ -162,14 +162,29 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Venue 3 Courts (3 Courts: Court 6, Court 7, Court 8)
-        $court6 = Court::firstOrCreate(
-            ['slug' => 'court-6'],
+        $v2_courtC = Court::firstOrCreate(
+            ['slug' => 'bayside-court-c'],
+            [
+                'venue_id' => $venue2->id,
+                'name' => 'Court C',
+                'sport_type' => SportType::Pickleball,
+                'description' => 'Court C at Bayside Club - Coastal canopy court.',
+                'status' => CourtStatus::Available,
+                'base_price' => 32.00,
+                'slot_duration_minutes' => 60,
+                'buffer_minutes' => 0,
+                'is_active' => true,
+            ]
+        );
+
+        // Venue 3 Courts: Court A, Court B, Court C
+        $v3_courtA = Court::firstOrCreate(
+            ['slug' => 'arena-court-a'],
             [
                 'venue_id' => $venue3->id,
-                'name' => 'Court 6 - Arena Alpha',
+                'name' => 'Court A',
                 'sport_type' => SportType::Badminton,
-                'description' => 'Court 6 at Downtown Smash Arena - Sprung wooden floor badminton court.',
+                'description' => 'Court A at Downtown Smash Arena - Sprung wooden floor badminton court.',
                 'status' => CourtStatus::Available,
                 'base_price' => 22.00,
                 'slot_duration_minutes' => 60,
@@ -178,13 +193,13 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $court7 = Court::firstOrCreate(
-            ['slug' => 'court-7'],
+        $v3_courtB = Court::firstOrCreate(
+            ['slug' => 'arena-court-b'],
             [
                 'venue_id' => $venue3->id,
-                'name' => 'Court 7 - Arena Beta',
+                'name' => 'Court B',
                 'sport_type' => SportType::Basketball,
-                'description' => 'Court 7 at Downtown Smash Arena - Full-size hardwood basketball court.',
+                'description' => 'Court B at Downtown Smash Arena - Full-size hardwood basketball court.',
                 'status' => CourtStatus::Available,
                 'base_price' => 50.00,
                 'slot_duration_minutes' => 60,
@@ -193,13 +208,13 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $court8 = Court::firstOrCreate(
-            ['slug' => 'court-8'],
+        $v3_courtC = Court::firstOrCreate(
+            ['slug' => 'arena-court-c'],
             [
                 'venue_id' => $venue3->id,
-                'name' => 'Court 8 - Arena Gamma',
+                'name' => 'Court C',
                 'sport_type' => SportType::Futsal,
-                'description' => 'Court 8 at Downtown Smash Arena - Professional synthetic futsal court.',
+                'description' => 'Court C at Downtown Smash Arena - Professional synthetic futsal court.',
                 'status' => CourtStatus::Available,
                 'base_price' => 45.00,
                 'slot_duration_minutes' => 60,
@@ -208,31 +223,35 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $courts = collect([$court1, $court2, $court3, $court4, $court5, $court6, $court7, $court8]);
+        $courts = collect([
+            $v1_courtA, $v1_courtB, $v1_courtC,
+            $v2_courtA, $v2_courtB, $v2_courtC,
+            $v3_courtA, $v3_courtB, $v3_courtC,
+        ]);
 
-        // Seed 3 separate court staff accounts
+        // Seed separate court staff accounts
         $staff1 = User::firstOrCreate(
             ['email' => 'staff1@example.com'],
             ['name' => 'Court Staff 1', 'password' => bcrypt('password')]
         );
         $staff1->assignRole(RoleName::Staff->value);
-        $staff1->assignedCourts()->sync([$court1->id, $court2->id, $court3->id]);
+        $staff1->assignedCourts()->sync([$v1_courtA->id, $v1_courtB->id, $v1_courtC->id]);
 
         $staff2 = User::firstOrCreate(
             ['email' => 'staff2@example.com'],
             ['name' => 'Court Staff 2', 'password' => bcrypt('password')]
         );
         $staff2->assignRole(RoleName::Staff->value);
-        $staff2->assignedCourts()->sync([$court4->id, $court5->id]);
+        $staff2->assignedCourts()->sync([$v2_courtA->id, $v2_courtB->id, $v2_courtC->id]);
 
         $staff3 = User::firstOrCreate(
             ['email' => 'staff3@example.com'],
             ['name' => 'Court Staff 3', 'password' => bcrypt('password')]
         );
         $staff3->assignRole(RoleName::Staff->value);
-        $staff3->assignedCourts()->sync([$court6->id, $court7->id, $court8->id]);
+        $staff3->assignedCourts()->sync([$v3_courtA->id, $v3_courtB->id, $v3_courtC->id]);
 
-        $staff->assignedCourts()->sync([$court1->id, $court2->id, $court3->id]);
+        $staff->assignedCourts()->sync([$v1_courtA->id, $v1_courtB->id, $v1_courtC->id]);
 
         // Seed court images for each court
         foreach ($courts as $court) {

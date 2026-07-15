@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Site\StoreBookingRequest;
 use App\Models\Booking;
 use App\Models\Court;
+use App\Models\CourtUnavailability;
 use App\Notifications\BookingStatusNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -57,6 +58,59 @@ class BookingController extends Controller
                 'receipt_url' => asset('storage/'.$booking->receipt_path),
             ],
         ], 201);
+    }
+
+    /**
+     * Get real-time booked time slots and unavailabilities for courts on a specific date.
+     */
+    public function availability(Request $request): JsonResponse
+    {
+        $date = $request->query('date', date('Y-m-d'));
+        $courtId = $request->query('court_id');
+
+        $query = Booking::query()
+            ->where('date', $date)
+            ->where('status', '!=', 'cancelled');
+
+        if ($courtId) {
+            $query->where('court_id', $courtId);
+        }
+
+        $bookings = $query->get(['court_id', 'time_slots']);
+
+        $bookedSlots = [];
+        foreach ($bookings as $b) {
+            $cId = (string) $b->court_id;
+            if (! isset($bookedSlots[$cId])) {
+                $bookedSlots[$cId] = [];
+            }
+            $bookedSlots[$cId] = array_merge($bookedSlots[$cId], $b->time_slots ?? []);
+        }
+
+        // Also fetch staff court unavailabilities
+        $unavailabilities = CourtUnavailability::query()
+            ->where('date', $date)
+            ->get(['court_id', 'slot_time']);
+
+        foreach ($unavailabilities as $u) {
+            $cId = (string) $u->court_id;
+            if (! isset($bookedSlots[$cId])) {
+                $bookedSlots[$cId] = [];
+            }
+            if ($u->slot_time) {
+                $bookedSlots[$cId][] = $u->slot_time;
+            }
+        }
+
+        // Unique array for each court
+        foreach ($bookedSlots as $cId => $slots) {
+            $bookedSlots[$cId] = array_values(array_unique($slots));
+        }
+
+        return response()->json([
+            'date' => $date,
+            'booked_slots' => $bookedSlots,
+        ]);
     }
 
     /**

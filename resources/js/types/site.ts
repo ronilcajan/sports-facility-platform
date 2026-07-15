@@ -31,8 +31,20 @@ export type SiteData = {
     legal: SiteLink[];
 };
 
+export type PublicVenue = {
+    id: number;
+    name: string;
+    slug: string;
+    description?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    email?: string | null;
+};
+
 export type PublicCourt = {
     id: number;
+    venue_id?: number | null;
+    venue?: PublicVenue | null;
     name: string;
     slug: string;
     sport_type: string;

@@ -10,10 +10,12 @@ Route::get('/', [PageController::class, 'home'])->name('home');
 Route::get('/about', [PageController::class, 'about'])->name('site.about');
 Route::get('/courts', [PageController::class, 'courts'])->name('site.courts');
 Route::get('/courts/{court:slug}', [PageController::class, 'show'])->name('site.courts.show');
+Route::get('/venues/{venue:slug}', [PageController::class, 'venueShow'])->name('site.venues.show');
 Route::get('/pricing', [PageController::class, 'pricing'])->name('site.pricing');
 Route::get('/gallery', [PageController::class, 'gallery'])->name('site.gallery');
 Route::get('/privacy', [PageController::class, 'privacy'])->name('site.privacy');
 Route::get('/terms', [PageController::class, 'terms'])->name('site.terms');
+Route::get('/bookings/availability', [BookingController::class, 'availability'])->name('site.bookings.availability');
 Route::post('/bookings', [BookingController::class, 'store'])->name('site.bookings.store');
 
 Route::middleware(['auth', 'verified'])->group(function () {

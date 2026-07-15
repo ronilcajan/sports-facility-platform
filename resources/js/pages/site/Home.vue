@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import SiteVenueCard, { type CatalogVenue } from '@/components/site/SiteVenueCard.vue';
 import SiteCourtCard from '@/components/site/SiteCourtCard.vue';
 import BookingModal from '@/components/site/BookingModal.vue';
 import { useSite } from '@/composables/useSite';
@@ -26,17 +27,30 @@ interface HomeContent {
 
 defineProps<{
     content: HomeContent;
+    venues?: CatalogVenue[];
     featuredCourts: PublicCourt[];
 }>();
 
 const site = useSite();
 
 const activeCourt = ref<PublicCourt | null>(null);
+const activeVenue = ref<CatalogVenue | null>(null);
 const isBookingOpen = ref(false);
 
 function handleBook(court: PublicCourt) {
     activeCourt.value = court;
+    activeVenue.value = null;
     isBookingOpen.value = true;
+}
+
+function handleBookVenue(venue: CatalogVenue) {
+    activeVenue.value = venue;
+    activeCourt.value = venue.courts && venue.courts.length > 0 ? venue.courts[0] : null;
+    isBookingOpen.value = true;
+}
+
+function handleViewVenueCourts(venue: CatalogVenue) {
+    router.get('/courts', { venue: venue.id });
 }
 </script>
 
@@ -89,7 +103,7 @@ function handleBook(court: PublicCourt) {
                         class="xl:text-7.5xl mt-6 font-display text-5xl leading-[1.05] font-black tracking-tight text-balance text-content-inverse sm:text-6xl"
                     >
                         Play Better.<br />
-                        <span class="text-brand">Dink Stronger.</span>
+                        <span class="text-brand">Live Stronger.</span>
                     </h1>
                     <p
                         class="mt-6 max-w-xl text-lg leading-relaxed text-pretty text-content-muted"
@@ -343,7 +357,7 @@ function handleBook(court: PublicCourt) {
         </div>
     </section>
 
-    <!-- 3. Showcase Section: Dynamically render real featured courts -->
+    <!-- 3. Venue Showcase Section: Display Venues First -->
     <section
         class="border-b border-line bg-surface py-20 text-content sm:py-24"
     >
@@ -354,23 +368,22 @@ function handleBook(court: PublicCourt) {
                 <div>
                     <span
                         class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
-                        >THE COURTS</span
+                        >OUR VENUES</span
                     >
                     <h2
                         class="mt-3 font-display text-3xl font-black tracking-tight text-content sm:text-4xl"
                     >
-                        Pick a Court, Grab Your Paddle
+                        Explore Sports Facility Venues
                     </h2>
                     <p class="mt-3 max-w-xl text-base text-content-muted">
-                        Every court is tournament-grade, cushioned, and floodlit
-                        for night play. Select from our available slots below.
+                        Select a facility location to view its courts, tournament surfaces, and available reservation slots.
                     </p>
                 </div>
                 <Link
                     :href="courtsRoute()"
                     class="group inline-flex shrink-0 items-center gap-2 text-sm font-bold text-brand transition-colors hover:text-content"
                 >
-                    See all courts
+                    See all venues & courts
                     <svg
                         class="size-4 transition-transform group-hover:translate-x-1"
                         fill="none"
@@ -387,20 +400,23 @@ function handleBook(court: PublicCourt) {
                 </Link>
             </div>
 
-            <!-- Court Card Showcase Grid -->
-            <div class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <!-- Venue Cards Showcase Grid -->
+            <div v-if="venues && venues.length > 0" class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                <SiteVenueCard
+                    v-for="venue in venues"
+                    :key="venue.id"
+                    :venue="venue"
+                    @book-now="handleBookVenue"
+                    @view-courts="handleViewVenueCourts"
+                />
+            </div>
+            <div v-else class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
                 <SiteCourtCard
                     v-for="court in featuredCourts"
                     :key="court.id"
                     :court="court"
                     @book="handleBook"
                 />
-                <div
-                    v-if="featuredCourts.length === 0"
-                    class="col-span-full rounded-2xl border border-dashed border-line p-12 text-center text-content-muted"
-                >
-                    Courts are currently being updated — check back shortly!
-                </div>
             </div>
         </div>
     </section>
@@ -736,6 +752,8 @@ function handleBook(court: PublicCourt) {
     <!-- Booking Modal Component overlay -->
     <BookingModal
         :court="activeCourt"
+        :venue="activeVenue"
+        :venues="venues"
         :is-open="isBookingOpen"
         @close="isBookingOpen = false"
     />
