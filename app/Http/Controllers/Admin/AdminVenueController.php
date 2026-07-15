@@ -66,16 +66,19 @@ class AdminVenueController extends Controller
     {
         $this->authorize('create', Venue::class);
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:1000'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'is_active' => ['boolean'],
-        ]);
+        $validated = $request->validate($this->rules());
 
         $validated['slug'] = Str::slug($validated['name']);
+
+        if ($request->hasFile('gcash_qr')) {
+            $validated['gcash_qr_path'] = $request->file('gcash_qr')->store('venue-qr', 'public');
+        }
+
+        if ($request->hasFile('maya_qr')) {
+            $validated['maya_qr_path'] = $request->file('maya_qr')->store('venue-qr', 'public');
+        }
+
+        unset($validated['gcash_qr'], $validated['maya_qr']);
 
         Venue::create($validated);
 
@@ -99,6 +102,10 @@ class AdminVenueController extends Controller
                 'address' => $venue->address,
                 'phone' => $venue->phone,
                 'email' => $venue->email,
+                'gcash_number' => $venue->gcash_number,
+                'gcash_qr_url' => $venue->paymentMethods()['gcash']['qr_url'] ?? null,
+                'maya_number' => $venue->maya_number,
+                'maya_qr_url' => $venue->paymentMethods()['maya']['qr_url'] ?? null,
                 'is_active' => $venue->is_active,
             ],
         ]);
@@ -111,21 +118,45 @@ class AdminVenueController extends Controller
     {
         $this->authorize('update', $venue);
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:1000'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'is_active' => ['boolean'],
-        ]);
+        $validated = $request->validate($this->rules());
 
         $validated['slug'] = Str::slug($validated['name']);
+
+        if ($request->hasFile('gcash_qr')) {
+            $validated['gcash_qr_path'] = $request->file('gcash_qr')->store('venue-qr', 'public');
+        }
+
+        if ($request->hasFile('maya_qr')) {
+            $validated['maya_qr_path'] = $request->file('maya_qr')->store('venue-qr', 'public');
+        }
+
+        unset($validated['gcash_qr'], $validated['maya_qr']);
 
         $venue->update($validated);
 
         return redirect()->route('admin.venues.index')
             ->with('success', 'Venue updated successfully.');
+    }
+
+    /**
+     * Shared validation rules for storing/updating a venue.
+     *
+     * @return array<string, array<int, string>>
+     */
+    private function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'gcash_number' => ['nullable', 'string', 'max:50'],
+            'gcash_qr' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
+            'maya_number' => ['nullable', 'string', 'max:50'],
+            'maya_qr' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
+            'is_active' => ['boolean'],
+        ];
     }
 
     /**

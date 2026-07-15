@@ -96,7 +96,7 @@ const imageList = computed(() => {
                     {{ venue.description }}
                 </p>
                 <p v-else class="text-sm leading-relaxed text-content-muted italic">
-                    Premium sports facility equipping modern tournament-grade courts and dedicated amenities.
+                    A friendly pickleball venue with welcoming courts for every level.
                 </p>
 
                 <!-- Contact & Address Snippets -->

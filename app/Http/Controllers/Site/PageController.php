@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Site;
 use App\Enums\CourtStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Court;
+use App\Models\CourtImage;
 use App\Models\Venue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -18,10 +19,20 @@ class PageController extends Controller
      */
     public function home(): Response
     {
+        $courtsCount = Court::query()
+            ->where('status', CourtStatus::Available)
+            ->where('is_active', true)
+            ->count();
+
+        // Keep the hero's headline court stat accurate to the real catalog.
+        $content = config('site_content.home');
+        $content['hero']['stats'][0]['value'] = (string) $courtsCount;
+
         return Inertia::render('site/Home', [
-            'content' => config('site_content.home'),
+            'content' => $content,
             'venues' => $this->venueCatalog(),
             'featuredCourts' => $this->bookableCourts(3),
+            'courtsCount' => $courtsCount,
         ]);
     }
 
@@ -83,6 +94,7 @@ class PageController extends Controller
                     'phone' => $court->venue->phone,
                     'email' => $court->venue->email,
                     'description' => $court->venue->description,
+                    'payment_methods' => $court->venue->paymentMethods(),
                 ] : null,
             ],
             'relatedCourts' => $relatedCourts->take(3)->values(),
@@ -135,6 +147,7 @@ class PageController extends Controller
                 'courts_count' => $bookableCourts->count(),
                 'courts' => $bookableCourts->values(),
                 'images' => $allCourtImages,
+                'payment_methods' => $venue->paymentMethods(),
             ],
             'venues' => $this->venueCatalog(),
         ]);
@@ -149,8 +162,24 @@ class PageController extends Controller
 
     public function gallery(): Response
     {
+        $images = CourtImage::query()
+            ->whereHas('court', function ($q): void {
+                $q->where('status', CourtStatus::Available)->where('is_active', true);
+            })
+            ->with('court.venue')
+            ->orderByDesc('is_primary')
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn (CourtImage $image): array => [
+                'url' => str_starts_with($image->path, 'http') ? $image->path : asset('storage/'.$image->path),
+                'court' => $image->court?->name,
+                'venue' => $image->court?->venue?->name,
+            ])
+            ->values();
+
         return Inertia::render('site/Gallery', [
             'content' => config('site_content.gallery'),
+            'images' => $images,
         ]);
     }
 
@@ -216,6 +245,7 @@ class PageController extends Controller
                     'cover_image_url' => $firstImage ?: asset('images/hero_pickleball.png'),
                     'courts_count' => $bookableCourts->count(),
                     'courts' => $bookableCourts->values(),
+                    'payment_methods' => $venue->paymentMethods(),
                 ];
             });
     }

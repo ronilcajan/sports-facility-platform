@@ -199,7 +199,7 @@ function submitCreate() {
                         <td class="py-3 px-3 text-neutral-800 dark:text-neutral-200">{{ b.court?.name }}</td>
                         <td class="py-3 px-3 text-neutral-700 dark:text-neutral-300">{{ b.date }}</td>
                         <td class="py-3 px-3 font-mono text-[11px] text-neutral-500">{{ b.time_slots ? b.time_slots.join(', ') : '' }}</td>
-                        <td class="py-3 px-3 font-bold text-emerald-600">${{ b.total_price }}</td>
+                        <td class="py-3 px-3 font-bold text-emerald-600">₱{{ b.total_price }}</td>
                         <td class="py-3 px-3">
                             <span
                                 :class="[

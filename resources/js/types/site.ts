@@ -29,6 +29,17 @@ export type SiteData = {
     social: SiteSocial[];
     nav: SiteLink[];
     legal: SiteLink[];
+    logo: string;
+};
+
+export type PaymentMethod = {
+    number: string;
+    qr_url?: string | null;
+};
+
+export type VenuePaymentMethods = {
+    gcash?: PaymentMethod;
+    maya?: PaymentMethod;
 };
 
 export type PublicVenue = {
@@ -39,6 +50,7 @@ export type PublicVenue = {
     address?: string | null;
     phone?: string | null;
     email?: string | null;
+    payment_methods?: VenuePaymentMethods;
 };
 
 export type PublicCourt = {

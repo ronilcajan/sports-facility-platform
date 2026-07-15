@@ -69,5 +69,6 @@ Route::middleware([
             // Appearance Settings
             Route::get('appearance', [AppearanceController::class, 'index'])->name('appearance.index');
             Route::put('appearance', [AppearanceController::class, 'update'])->name('appearance.update');
+            Route::post('appearance/branding', [AppearanceController::class, 'updateBranding'])->name('appearance.branding');
         });
     });

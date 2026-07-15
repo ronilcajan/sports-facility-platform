@@ -11,7 +11,6 @@ Route::get('/about', [PageController::class, 'about'])->name('site.about');
 Route::get('/courts', [PageController::class, 'courts'])->name('site.courts');
 Route::get('/courts/{court:slug}', [PageController::class, 'show'])->name('site.courts.show');
 Route::get('/venues/{venue:slug}', [PageController::class, 'venueShow'])->name('site.venues.show');
-Route::get('/pricing', [PageController::class, 'pricing'])->name('site.pricing');
 Route::get('/gallery', [PageController::class, 'gallery'])->name('site.gallery');
 Route::get('/privacy', [PageController::class, 'privacy'])->name('site.privacy');
 Route::get('/terms', [PageController::class, 'terms'])->name('site.terms');
@@ -30,8 +29,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             return redirect()->route('staff.dashboard');
         }
 
+        // Show bookings linked to this account, plus any guest bookings made with the same
+        // (verified) email — so registering later with that email surfaces past bookings.
         $bookings = Booking::with('court')
-            ->where('user_id', $user->id)
+            ->where(function ($query) use ($user) {
+                $query->where('user_id', $user->id)
+                    ->orWhere('email', $user->email);
+            })
             ->latest()
             ->get()
             ->map(function ($b) {

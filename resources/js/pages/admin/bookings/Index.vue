@@ -175,7 +175,7 @@ function deleteBooking(bookingId: number) {
                             <td class="py-3 px-3 font-medium text-neutral-800 dark:text-neutral-200">{{ b.court?.name || 'N/A' }}</td>
                             <td class="py-3 px-3 text-neutral-700 dark:text-neutral-300">{{ b.date }}</td>
                             <td class="py-3 px-3 font-mono text-[11px] text-neutral-500">{{ b.time_slots ? b.time_slots.join(', ') : 'N/A' }}</td>
-                            <td class="py-3 px-3 font-bold text-neutral-900 dark:text-white">${{ b.total_price }}</td>
+                            <td class="py-3 px-3 font-bold text-neutral-900 dark:text-white">₱{{ b.total_price }}</td>
                             <td class="py-3 px-3">
                                 <span
                                     :class="[

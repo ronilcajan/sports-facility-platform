@@ -87,7 +87,7 @@ defineOptions({
                     </div>
                     <div class="flex justify-between">
                         <span class="text-muted-foreground">Base price</span>
-                        <span>${{ props.court.base_price }}</span>
+                        <span>₱{{ props.court.base_price }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-muted-foreground">Slot duration</span>

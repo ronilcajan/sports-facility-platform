@@ -185,7 +185,7 @@ function destroy(court: Court): void {
                                 {{ court.status }}
                             </Badge>
                         </td>
-                        <td class="px-4 py-3">${{ court.base_price }}</td>
+                        <td class="px-4 py-3">₱{{ court.base_price }}</td>
                         <td class="px-4 py-3">{{ court.staff_count }}</td>
                         <td class="px-4 py-3">
                             <div class="flex justify-end gap-2">

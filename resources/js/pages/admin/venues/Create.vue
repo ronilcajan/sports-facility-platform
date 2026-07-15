@@ -22,8 +22,16 @@ const form = useForm({
     address: '',
     phone: '',
     email: '',
+    gcash_number: '',
+    gcash_qr: null as File | null,
+    maya_number: '',
+    maya_qr: null as File | null,
     is_active: true,
 });
+
+function onQrChange(e: Event, key: 'gcash_qr' | 'maya_qr') {
+    form[key] = (e.target as HTMLInputElement).files?.[0] ?? null;
+}
 
 function submit() {
     form.post('/admin/venues', {
@@ -76,6 +84,38 @@ function submit() {
                     <Label for="email">Email</Label>
                     <Input id="email" v-model="form.email" type="email" />
                     <InputError :message="form.errors.email" />
+                </div>
+            </div>
+
+            <!-- Payment Methods (Optional) -->
+            <div class="space-y-4 rounded-xl border border-input p-4">
+                <div>
+                    <h3 class="text-sm font-semibold">Payment Methods</h3>
+                    <p class="text-xs text-muted-foreground">
+                        Add GCash / Maya details so customers can pay when booking. A method only appears in the booking modal if its number is set. QR image is optional.
+                    </p>
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="gcash_number">GCash Number</Label>
+                    <Input id="gcash_number" v-model="form.gcash_number" type="text" placeholder="0917 123 4567" />
+                    <InputError :message="form.errors.gcash_number" />
+                    <div class="flex items-center gap-2">
+                        <input type="file" accept="image/*" @change="(e) => onQrChange(e, 'gcash_qr')" class="text-xs" />
+                        <span class="text-xs text-muted-foreground">GCash QR (optional)</span>
+                    </div>
+                    <InputError :message="form.errors.gcash_qr" />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="maya_number">Maya Number</Label>
+                    <Input id="maya_number" v-model="form.maya_number" type="text" placeholder="0918 555 0000" />
+                    <InputError :message="form.errors.maya_number" />
+                    <div class="flex items-center gap-2">
+                        <input type="file" accept="image/*" @change="(e) => onQrChange(e, 'maya_qr')" class="text-xs" />
+                        <span class="text-xs text-muted-foreground">Maya QR (optional)</span>
+                    </div>
+                    <InputError :message="form.errors.maya_qr" />
                 </div>
             </div>
 

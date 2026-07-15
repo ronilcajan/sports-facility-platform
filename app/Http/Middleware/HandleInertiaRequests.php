@@ -77,15 +77,31 @@ class HandleInertiaRequests extends Middleware
         ], $links);
 
         return [
-            'name' => config('site.name'),
+            'name' => SiteSetting::get('site_name', config('site.name')),
             'tagline' => config('site.tagline'),
             'description' => config('site.description'),
-            'contact' => config('site.contact'),
+            'contact' => [
+                'email' => SiteSetting::get('contact_email', config('site.contact.email')),
+                'phone' => SiteSetting::get('contact_phone', config('site.contact.phone')),
+                'address_line' => SiteSetting::get('contact_address', config('site.contact.address_line')),
+                'maps_query' => SiteSetting::get('contact_address', config('site.contact.maps_query')),
+            ],
             'hours' => config('site.hours'),
             'social' => config('site.social'),
             'nav' => $resolveLinks(config('site.nav')),
             'legal' => $resolveLinks(config('site.legal')),
             'activeTheme' => SiteSetting::get('active_theme', SiteTheme::default()->value),
+            'logo' => $this->logoUrl(),
         ];
+    }
+
+    /**
+     * Resolve the current site logo URL (superadmin-uploaded, or the bundled default).
+     */
+    protected function logoUrl(): string
+    {
+        $path = SiteSetting::get('site_logo');
+
+        return $path ? asset('storage/'.$path) : asset('logo.jpg');
     }
 }

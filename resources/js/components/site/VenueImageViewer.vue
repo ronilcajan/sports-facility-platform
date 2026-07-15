@@ -77,7 +77,12 @@ function handleKeydown(e: KeyboardEvent) {
     }
 }
 
+// Teleport to <body> only after hydration to avoid an SSR mismatch
+// (the server renders the teleport placeholder next to Inertia's data-page script)
+const isMounted = ref(false);
+
 onMounted(() => {
+    isMounted.value = true;
     if (typeof window !== 'undefined') {
         window.addEventListener('keydown', handleKeydown);
     }
@@ -92,7 +97,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Teleport to="body">
+    <Teleport v-if="isMounted" to="body">
         <Transition
             enter-active-class="transition duration-300 ease-out"
             enter-from-class="opacity-0"

@@ -164,7 +164,7 @@ function updateStatus(bookingId: number, status: string) {
                     <div class="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-1">
                         <span class="text-xs text-neutral-500 font-medium">Assigned Court Revenue</span>
                         <div class="text-2xl font-bold text-neutral-900 dark:text-white">
-                            ${{ stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                            ₱{{ stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
                         </div>
                         <span class="text-[11px] text-neutral-500">Confirmed booking earnings</span>
                     </div>
@@ -200,7 +200,7 @@ function updateStatus(bookingId: number, status: string) {
                             >
                                 <div class="flex items-center justify-between text-xs">
                                     <span class="font-bold text-neutral-900 dark:text-white">#{{ booking.id }} - {{ booking.name }}</span>
-                                    <span class="font-semibold text-emerald-600">${{ booking.total_price }}</span>
+                                    <span class="font-semibold text-emerald-600">₱{{ booking.total_price }}</span>
                                 </div>
 
                                 <div class="text-xs text-neutral-500 flex flex-wrap gap-x-4 gap-y-1">

@@ -14,6 +14,7 @@ interface Booking {
     total_price: string;
     receipt_path?: string | null;
     receipt_url?: string | null;
+    transaction_code?: string | null;
     status: string;
     court?: { id: number; name: string };
 }
@@ -102,7 +103,12 @@ function updateStatus(newStatus: string) {
                             <p><strong>Date:</strong> {{ booking.date }}</p>
                             <p><strong>Time Slots:</strong> <span class="font-mono">{{ booking.time_slots ? booking.time_slots.join(', ') : '' }}</span></p>
                             <p><strong>Status:</strong> <span class="font-bold capitalize">{{ booking.status }}</span></p>
-                            <p><strong>Total Paid:</strong> <span class="font-bold text-emerald-600">${{ booking.total_price }}</span></p>
+                            <p><strong>Total Amount:</strong> <span class="font-bold text-emerald-600">₱{{ booking.total_price }}</span></p>
+                            <p>
+                                <strong>Transaction Ref:</strong>
+                                <span v-if="booking.transaction_code" class="font-mono font-bold text-neutral-900 dark:text-white">{{ booking.transaction_code }}</span>
+                                <span v-else class="italic text-neutral-400">Not provided</span>
+                            </p>
                         </div>
                     </div>
                 </div>

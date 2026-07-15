@@ -1,12 +1,32 @@
 <?php
 
+use App\Mail\BookingReceivedMail;
 use App\Models\Booking;
 use App\Models\Court;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function (): void {
     Storage::fake('public');
+});
+
+test('a booking-received confirmation email is sent to the customer', function (): void {
+    Mail::fake();
+    $court = Court::factory()->create();
+
+    $this->postJson(route('site.bookings.store'), [
+        'court_id' => $court->id,
+        'name' => 'Alice Player',
+        'email' => 'alice@example.com',
+        'phone' => '09171234567',
+        'date' => now()->addDay()->format('Y-m-d'),
+        'time' => ['08:00 AM'],
+    ])->assertStatus(201);
+
+    Mail::assertSent(BookingReceivedMail::class, function (BookingReceivedMail $mail) {
+        return $mail->hasTo('alice@example.com');
+    });
 });
 
 test('a guest can successfully book a court and save it to the database', function (): void {
@@ -26,6 +46,7 @@ test('a guest can successfully book a court and save it to the database', functi
         'date' => now()->addDay()->format('Y-m-d'),
         'time' => ['08:00 AM', '09:00 AM'],
         'notes' => 'Looking forward to it!',
+        'transaction_code' => 'GC-1234567890',
         'receipt' => $file,
     ]);
 
@@ -41,8 +62,11 @@ test('a guest can successfully book a court and save it to the database', functi
                 'time_slots',
                 'total_price',
                 'receipt_url',
+                'qr_code',
             ],
         ]);
+
+    expect($response->json('booking.qr_code'))->toStartWith('data:image/svg+xml;base64,');
 
     $bookingId = $response->json('booking.id');
 
@@ -54,7 +78,8 @@ test('a guest can successfully book a court and save it to the database', functi
         'phone' => '09171234567',
         'date' => now()->addDay()->format('Y-m-d'),
         'notes' => 'Looking forward to it!',
-        'total_price' => 100.00, // 2 slots * $50.00
+        'total_price' => 100.00, // 2 slots * ₱50.00
+        'transaction_code' => 'GC-1234567890',
     ]);
 
     $booking = Booking::find($bookingId);
@@ -62,7 +87,8 @@ test('a guest can successfully book a court and save it to the database', functi
     Storage::disk('public')->assertExists($booking->receipt_path);
 });
 
-test('booking validation fails if receipt file is missing', function (): void {
+test('booking succeeds without a receipt file since payment proof is optional', function (): void {
+    Storage::fake('public');
     $court = Court::factory()->create();
 
     $response = $this->postJson(route('site.bookings.store'), [
@@ -74,8 +100,12 @@ test('booking validation fails if receipt file is missing', function (): void {
         'time' => ['08:00 AM'],
     ]);
 
-    $response->assertStatus(422)
-        ->assertJsonValidationErrors(['receipt']);
+    $response->assertStatus(201)
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('booking.receipt_url', null);
+
+    $booking = Booking::query()->latest('id')->first();
+    expect($booking->receipt_path)->toBeNull();
 });
 
 test('booking validation fails if double-booking a slot is attempted', function (): void {

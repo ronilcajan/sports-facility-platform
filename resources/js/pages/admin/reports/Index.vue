@@ -67,7 +67,7 @@ function filterReports() {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-1">
                     <span class="text-xs text-neutral-500 font-medium">Period Revenue</span>
-                    <div class="text-2xl font-bold text-emerald-600">${{ reports.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</div>
+                    <div class="text-2xl font-bold text-emerald-600">₱{{ reports.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</div>
                     <span class="text-[11px] text-neutral-400">Total generated earnings</span>
                 </div>
 
@@ -111,7 +111,7 @@ function filterReports() {
                                 <td class="py-3 px-3 text-neutral-600 dark:text-neutral-300">{{ court.sport_type }}</td>
                                 <td class="py-3 px-3 text-neutral-800 dark:text-neutral-200">{{ court.total_bookings }}</td>
                                 <td class="py-3 px-3 font-semibold text-emerald-600">{{ court.approved_count }}</td>
-                                <td class="py-3 px-3 text-right font-bold text-neutral-900 dark:text-white">${{ court.revenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</td>
+                                <td class="py-3 px-3 text-right font-bold text-neutral-900 dark:text-white">₱{{ court.revenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</td>
                             </tr>
                         </tbody>
                     </table>

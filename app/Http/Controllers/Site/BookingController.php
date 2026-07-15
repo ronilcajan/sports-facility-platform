@@ -4,15 +4,39 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Site\StoreBookingRequest;
+use App\Mail\BookingReceivedMail;
 use App\Models\Booking;
 use App\Models\Court;
 use App\Models\CourtUnavailability;
 use App\Notifications\BookingStatusNotification;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class BookingController extends Controller
 {
+    /**
+     * Build a scannable QR code (SVG data URI) that opens the staff booking view for verification.
+     */
+    private function bookingQrDataUri(Booking $booking): string
+    {
+        $payload = url('/staff/bookings/'.$booking->id);
+
+        $renderer = new ImageRenderer(
+            new RendererStyle(240, 1),
+            new SvgImageBackEnd,
+        );
+
+        $svg = (new Writer($renderer))->writeString($payload);
+
+        return 'data:image/svg+xml;base64,'.base64_encode($svg);
+    }
+
     /**
      * Store a newly created booking in the database.
      */
@@ -20,8 +44,10 @@ class BookingController extends Controller
     {
         $court = Court::findOrFail($request->validated('court_id'));
 
-        // Save receipt to public storage disk
-        $receiptPath = $request->file('receipt')->store('receipts', 'public');
+        // Save receipt to public storage disk (optional — booking is valid without it)
+        $receiptPath = $request->hasFile('receipt')
+            ? $request->file('receipt')->store('receipts', 'public')
+            : null;
 
         // Calculate total price based on duration slots
         $totalPrice = $court->base_price * count($request->validated('time'));
@@ -38,12 +64,23 @@ class BookingController extends Controller
             'notes' => $request->validated('notes'),
             'total_price' => $totalPrice,
             'receipt_path' => $receiptPath,
+            'transaction_code' => $request->validated('transaction_code'),
             'status' => 'pending',
         ]);
 
         // Send notification to staff assigned to this court
         foreach ($court->staff as $staffMember) {
             $staffMember->notify(new BookingStatusNotification($booking, 'created'));
+        }
+
+        // Email the customer a booking-received confirmation (never let a mail failure break the booking)
+        try {
+            Mail::to($booking->email)->send(new BookingReceivedMail($booking));
+        } catch (\Throwable $e) {
+            Log::warning('Booking confirmation email failed to send.', [
+                'booking_id' => $booking->id,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         return response()->json([
@@ -55,7 +92,8 @@ class BookingController extends Controller
                 'date' => $booking->date,
                 'time_slots' => $booking->time_slots,
                 'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
-                'receipt_url' => asset('storage/'.$booking->receipt_path),
+                'receipt_url' => $booking->receipt_path ? asset('storage/'.$booking->receipt_path) : null,
+                'qr_code' => $this->bookingQrDataUri($booking),
             ],
         ], 201);
     }

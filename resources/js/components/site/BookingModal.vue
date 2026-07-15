@@ -36,6 +36,12 @@ const activeVenue = computed<CatalogVenue | null>(() => {
     return null;
 });
 
+// Only offer the venue picker when the modal was opened without a specific venue/court.
+// When a venue is already chosen, its name goes in the header and we jump straight to courts.
+const showVenuePicker = computed<boolean>(() => {
+    return !props.venue && !props.court && !!props.venues && props.venues.length > 0;
+});
+
 const availableCourts = computed<PublicCourt[]>(() => {
     if (props.venue?.courts && props.venue.courts.length > 0) {
         return props.venue.courts;
@@ -73,6 +79,7 @@ const form = ref({
     date: '',
     time: [] as string[],
     notes: '',
+    transaction_code: '',
 });
 
 // Form Errors State
@@ -93,11 +100,32 @@ const bookingDetails = ref<{
     time_slots: string[];
     total_price: string;
     receipt_url: string;
+    qr_code: string;
 } | null>(null);
 
 // Step of the Booking Flow: 'form' | 'submitting' | 'confirmed'
 const step = ref<'form' | 'submitting' | 'confirmed'>('form');
 const currentWizardStep = ref(1);
+
+// Header title/subtitle shown in the fixed modal header per wizard step
+const wizardHeading = computed<{ title: string; subtitle: string }>(() => {
+    if (currentWizardStep.value === 1) {
+        return {
+            title: 'Book a Court',
+            subtitle: 'Pick your date, court, and preferred time slots.',
+        };
+    }
+    if (currentWizardStep.value === 2) {
+        return {
+            title: 'Your Details',
+            subtitle: 'Provide your contact information to reserve the court.',
+        };
+    }
+    return {
+        title: 'Review & Confirm',
+        subtitle: 'Check your reservation, then confirm your booking.',
+    };
+});
 
 // Receipt Upload State
 const receiptFile = ref<File | null>(null);
@@ -160,12 +188,60 @@ const timeSlots = [
     '02:00 AM',
 ];
 
+// Parse a slot label like '07:00 AM' into a 24-hour number (0-23)
+function parseSlotHour(slot: string): number {
+    const [time, period] = slot.split(' ');
+    let hour = parseInt(time.split(':')[0], 10);
+    if (period === 'PM' && hour !== 12) {
+        hour += 12;
+    }
+    if (period === 'AM' && hour === 12) {
+        hour = 0;
+    }
+    return hour;
+}
+
+// Time-of-day period label used to group slots into sections
+function slotPeriodLabel(slot: string): string {
+    const h = parseSlotHour(slot);
+    if (h >= 5 && h < 12) {
+        return 'Morning';
+    }
+    if (h >= 12 && h < 17) {
+        return 'Afternoon';
+    }
+    if (h >= 17 && h < 21) {
+        return 'Evening';
+    }
+    return 'Night';
+}
+
+// Time slots grouped under period headers, in chronological period order
+const groupedTimeSlots = computed<{ period: string; slots: string[] }[]>(() => {
+    const order = ['Morning', 'Afternoon', 'Evening', 'Night'];
+    const groups: Record<string, string[]> = {};
+    for (const slot of timeSlots) {
+        const period = slotPeriodLabel(slot);
+        (groups[period] ??= []).push(slot);
+    }
+    return order
+        .filter((period) => groups[period]?.length)
+        .map((period) => ({ period, slots: groups[period] }));
+});
+
 // Calculated Duration based on selected checkmarked slots
 const calculatedDuration = computed(() => {
     if (!selectedCourt.value) {
         return 0;
     }
     return form.value.time.length * (selectedCourt.value.slot_duration_minutes || 60);
+});
+
+// Duration expressed in hours, e.g. "2 hours" or "1.5 hours"
+const calculatedDurationLabel = computed<string>(() => {
+    const hours = calculatedDuration.value / 60;
+    const rounded = Number.isInteger(hours) ? hours : parseFloat(hours.toFixed(1));
+    return `${rounded} ${rounded === 1 ? 'hour' : 'hours'}`;
 });
 
 // Calculated Price based on duration
@@ -177,14 +253,130 @@ const calculatedPrice = computed(() => {
     return (base * form.value.time.length).toFixed(2);
 });
 
-// Local YYYY-MM-DD date string for native picker min validation
-const todayDateString = computed(() => {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+// Collapsible reservation summary on the final step (collapsed by default; total stays visible)
+const summaryExpanded = ref(false);
+
+// Enlarged (zoomed) payment QR overlay
+const qrZoomed = ref(false);
+
+// Payment methods configured on the active venue (GCash / Maya), shown as selectable options
+const availablePaymentMethods = computed<{ key: 'gcash' | 'maya'; label: string; number: string; qr_url?: string | null }[]>(() => {
+    const pm = activeVenue.value?.payment_methods;
+    if (!pm) {
+        return [];
+    }
+    const list: { key: 'gcash' | 'maya'; label: string; number: string; qr_url?: string | null }[] = [];
+    if (pm.gcash) {
+        list.push({ key: 'gcash', label: 'GCash', number: pm.gcash.number, qr_url: pm.gcash.qr_url });
+    }
+    if (pm.maya) {
+        list.push({ key: 'maya', label: 'Maya', number: pm.maya.number, qr_url: pm.maya.qr_url });
+    }
+    return list;
 });
+
+const selectedPaymentMethod = ref<'gcash' | 'maya' | null>(null);
+
+const activePaymentMethod = computed(() =>
+    availablePaymentMethods.value.find((m) => m.key === selectedPaymentMethod.value) || null,
+);
+
+// Keep a valid method selected as the available methods change (venue switch / open)
+watch(
+    availablePaymentMethods,
+    (methods) => {
+        if (!methods.find((m) => m.key === selectedPaymentMethod.value)) {
+            selectedPaymentMethod.value = methods[0]?.key ?? null;
+        }
+    },
+    { immediate: true },
+);
+
+// Convert a Date to a local YYYY-MM-DD string (avoids UTC drift from toISOString)
+function toDateKey(d: Date): string {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+// Local YYYY-MM-DD date string for min validation
+const todayDateString = computed(() => toDateKey(new Date()));
+
+// Day-slider state: 0 = current window (today + next 6 days), each step slides one week forward
+const weekOffset = ref(0);
+const slideDir = ref<'next' | 'prev'>('next');
+const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// The 7 consecutive days shown in the slider. First cell of window 0 is today.
+const visibleDays = computed<Date[]>(() => {
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    base.setDate(base.getDate() + weekOffset.value * 7);
+    return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(base);
+        d.setDate(base.getDate() + i);
+        return d;
+    });
+});
+
+// Month + year heading above the slider (handles windows spanning two months/years)
+const monthYearLabel = computed(() => {
+    const days = visibleDays.value;
+    const first = days[0];
+    const last = days[6];
+    const monthName = (d: Date) => d.toLocaleDateString('en-US', { month: 'short' });
+    if (first.getMonth() === last.getMonth()) {
+        return `${monthName(first)} ${first.getFullYear()}`;
+    }
+    if (first.getFullYear() === last.getFullYear()) {
+        return `${monthName(first)} – ${monthName(last)} ${last.getFullYear()}`;
+    }
+    return `${monthName(first)} ${first.getFullYear()} – ${monthName(last)} ${last.getFullYear()}`;
+});
+
+// Direction-aware slide transition classes for the day grid
+const dateEnterFrom = computed(() =>
+    slideDir.value === 'next' ? 'opacity-0 translate-x-6' : 'opacity-0 -translate-x-6',
+);
+const dateLeaveTo = computed(() =>
+    slideDir.value === 'next' ? 'opacity-0 -translate-x-6' : 'opacity-0 translate-x-6',
+);
+
+function selectDay(d: Date): void {
+    form.value.date = toDateKey(d);
+}
+
+function isSelectedDay(d: Date): boolean {
+    return toDateKey(d) === form.value.date;
+}
+
+function isToday(d: Date): boolean {
+    return toDateKey(d) === todayDateString.value;
+}
+
+function prevWeek(): void {
+    if (weekOffset.value > 0) {
+        slideDir.value = 'prev';
+        weekOffset.value--;
+    }
+}
+
+function nextWeek(): void {
+    slideDir.value = 'next';
+    weekOffset.value++;
+}
+
+// Horizontal court slider
+const courtScroller = ref<HTMLElement | null>(null);
+
+function scrollCourts(dir: 'prev' | 'next'): void {
+    const el = courtScroller.value;
+    if (!el) {
+        return;
+    }
+    el.scrollBy({ left: dir === 'next' ? 220 : -220, behavior: 'smooth' });
+}
 
 // Fetch real-time court availability from server
 async function fetchRealtimeAvailability() {
@@ -266,16 +458,18 @@ watch(
                 court: '',
             };
 
-            // Set up initial venue & court selection
-            if (props.venue) {
-                selectedVenueId.value = props.venue.id;
-                if (props.venue.courts && props.venue.courts.length > 0) {
-                    selectedCourtId.value = props.venue.courts[0].id;
-                }
-            } else if (props.court) {
+            // Set up initial venue & court selection — a specific court (if provided) wins over the venue default
+            if (props.court) {
                 selectedCourtId.value = props.court.id;
                 if (props.court.venue) {
                     selectedVenueId.value = props.court.venue.id;
+                } else if (props.venue) {
+                    selectedVenueId.value = props.venue.id;
+                }
+            } else if (props.venue) {
+                selectedVenueId.value = props.venue.id;
+                if (props.venue.courts && props.venue.courts.length > 0) {
+                    selectedCourtId.value = props.venue.courts[0].id;
                 }
             } else if (props.venues && props.venues.length > 0) {
                 selectedVenueId.value = props.venues[0].id;
@@ -284,12 +478,15 @@ watch(
                 }
             }
 
-            // Default date to tomorrow
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            form.value.date = tomorrow.toISOString().split('T')[0];
+            // Default date to today (first cell of the slider) and reset the window
+            weekOffset.value = 0;
+            slideDir.value = 'next';
+            form.value.date = todayDateString.value;
             form.value.time = [];
             form.value.notes = '';
+            form.value.transaction_code = '';
+            summaryExpanded.value = false;
+            qrZoomed.value = false;
 
             if (currentUser.value) {
                 form.value.name = currentUser.value.name || '';
@@ -424,10 +621,6 @@ function validateStep2(): boolean {
     if (!form.value.phone.trim()) {
         errors.value.phone = 'Phone number is required.';
         isValid = false;
-    } else if (!/^\+?[\d\s-]{8,15}$/.test(form.value.phone.trim())) {
-        errors.value.phone =
-            'Please enter a valid phone number (minimum 8 digits).';
-        isValid = false;
     }
 
     return isValid;
@@ -456,10 +649,6 @@ function handleSubmit() {
     if (!validateStep1() || !validateStep2()) {
         return;
     }
-    if (!receiptFile.value) {
-        receiptError.value = 'Payment receipt is required.';
-        return;
-    }
 
     step.value = 'submitting';
     loadingStep.value = 1;
@@ -474,7 +663,10 @@ function handleSubmit() {
     formData.append('date', form.value.date);
     form.value.time.forEach((t) => formData.append('time[]', t));
     formData.append('notes', form.value.notes);
-    formData.append('receipt', receiptFile.value);
+    formData.append('transaction_code', form.value.transaction_code);
+    if (receiptFile.value) {
+        formData.append('receipt', receiptFile.value);
+    }
 
     // Send HTTP POST request to Laravel backend
     const uploadPromise = fetch('/bookings', {
@@ -546,7 +738,31 @@ function handleSubmit() {
         });
 }
 
-function downloadVoucher() {
+function loadImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+    });
+}
+
+// Resolve the current theme's brand color so the voucher matches the active theme
+function getBrandColor(): string {
+    if (typeof document === 'undefined') {
+        return '#0f766e';
+    }
+    const el = document.createElement('span');
+    el.className = 'text-brand';
+    el.style.cssText = 'position:absolute;opacity:0;pointer-events:none';
+    document.body.appendChild(el);
+    const color = getComputedStyle(el).color;
+    document.body.removeChild(el);
+    return color || '#0f766e';
+}
+
+// Render the booking as a downloadable PNG receipt with a scannable verification QR
+async function downloadVoucher() {
     if (!bookingDetails.value && !selectedCourt.value) {
         return;
     }
@@ -565,40 +781,134 @@ function downloadVoucher() {
     const times = bookingDetails.value
         ? bookingDetails.value.time_slots.join(', ')
         : form.value.time.join(', ');
-    const duration = bookingDetails.value
+    const durationMinutes = bookingDetails.value
         ? bookingDetails.value.time_slots.length *
           (selectedCourt.value?.slot_duration_minutes || 60)
         : calculatedDuration.value;
+    const durationHours = durationMinutes / 60;
+    const duration = `${Number.isInteger(durationHours) ? durationHours : durationHours.toFixed(1)} ${durationHours === 1 ? 'hour' : 'hours'}`;
     const price = bookingDetails.value
         ? bookingDetails.value.total_price
         : calculatedPrice.value;
+    const qrSrc = bookingDetails.value?.qr_code || null;
 
-    const content = `=========================================
-      COURT RESERVATION VOUCHER
-=========================================
-Booking Reference : ${reference}
-Venue Location    : ${venueName}
-Court Name        : ${courtName}
-Player Name       : ${playerName}
-Reservation Date  : ${date}
-Preferred Time    : ${times}
-Duration          : ${duration} minutes
-Total Amount      : $${price}
-Status            : CONFIRMED
-=========================================
-Show this voucher upon arrival at the
-facility shop. Thank you for booking!
-=========================================`;
+    const brand = getBrandColor();
+    const scale = 2;
+    const W = 640;
+    const H = 960;
+    const canvas = document.createElement('canvas');
+    canvas.width = W * scale;
+    canvas.height = H * scale;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        return;
+    }
+    ctx.scale(scale, scale);
 
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
+    // Card background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    // Header band
+    ctx.fillStyle = brand;
+    ctx.fillRect(0, 0, W, 96);
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.font = '700 24px Arial, sans-serif';
+    ctx.fillText('COURT RESERVATION', W / 2, 44);
+    ctx.font = '400 14px Arial, sans-serif';
+    ctx.fillText(venueName || 'Sports Facility', W / 2, 72);
+
+    // Reference
+    ctx.fillStyle = '#111827';
+    ctx.font = '700 13px monospace';
+    ctx.fillText(`REF: ${reference}`, W / 2, 128);
+
+    // QR code
+    let y = 156;
+    if (qrSrc) {
+        try {
+            const qrImg = await loadImage(qrSrc);
+            const qrSize = 196;
+            const boxX = (W - qrSize) / 2 - 10;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(boxX, y - 10, qrSize + 20, qrSize + 20);
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(boxX, y - 10, qrSize + 20, qrSize + 20);
+            ctx.drawImage(qrImg, (W - qrSize) / 2, y, qrSize, qrSize);
+            y += qrSize + 22;
+        } catch {
+            // QR failed to load — continue without it
+        }
+    }
+    ctx.fillStyle = '#6b7280';
+    ctx.textAlign = 'center';
+    ctx.font = '400 12px Arial, sans-serif';
+    ctx.fillText('Show this QR to staff to verify your booking', W / 2, y);
+    y += 34;
+
+    // Detail rows
+    const padX = 64;
+    const rows: [string, string][] = [
+        ['Court', courtName],
+        ['Player', playerName],
+        ['Date', date],
+        ['Time', times],
+        ['Duration', duration],
+    ];
+    for (const [label, value] of rows) {
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '400 14px Arial, sans-serif';
+        ctx.fillText(label, padX, y);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#111827';
+        ctx.font = '700 14px Arial, sans-serif';
+        ctx.fillText(value, W - padX, y);
+        y += 30;
+    }
+
+    // Total
+    y += 4;
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padX, y);
+    ctx.lineTo(W - padX, y);
+    ctx.stroke();
+    y += 32;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#111827';
+    ctx.font = '700 16px Arial, sans-serif';
+    ctx.fillText('Total', padX, y);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = brand;
+    ctx.font = '800 20px Arial, sans-serif';
+    ctx.fillText(`PHP ${price}`, W - padX, y);
+    y += 40;
+
+    // Pending / cancellation disclaimer
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '400 11px Arial, sans-serif';
+    const disclaimer = [
+        'This booking is PENDING and not yet guaranteed.',
+        'Staff may cancel it at any time. You will receive a confirmation',
+        'email, or log in to track your booking status anytime.',
+    ];
+    for (const line of disclaimer) {
+        ctx.fillText(line, W / 2, y);
+        y += 16;
+    }
+
+    // Download
     const link = document.createElement('a');
-    link.href = url;
-    link.download = `Voucher-${reference}.txt`;
+    link.href = canvas.toDataURL('image/png');
+    link.download = `Booking-${reference}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
 }
 </script>
 
@@ -617,12 +927,12 @@ facility shop. Thank you for booking!
         >
             <!-- Modal Container -->
             <div
-                class="relative w-full max-w-lg scale-100 transform overflow-hidden rounded-2xl border border-line bg-surface text-content opacity-100 shadow-2xl transition-all duration-300"
+                class="relative flex max-h-[90vh] w-full max-w-lg scale-100 transform flex-col overflow-hidden rounded-2xl border border-line bg-surface text-content opacity-100 shadow-2xl transition-all duration-300"
                 @click.stop
             >
-                <!-- Close Button -->
+                <!-- Close Button (confirmed stage only; the form stage has its own header close button) -->
                 <button
-                    v-if="step !== 'submitting'"
+                    v-if="step === 'confirmed'"
                     type="button"
                     class="absolute top-4 right-4 z-10 flex size-9 items-center justify-center rounded-full border border-line bg-surface-elevated/50 text-content transition-colors hover:bg-surface-elevated hover:text-brand"
                     aria-label="Close booking modal"
@@ -643,18 +953,64 @@ facility shop. Thank you for booking!
                     </svg>
                 </button>
 
+                <!-- Enlarged QR overlay -->
+                <div
+                    v-if="qrZoomed && activePaymentMethod?.qr_url"
+                    class="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-surface-inverse/85 p-6 backdrop-blur-sm"
+                    @click="qrZoomed = false"
+                >
+                    <div class="max-h-[70vh] max-w-full overflow-hidden rounded-2xl border border-line bg-white p-3 shadow-2xl" @click.stop>
+                        <img
+                            :src="activePaymentMethod.qr_url"
+                            alt="Payment QR code"
+                            class="mx-auto h-auto max-h-[64vh] w-auto max-w-full object-contain"
+                        />
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm font-bold text-white">Send {{ activePaymentMethod.label }} to</p>
+                        <code class="font-mono text-base font-bold text-white">{{ activePaymentMethod.number }}</code>
+                        <p class="mt-0.5 text-xs text-white/70">Amount: ₱{{ calculatedPrice }}</p>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-full bg-white px-5 py-2 text-xs font-bold text-surface-inverse transition-colors hover:bg-white/90 cursor-pointer"
+                        @click="qrZoomed = false"
+                    >
+                        Close
+                    </button>
+                </div>
+
                 <!-- Stage 1: Booking Wizard -->
-                <div v-if="step === 'form'" class="p-6 sm:p-8">
-                    <!-- Wizard Progress Header -->
-                    <div class="mb-6">
-                        <div class="flex items-center justify-between">
+                <div v-if="step === 'form'" class="flex min-h-0 flex-1 flex-col">
+                    <!-- Fixed Header -->
+                    <div class="shrink-0 border-b border-line px-6 pt-5 pb-4 sm:px-8">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0 pr-1">
+                                <h2 class="font-display text-lg font-bold tracking-tight text-content">
+                                    {{ wizardHeading.title }}
+                                </h2>
+                                <p class="mt-0.5 text-xs text-content-muted">
+                                    {{ wizardHeading.subtitle }}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                class="flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface-elevated/50 text-content transition-colors hover:bg-surface-elevated hover:text-brand cursor-pointer"
+                                aria-label="Close booking modal"
+                                @click="close"
+                            >
+                                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <!-- Step tracker -->
+                        <div class="mt-4 flex items-center justify-between">
                             <span
                                 class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
                                 >Step {{ currentWizardStep }} of 3</span
                             >
-                            <span
-                                class="text-xs font-semibold text-content-muted"
-                            >
+                            <span class="text-xs font-semibold text-content-muted">
                                 {{
                                     currentWizardStep === 1
                                         ? 'Court & Schedule'
@@ -664,8 +1020,7 @@ facility shop. Thank you for booking!
                                 }}
                             </span>
                         </div>
-                        <!-- Horizontal progress bar tracker -->
-                        <div class="mt-3 flex items-center gap-2">
+                        <div class="mt-2 flex items-center gap-2">
                             <div
                                 v-for="stepNum in 3"
                                 :key="stepNum"
@@ -681,19 +1036,36 @@ facility shop. Thank you for booking!
                         </div>
                     </div>
 
-                    <form @submit.prevent="handleSubmit" class="space-y-4">
+                    <form @submit.prevent="handleSubmit" class="flex min-h-0 flex-1 flex-col">
+                        <!-- Scrollable Body -->
+                        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5 sm:px-8">
                         <!-- Step 1: Venue & Court Selection -->
                         <div v-if="currentWizardStep === 1" class="space-y-4">
-                            <header class="mb-2">
-                                <h3
-                                    class="font-display text-lg font-bold tracking-tight text-content"
-                                >
-                                    Select Venue & Court
-                                </h3>
-                            </header>
+                            <!-- Venue banner shown when a venue is already chosen -->
+                            <div
+                                v-if="activeVenue && !showVenuePicker"
+                                class="flex items-center gap-3 rounded-xl border border-line bg-surface-elevated/40 p-2.5"
+                            >
+                                <div class="relative size-12 shrink-0 overflow-hidden rounded-lg bg-surface-inverse">
+                                    <img
+                                        :src="activeVenue.cover_image_url || '/images/hero_pickleball.png'"
+                                        :alt="activeVenue.name"
+                                        class="h-full w-full object-cover"
+                                    />
+                                </div>
+                                <div class="min-w-0">
+                                    <span class="block text-[9px] font-bold uppercase tracking-[0.2em] text-brand">Booking at</span>
+                                    <h3 class="truncate font-display text-base font-bold tracking-tight text-content">
+                                        {{ activeVenue.name }}
+                                    </h3>
+                                    <p v-if="activeVenue.address" class="truncate text-[11px] text-content-muted">
+                                        {{ activeVenue.address }}
+                                    </p>
+                                </div>
+                            </div>
 
                             <!-- 1. Venue Selection (Image-Based Cards) -->
-                            <div v-if="props.venues && props.venues.length > 0" class="space-y-2">
+                            <div v-if="showVenuePicker" class="space-y-2">
                                 <label class="block text-xs font-bold text-content-muted uppercase tracking-wider">
                                     Select Venue Facility
                                 </label>
@@ -736,24 +1108,83 @@ facility shop. Thank you for booking!
                                 </div>
                             </div>
 
-                            <!-- 2. Date Selection Field -->
+                            <!-- 2. Date Selection: 7-day slider -->
                             <div>
-                                <label
-                                    for="booking-date"
-                                    class="mb-1.5 block text-xs font-bold text-content-muted uppercase tracking-wider"
-                                    >Booking Date</label
-                                >
-                                <input
-                                    id="booking-date"
-                                    type="date"
-                                    :min="todayDateString"
-                                    v-model="form.date"
-                                    class="w-full rounded-xl border border-line bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-                                    :class="{
-                                        'border-destructive focus:border-destructive focus:ring-destructive':
-                                            errors.date,
-                                    }"
-                                />
+                                <div class="mb-2 flex items-center justify-between">
+                                    <label
+                                        class="block text-xs font-bold text-content-muted uppercase tracking-wider"
+                                        >Booking Date</label
+                                    >
+                                    <div class="flex items-center gap-2.5">
+                                        <span class="text-sm font-bold text-content">{{ monthYearLabel }}</span>
+                                        <div class="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                @click="prevWeek"
+                                                :disabled="weekOffset === 0"
+                                                aria-label="Previous days"
+                                                class="flex size-7 items-center justify-center rounded-full border border-line text-content-muted transition-colors hover:bg-surface-elevated hover:text-brand disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-content-muted cursor-pointer"
+                                            >
+                                                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                @click="nextWeek"
+                                                aria-label="Next days"
+                                                class="flex size-7 items-center justify-center rounded-full border border-line text-content-muted transition-colors hover:bg-surface-elevated hover:text-brand cursor-pointer"
+                                            >
+                                                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="overflow-hidden">
+                                    <transition
+                                        :enter-active-class="'transition duration-200 ease-out'"
+                                        :enter-from-class="dateEnterFrom"
+                                        enter-to-class="opacity-100 translate-x-0"
+                                        :leave-active-class="'transition duration-150 ease-in'"
+                                        leave-from-class="opacity-100 translate-x-0"
+                                        :leave-to-class="dateLeaveTo"
+                                        mode="out-in"
+                                    >
+                                        <div :key="weekOffset" class="grid grid-cols-7 gap-1.5">
+                                            <button
+                                                v-for="d in visibleDays"
+                                                :key="toDateKey(d)"
+                                                type="button"
+                                                @click="selectDay(d)"
+                                                class="group flex flex-col items-center gap-1.5 rounded-xl border py-2 transition-all cursor-pointer"
+                                                :class="isSelectedDay(d)
+                                                    ? 'border-brand bg-brand/5'
+                                                    : 'border-transparent hover:bg-surface-elevated/50'"
+                                            >
+                                                <span
+                                                    class="text-[10px] font-bold uppercase tracking-wide"
+                                                    :class="isSelectedDay(d) ? 'text-brand' : 'text-content-muted'"
+                                                    >{{ dayLabels[d.getDay()] }}</span
+                                                >
+                                                <span
+                                                    class="flex size-9 items-center justify-center rounded-full text-sm font-bold transition-all"
+                                                    :class="isSelectedDay(d)
+                                                        ? 'bg-brand text-brand-foreground shadow-md shadow-brand/30'
+                                                        : 'bg-surface-elevated/60 text-content group-hover:bg-surface-elevated'"
+                                                    >{{ d.getDate() }}</span
+                                                >
+                                                <span
+                                                    class="text-[8px] font-bold uppercase tracking-wide"
+                                                    :class="isSelectedDay(d) ? 'text-brand' : 'text-content-muted/70'"
+                                                    >{{ isToday(d) ? 'Today' : ' ' }}</span
+                                                >
+                                            </button>
+                                        </div>
+                                    </transition>
+                                </div>
                                 <p
                                     v-if="errors.date"
                                     class="mt-1 text-xs font-semibold text-destructive"
@@ -762,60 +1193,65 @@ facility shop. Thank you for booking!
                                 </p>
                             </div>
 
-                            <!-- 3. Court Selection (Dropdown Selection) -->
+                            <!-- 3. Court Selection (Horizontal Slider) -->
                             <div>
-                                <label
-                                    for="court-select"
-                                    class="mb-1.5 block text-xs font-bold text-content-muted uppercase tracking-wider"
-                                    >Choose Available Court</label
+                                <div class="mb-1.5 flex items-center justify-between">
+                                    <label
+                                        class="block text-xs font-bold text-content-muted uppercase tracking-wider"
+                                        >Choose Available Court</label
+                                    >
+                                    <div v-if="sortedAvailableCourts.length > 2" class="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            @click="scrollCourts('prev')"
+                                            aria-label="Previous courts"
+                                            class="flex size-7 items-center justify-center rounded-full border border-line text-content-muted transition-colors hover:bg-surface-elevated hover:text-brand cursor-pointer"
+                                        >
+                                            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click="scrollCourts('next')"
+                                            aria-label="Next courts"
+                                            class="flex size-7 items-center justify-center rounded-full border border-line text-content-muted transition-colors hover:bg-surface-elevated hover:text-brand cursor-pointer"
+                                        >
+                                            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div
+                                    ref="courtScroller"
+                                    class="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                 >
-                                <select
-                                    id="court-select"
-                                    v-model="selectedCourtId"
-                                    class="w-full rounded-xl border border-line bg-surface-elevated/40 px-4 py-2.5 text-sm font-semibold text-content outline-none focus:border-brand focus:ring-1 focus:ring-brand cursor-pointer"
-                                >
-                                    <option
+                                    <div
                                         v-for="c in sortedAvailableCourts"
                                         :key="c.id"
-                                        :value="c.id"
-                                        :disabled="isCourtFullyBooked(c)"
+                                        @click="!isCourtFullyBooked(c) && (selectedCourtId = c.id)"
+                                        class="relative flex w-auto min-w-20 shrink-0 snap-start flex-col items-center gap-0.5 rounded-xl border px-4 py-2.5 text-center transition-all select-none"
+                                        :class="[
+                                            isCourtFullyBooked(c)
+                                                ? 'cursor-not-allowed border-line bg-surface/30 opacity-50'
+                                                : selectedCourtId === c.id
+                                                  ? 'cursor-pointer border-brand bg-brand/5 shadow-sm shadow-brand/10 ring-1 ring-brand'
+                                                  : 'cursor-pointer border-line bg-surface-elevated/40 hover:border-brand/40 hover:bg-surface-elevated',
+                                        ]"
                                     >
-                                        {{ c.name }} ({{ c.sport_type }}) — ${{ c.base_price }}/{{ c.slot_duration_minutes }}m {{ isCourtFullyBooked(c) ? ' [Fully Booked]' : '' }}
-                                    </option>
-                                </select>
+                                        <h4 class="text-sm font-extrabold whitespace-nowrap text-content">
+                                            {{ c.name }}
+                                        </h4>
+                                        <span class="text-sm font-extrabold text-brand">₱{{ c.base_price }}</span>
+                                        <span v-if="isCourtFullyBooked(c)" class="text-[10px] font-bold text-destructive uppercase">
+                                            Fully Booked
+                                        </span>
+                                    </div>
+                                </div>
                                 <p v-if="errors.court" class="mt-1 text-xs font-semibold text-destructive">
                                     {{ errors.court }}
                                 </p>
-                            </div>
-
-                            <!-- Active Selected Court Display Card -->
-                            <div
-                                v-if="selectedCourt"
-                                class="flex items-center gap-3 rounded-xl border border-line bg-surface-elevated/40 p-4"
-                            >
-                                <div>
-                                    <h4 class="text-sm font-extrabold text-content">
-                                        {{ selectedCourt.name }}
-                                    </h4>
-                                    <p class="text-xs text-content-muted">
-                                        {{ activeVenue ? activeVenue.name + ' • ' : '' }}{{ selectedCourt.sport_type }}
-                                    </p>
-                                </div>
-                                <div class="ml-auto text-right">
-                                    <span
-                                        class="block text-[9px] font-bold text-content-muted uppercase"
-                                        >Rate</span
-                                    >
-                                    <span
-                                        class="text-sm font-extrabold text-brand"
-                                        >${{ selectedCourt.base_price }}</span
-                                    >
-                                    <span class="text-xs text-content-muted"
-                                        >/{{
-                                            selectedCourt.slot_duration_minutes
-                                        }}m</span
-                                    >
-                                </div>
                             </div>
 
                             <!-- Time Slots Grid -->
@@ -824,51 +1260,59 @@ facility shop. Thank you for booking!
                                     class="mb-1.5 block text-xs font-bold text-content-muted uppercase tracking-wider"
                                     >Select Time Slots</label
                                 >
-                                <div
-                                    class="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-line bg-surface-elevated/20 p-2 sm:grid-cols-3"
-                                >
-                                    <label
-                                        v-for="slot in timeSlots"
-                                        :key="slot"
-                                        class="relative flex flex-col items-center justify-center rounded-lg border p-2 text-center transition-all select-none"
-                                        :class="[
-                                            isSlotBooked(slot)
-                                                ? 'cursor-not-allowed border-line bg-surface/30 opacity-40 pointer-events-none'
-                                                : form.time.includes(slot)
-                                                  ? 'border-brand bg-brand/5 font-extrabold text-brand cursor-pointer'
-                                                  : 'border-line text-content-muted hover:bg-surface-elevated/50 cursor-pointer',
-                                        ]"
+                                <div class="space-y-3">
+                                    <div
+                                        v-for="group in groupedTimeSlots"
+                                        :key="group.period"
                                     >
-                                        <input
-                                            type="checkbox"
-                                            :value="slot"
-                                            v-model="form.time"
-                                            :disabled="isSlotBooked(slot)"
-                                            class="sr-only"
-                                        />
-                                        <span class="text-xs font-bold">{{ slot }}</span>
-                                        <span
-                                            v-if="isSlotBooked(slot)"
-                                            class="mt-0.5 text-[8px] font-bold tracking-tight text-destructive uppercase"
-                                        >
-                                            Already Booked
-                                        </span>
-                                        <span
-                                            v-else
-                                            class="mt-0.5 text-[8px] tracking-wide"
-                                            :class="
-                                                form.time.includes(slot)
-                                                    ? 'text-brand font-bold'
-                                                    : 'text-content-muted/65'
-                                            "
-                                        >
-                                            {{
-                                                form.time.includes(slot)
-                                                    ? 'Selected'
-                                                    : 'Available'
-                                            }}
-                                        </span>
-                                    </label>
+                                        <h5 class="mb-1.5 px-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-content-muted">
+                                            {{ group.period }}
+                                        </h5>
+                                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                            <label
+                                                v-for="slot in group.slots"
+                                                :key="slot"
+                                                class="relative flex flex-col items-center justify-center rounded-lg border p-2 text-center transition-all select-none"
+                                                :class="[
+                                                    isSlotBooked(slot)
+                                                        ? 'cursor-not-allowed border-line bg-surface/30 opacity-40 pointer-events-none'
+                                                        : form.time.includes(slot)
+                                                          ? 'border-brand bg-brand/5 font-extrabold text-brand cursor-pointer'
+                                                          : 'border-line text-content-muted hover:bg-surface-elevated/50 cursor-pointer',
+                                                ]"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    :value="slot"
+                                                    v-model="form.time"
+                                                    :disabled="isSlotBooked(slot)"
+                                                    class="sr-only"
+                                                />
+                                                <span class="text-xs font-bold">{{ slot }}</span>
+                                                <span
+                                                    v-if="isSlotBooked(slot)"
+                                                    class="mt-0.5 text-[8px] font-bold tracking-tight text-destructive uppercase"
+                                                >
+                                                    Already Booked
+                                                </span>
+                                                <span
+                                                    v-else
+                                                    class="mt-0.5 text-[8px] tracking-wide"
+                                                    :class="
+                                                        form.time.includes(slot)
+                                                            ? 'text-brand font-bold'
+                                                            : 'text-content-muted/65'
+                                                    "
+                                                >
+                                                    {{
+                                                        form.time.includes(slot)
+                                                            ? 'Selected'
+                                                            : 'Available'
+                                                    }}
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
                                 <p
                                     v-if="errors.time"
@@ -878,39 +1322,6 @@ facility shop. Thank you for booking!
                                 </p>
                             </div>
 
-                            <!-- Running Fee Summary for Step 1 -->
-                            <div
-                                class="mt-6 flex items-center justify-between border-t border-line pt-4"
-                            >
-                                <div>
-                                    <span
-                                        class="block text-[9px] font-semibold text-content-muted uppercase"
-                                        >Duration & Estimate</span
-                                    >
-                                    <span class="text-xs text-content-muted"
-                                        >{{ calculatedDuration }} minutes •
-                                        <strong class="text-sm text-content"
-                                            >${{ calculatedPrice }}</strong
-                                        ></span
-                                    >
-                                </div>
-                                <div class="flex gap-2">
-                                    <button
-                                        type="button"
-                                        class="rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-content-muted transition-colors hover:bg-surface-elevated cursor-pointer"
-                                        @click="close"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5 hover:bg-brand/95 cursor-pointer"
-                                        @click="nextStep"
-                                    >
-                                        Next
-                                    </button>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- Step 2: User Details -->
@@ -918,18 +1329,6 @@ facility shop. Thank you for booking!
                             v-else-if="currentWizardStep === 2"
                             class="space-y-4"
                         >
-                            <header class="mb-4">
-                                <h3
-                                    class="font-display text-lg font-bold tracking-tight text-content"
-                                >
-                                    Your Details
-                                </h3>
-                                <p class="text-xs text-content-muted">
-                                    Please provide your contact information to
-                                    reserve the court.
-                                </p>
-                            </header>
-
                             <div class="grid gap-4 sm:grid-cols-2">
                                 <div>
                                     <label
@@ -963,9 +1362,9 @@ facility shop. Thank you for booking!
                                     >
                                     <input
                                         id="booking-phone"
-                                        type="tel"
+                                        type="text"
                                         v-model="form.phone"
-                                        placeholder="(512) 555-0199"
+                                        placeholder="0917 123 4567"
                                         class="w-full rounded-xl border border-line bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                                         :class="{
                                             'border-destructive focus:border-destructive':
@@ -991,7 +1390,7 @@ facility shop. Thank you for booking!
                                     id="booking-email"
                                     type="email"
                                     v-model="form.email"
-                                    placeholder="your.email@example.com"
+                                    placeholder="juan.delacruz@email.com"
                                     class="w-full rounded-xl border border-line bg-surface-elevated/40 px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                                     :class="{
                                         'border-destructive focus:border-destructive':
@@ -1021,8 +1420,218 @@ facility shop. Thank you for booking!
                                 ></textarea>
                             </div>
 
+                        </div>
+
+                        <!-- Step 3: Payment Upload -->
+                        <div
+                            v-else-if="currentWizardStep === 3"
+                            class="space-y-4"
+                        >
+                            <!-- Collapsible Reservation Summary — total always visible -->
+                            <div class="rounded-xl border border-line bg-surface-elevated/40 p-4">
+                                <button
+                                    type="button"
+                                    class="flex w-full items-center justify-between text-left cursor-pointer"
+                                    @click="summaryExpanded = !summaryExpanded"
+                                >
+                                    <div>
+                                        <span class="block text-[10px] font-bold uppercase tracking-wider text-content-muted">Total Payable</span>
+                                        <span class="text-xl font-black text-brand">₱{{ calculatedPrice }}</span>
+                                    </div>
+                                    <span class="flex items-center gap-1 text-xs font-semibold text-content-muted">
+                                        {{ summaryExpanded ? 'Hide' : 'View details' }}
+                                        <svg
+                                            class="size-4 transition-transform"
+                                            :class="{ 'rotate-180': summaryExpanded }"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+                                        >
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </span>
+                                </button>
+
+                                <div v-if="summaryExpanded" class="mt-3 space-y-1.5 border-t border-line pt-3 text-xs">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <span class="text-content-muted">Venue</span>
+                                        <span class="truncate font-bold text-content">{{ activeVenue ? activeVenue.name : 'Main Yard' }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <span class="text-content-muted">Court</span>
+                                        <span class="truncate font-bold text-content">{{ selectedCourt ? selectedCourt.name : 'N/A' }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <span class="text-content-muted">Date</span>
+                                        <span class="font-bold text-content">{{ form.date }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <span class="shrink-0 text-content-muted">Time Slots</span>
+                                        <span class="truncate text-right font-bold text-content">{{ form.time.join(', ') }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <span class="text-content-muted">Duration</span>
+                                        <span class="font-bold text-content">{{ calculatedDurationLabel }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Payment (optional) -->
+                            <div class="space-y-3 rounded-xl border border-line bg-surface-elevated/30 p-4">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold uppercase tracking-wider text-content-muted">
+                                        Payment
+                                    </h4>
+                                    <span class="rounded-full bg-surface-elevated px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-content-muted">
+                                        Optional
+                                    </span>
+                                </div>
+
+                                <!-- Payment method selector (venue-configured) -->
+                                <template v-if="availablePaymentMethods.length">
+                                    <div class="flex gap-2">
+                                        <button
+                                            v-for="m in availablePaymentMethods"
+                                            :key="m.key"
+                                            type="button"
+                                            @click="selectedPaymentMethod = m.key"
+                                            class="flex-1 rounded-lg border px-3 py-2 text-sm font-bold transition-all cursor-pointer"
+                                            :class="selectedPaymentMethod === m.key
+                                                ? 'border-brand bg-brand/5 text-brand ring-1 ring-brand'
+                                                : 'border-line text-content-muted hover:bg-surface-elevated'"
+                                        >
+                                            {{ m.label }}
+                                        </button>
+                                    </div>
+
+                                    <!-- Selected method: where to send + QR -->
+                                    <div v-if="activePaymentMethod" class="flex items-center gap-3 rounded-lg border border-line bg-surface p-3">
+                                        <button
+                                            v-if="activePaymentMethod.qr_url"
+                                            type="button"
+                                            @click="qrZoomed = true"
+                                            aria-label="Enlarge QR code"
+                                            class="group relative size-20 shrink-0 overflow-hidden rounded-lg border border-line bg-white p-1 cursor-zoom-in"
+                                        >
+                                            <img :src="activePaymentMethod.qr_url" alt="Payment QR code" class="h-full w-full object-contain" />
+                                            <span class="absolute bottom-0.5 right-0.5 flex size-5 items-center justify-center rounded-full bg-brand text-brand-foreground shadow">
+                                                <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 8v6M8 11h6M19 11a8 8 0 11-16 0 8 8 0 0116 0z" />
+                                                </svg>
+                                            </span>
+                                        </button>
+                                        <div class="min-w-0">
+                                            <span class="block text-[10px] font-bold uppercase tracking-wider text-content-muted">
+                                                Send {{ activePaymentMethod.label }} to
+                                            </span>
+                                            <code class="font-mono text-sm font-bold text-brand">{{ activePaymentMethod.number }}</code>
+                                            <span class="mt-0.5 block text-xs text-content-muted">
+                                                Amount: <strong class="text-content">₱{{ calculatedPrice }}</strong>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- No payment methods configured on this venue -->
+                                <p v-else class="text-xs text-content-muted">
+                                    The venue will share payment details with you after your booking is received.
+                                </p>
+
+                                <!-- Reference number -->
+                                <input
+                                    id="booking-transaction-code"
+                                    type="text"
+                                    v-model="form.transaction_code"
+                                    placeholder="Reference no. (optional)"
+                                    class="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                                />
+
+                                <!-- Receipt upload -->
+                                <div
+                                    v-if="!receiptPreviewUrl"
+                                    class="relative flex items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-surface px-3 py-3 text-center transition-colors hover:border-brand/50 cursor-pointer"
+                                >
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        @change="handleReceiptUpload"
+                                        class="absolute inset-0 cursor-pointer opacity-0"
+                                    />
+                                    <svg class="size-4 shrink-0 text-content-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span class="text-xs font-semibold text-content-muted">Upload receipt screenshot</span>
+                                </div>
+
+                                <div
+                                    v-else
+                                    class="relative flex items-center gap-3 rounded-lg border border-line bg-surface p-2.5"
+                                >
+                                    <img :src="receiptPreviewUrl" alt="Receipt preview" class="size-11 rounded-lg border border-line object-cover" />
+                                    <div class="flex-1 overflow-hidden">
+                                        <p class="truncate text-xs font-bold text-content">{{ receiptFile?.name }}</p>
+                                        <p class="text-[10px] text-content-muted">{{ ((receiptFile?.size || 0) / 1024).toFixed(1) }} KB • Attached</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        @click="removeReceipt"
+                                        class="rounded-full border border-line p-1.5 text-content-muted transition-colors hover:text-destructive cursor-pointer"
+                                    >
+                                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <p v-if="receiptError" class="text-xs font-semibold text-destructive">
+                                    {{ receiptError }}
+                                </p>
+                            </div>
+
+                            <p class="text-center text-[11px] text-content-muted">
+                                Payment isn't required to book — paying ahead just helps staff confirm faster.
+                            </p>
+
+                        </div>
+                        </div>
+                        <!-- end scrollable body -->
+
+                        <!-- Fixed Footer (action bar) -->
+                        <div class="shrink-0 border-t border-line bg-surface px-6 py-4 sm:px-8">
+                            <!-- Step 1 footer -->
                             <div
-                                class="mt-6 flex items-center justify-between border-t border-line pt-4"
+                                v-if="currentWizardStep === 1"
+                                class="flex items-center justify-between gap-3"
+                            >
+                                <div>
+                                    <span class="block text-[9px] font-semibold text-content-muted uppercase"
+                                        >Duration &amp; Estimate</span
+                                    >
+                                    <span class="text-xs text-content-muted"
+                                        >{{ calculatedDurationLabel }} •
+                                        <strong class="text-sm text-content">₱{{ calculatedPrice }}</strong></span
+                                    >
+                                </div>
+                                <div class="flex gap-2">
+                                    <button
+                                        type="button"
+                                        class="rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-content-muted transition-colors hover:bg-surface-elevated cursor-pointer"
+                                        @click="close"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5 hover:bg-brand/95 cursor-pointer"
+                                        @click="nextStep"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Step 2 footer -->
+                            <div
+                                v-else-if="currentWizardStep === 2"
+                                class="flex items-center justify-between gap-3"
                             >
                                 <button
                                     type="button"
@@ -1039,233 +1648,11 @@ facility shop. Thank you for booking!
                                     Continue to Payment
                                 </button>
                             </div>
-                        </div>
 
-                        <!-- Step 3: Payment Upload -->
-                        <div
-                            v-else-if="currentWizardStep === 3"
-                            class="space-y-4"
-                        >
-                            <header class="mb-4">
-                                <h3
-                                    class="font-display text-lg font-bold tracking-tight text-content"
-                                >
-                                    Confirm & Pay
-                                </h3>
-                                <p class="text-xs text-content-muted">
-                                    Upload proof of payment to finalize your
-                                    court reservation.
-                                </p>
-                            </header>
-
-                            <!-- Reservation Summary Card -->
+                            <!-- Step 3 footer -->
                             <div
-                                class="rounded-xl border border-line bg-surface-elevated/40 p-4"
-                            >
-                                <h4
-                                    class="text-xs font-bold tracking-wider text-content-muted uppercase"
-                                >
-                                    Reservation Summary
-                                </h4>
-                                <div class="mt-2 space-y-1.5 text-xs">
-                                    <div
-                                        class="flex items-center justify-between"
-                                    >
-                                        <span class="text-content-muted"
-                                            >Location / Venue:</span
-                                        >
-                                        <span class="font-bold text-content">{{
-                                            activeVenue ? activeVenue.name : 'Main Yard'
-                                        }}</span>
-                                    </div>
-                                    <div
-                                        class="flex items-center justify-between"
-                                    >
-                                        <span class="text-content-muted"
-                                            >Selected Court:</span
-                                        >
-                                        <span class="font-bold text-content">{{
-                                            selectedCourt ? selectedCourt.name : 'N/A'
-                                        }}</span>
-                                    </div>
-                                    <div
-                                        class="flex items-center justify-between"
-                                    >
-                                        <span class="text-content-muted"
-                                            >Date:</span
-                                        >
-                                        <span class="font-bold text-content">{{
-                                            form.date
-                                        }}</span>
-                                    </div>
-                                    <div
-                                        class="flex items-center justify-between"
-                                    >
-                                        <span class="text-content-muted"
-                                            >Time Slots:</span
-                                        >
-                                        <span class="font-bold text-content">{{
-                                            form.time.join(', ')
-                                        }}</span>
-                                    </div>
-                                    <div
-                                        class="flex items-center justify-between"
-                                    >
-                                        <span class="text-content-muted"
-                                            >Duration:</span
-                                        >
-                                        <span class="font-bold text-content"
-                                            >{{
-                                                calculatedDuration
-                                            }}
-                                            mins</span
-                                        >
-                                    </div>
-                                    <div
-                                        class="mt-2 flex items-center justify-between border-t border-line pt-2 text-sm font-black"
-                                    >
-                                        <span class="text-content"
-                                            >Total Payable:</span
-                                        >
-                                        <span class="text-brand"
-                                            >${{ calculatedPrice }}</span
-                                        >
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Mock QR Code Payment Instructions -->
-                            <div
-                                class="flex items-center gap-4 rounded-xl border border-line bg-surface-elevated/20 p-3"
-                            >
-                                <div
-                                    class="flex size-16 shrink-0 items-center justify-center rounded-lg border border-line bg-white p-1 shadow-sm"
-                                >
-                                    <!-- Embedded SVG QR Code Mock Visual -->
-                                    <svg
-                                        class="size-full text-black"
-                                        viewBox="0 0 24 24"
-                                        fill="currentColor"
-                                    >
-                                        <path
-                                            d="M2 2h8v8H2V2zm2 2v4h4V4H4zm11-2h7v7h-7V2zm2 2v3h3V4h-3zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm13-2h3v3h-3v-3zm0 5h5v3h-5v-3zm-5-3h3v8h-3v-8zm5-2h3v2h-3v-2z"
-                                        />
-                                    </svg>
-                                </div>
-                                <div class="text-xs">
-                                    <h5 class="font-bold text-content">
-                                        Scan QR or Send Payment
-                                    </h5>
-                                    <p class="mt-0.5 text-content-muted">
-                                        Transfer
-                                        <strong class="text-content"
-                                            >${{ calculatedPrice }}</strong
-                                        >
-                                        to
-                                        <code class="font-mono text-brand"
-                                            >pay@dinkyard.test</code
-                                        >
-                                        (Venmo / Zelle / GPay)
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- File Upload Field -->
-                            <div>
-                                <label
-                                    class="mb-1.5 block text-xs font-bold text-content-muted uppercase"
-                                    >Upload Receipt Image *</label
-                                >
-
-                                <div
-                                    v-if="!receiptPreviewUrl"
-                                    class="relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-line bg-surface-elevated/30 p-6 text-center transition-colors hover:border-brand/50 hover:bg-surface-elevated/50 cursor-pointer"
-                                >
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        @change="handleReceiptUpload"
-                                        class="absolute inset-0 cursor-pointer opacity-0"
-                                    />
-                                    <svg
-                                        class="size-8 text-content-muted"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        stroke-width="1.5"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                        />
-                                    </svg>
-                                    <p
-                                        class="mt-2 text-xs font-semibold text-content"
-                                    >
-                                        Click or drop receipt screenshot here
-                                    </p>
-                                    <p class="mt-1 text-[10px] text-content-muted">
-                                        PNG, JPG, or WEBP up to 5MB
-                                    </p>
-                                </div>
-
-                                <div
-                                    v-else
-                                    class="relative flex items-center gap-3 rounded-xl border border-line bg-surface-elevated p-3"
-                                >
-                                    <img
-                                        :src="receiptPreviewUrl"
-                                        alt="Receipt preview"
-                                        class="size-14 rounded-lg object-cover border border-line"
-                                    />
-                                    <div class="flex-1 overflow-hidden">
-                                        <p
-                                            class="truncate text-xs font-bold text-content"
-                                        >
-                                            {{ receiptFile?.name }}
-                                        </p>
-                                        <p class="text-[10px] text-content-muted">
-                                            {{
-                                                (
-                                                    (receiptFile?.size || 0) /
-                                                    1024
-                                                ).toFixed(1)
-                                            }}
-                                            KB • Attached
-                                        </p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        @click="removeReceipt"
-                                        class="rounded-full border border-line p-1.5 text-content-muted hover:text-destructive transition-colors cursor-pointer"
-                                    >
-                                        <svg
-                                            class="size-4"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                            />
-                                        </svg>
-                                    </button>
-                                </div>
-
-                                <p
-                                    v-if="receiptError"
-                                    class="mt-1.5 text-xs font-semibold text-destructive"
-                                >
-                                    {{ receiptError }}
-                                </p>
-                            </div>
-
-                            <div
-                                class="mt-6 flex items-center justify-between border-t border-line pt-4"
+                                v-else-if="currentWizardStep === 3"
+                                class="flex items-center justify-between gap-3"
                             >
                                 <button
                                     type="button"
@@ -1278,7 +1665,7 @@ facility shop. Thank you for booking!
                                     type="submit"
                                     class="rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5 hover:bg-brand/95 cursor-pointer"
                                 >
-                                    Submit Reservation
+                                    Confirm Booking
                                 </button>
                             </div>
                         </div>
@@ -1302,8 +1689,8 @@ facility shop. Thank you for booking!
                     </div>
                 </div>
 
-                <!-- Stage 3: Confirmed Voucher Screen -->
-                <div v-else-if="step === 'confirmed'" class="p-8 text-center space-y-6">
+                <!-- Stage 3: Booking Received Screen -->
+                <div v-else-if="step === 'confirmed'" class="min-h-0 flex-1 space-y-5 overflow-y-auto p-8 text-center">
                     <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
                         <svg class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -1311,12 +1698,20 @@ facility shop. Thank you for booking!
                     </div>
                     <div>
                         <span class="inline-block rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-500 uppercase tracking-wider">
-                            Booking Confirmed
+                            Booking Received
                         </span>
-                        <h3 class="mt-3 font-display text-2xl font-black text-content">Court Reserved Successfully!</h3>
+                        <h3 class="mt-3 font-display text-2xl font-black text-content">Your Booking Was Submitted!</h3>
                         <p class="mt-1 text-sm text-content-muted">
                             Ref: <strong class="font-mono text-content">{{ bookingDetails?.reference_code }}</strong>
                         </p>
+                    </div>
+
+                    <!-- Verification QR -->
+                    <div v-if="bookingDetails?.qr_code" class="flex flex-col items-center gap-2">
+                        <div class="rounded-2xl border border-line bg-white p-3 shadow-sm">
+                            <img :src="bookingDetails.qr_code" alt="Booking verification QR code" class="size-36 object-contain" />
+                        </div>
+                        <p class="text-[11px] text-content-muted">Show this QR to staff to verify your booking</p>
                     </div>
 
                     <div class="rounded-xl border border-line bg-surface-elevated/50 p-4 text-left text-xs space-y-1.5">
@@ -1338,13 +1733,25 @@ facility shop. Thank you for booking!
                         </div>
                     </div>
 
-                    <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                    <!-- Pending / cancellation disclaimer -->
+                    <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-left">
+                        <div class="flex items-start gap-2">
+                            <svg class="mt-0.5 size-4 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                            </svg>
+                            <p class="text-[11px] leading-relaxed text-content">
+                                Your slot is <strong>not yet guaranteed</strong> — this booking is pending review and staff may cancel it at any time. You'll get a <strong>confirmation email</strong> once it's approved, or you can <strong>log in to track your booking status</strong> anytime.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3 pt-1">
                         <button
                             type="button"
                             @click="downloadVoucher"
                             class="flex-1 rounded-full border border-line bg-surface-elevated py-3 text-xs font-bold text-content hover:bg-surface transition-colors cursor-pointer"
                         >
-                            Download Voucher TXT
+                            Download Receipt
                         </button>
                         <button
                             type="button"

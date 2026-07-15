@@ -177,7 +177,7 @@ function cancelBooking(bookingId: number) {
                     <DollarSign class="w-12 h-12 text-emerald-600" />
                 </div>
                 <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">Total Investment</span>
-                <span class="text-2xl font-black text-neutral-900 dark:text-white mt-1 block">${{ stats.totalSpent }}</span>
+                <span class="text-2xl font-black text-neutral-900 dark:text-white mt-1 block">₱{{ stats.totalSpent }}</span>
                 <div class="flex items-center gap-1 mt-2 text-[10px] text-neutral-500 font-medium">
                     <TrendingUp class="w-3.5 h-3.5 text-emerald-600" />
                     <span>Includes approved & pending payments</span>
@@ -223,7 +223,7 @@ function cancelBooking(bookingId: number) {
                                     <span class="text-[10px] text-neutral-500 font-mono mt-0.5">{{ booking.time_slots ? booking.time_slots.join(', ') : 'N/A' }}</span>
                                 </div>
                             </td>
-                            <td class="py-4 px-3 font-bold text-neutral-900 dark:text-white">${{ booking.total_price }}</td>
+                            <td class="py-4 px-3 font-bold text-neutral-900 dark:text-white">₱{{ booking.total_price }}</td>
                             <td class="py-4 px-3">
                                 <a
                                     v-if="booking.receipt_url"

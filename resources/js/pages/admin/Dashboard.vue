@@ -117,7 +117,7 @@ function quickUpdateStatus(bookingId: number, status: string) {
                         </div>
                     </div>
                     <div class="text-2xl font-bold text-neutral-900 dark:text-white">
-                        ${{ stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                        ₱{{ stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
                     </div>
                     <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
                         <TrendingUp class="w-3.5 h-3.5" /> All confirmed & completed bookings
@@ -223,7 +223,7 @@ function quickUpdateStatus(bookingId: number, status: string) {
                                         </span>
                                     </td>
                                     <td class="py-3 px-3 text-right font-bold text-neutral-900 dark:text-white">
-                                        ${{ court.total_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                                        ₱{{ court.total_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
                                     </td>
                                 </tr>
                             </tbody>
@@ -345,7 +345,7 @@ function quickUpdateStatus(bookingId: number, status: string) {
                                     {{ b.time_slots ? b.time_slots.join(', ') : 'N/A' }}
                                 </td>
                                 <td class="py-3 px-3 font-bold text-neutral-900 dark:text-white">
-                                    ${{ b.total_price }}
+                                    ₱{{ b.total_price }}
                                 </td>
                                 <td class="py-3 px-3">
                                     <span

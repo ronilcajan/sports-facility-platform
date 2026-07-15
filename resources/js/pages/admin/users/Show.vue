@@ -84,7 +84,7 @@ setLayoutProps({
                                 <td class="py-3 px-3 font-medium text-neutral-900 dark:text-white">{{ b.court?.name || 'N/A' }}</td>
                                 <td class="py-3 px-3 text-neutral-600 dark:text-neutral-300">{{ b.date }}</td>
                                 <td class="py-3 px-3 font-mono text-[11px] text-neutral-500">{{ b.time_slots ? b.time_slots.join(', ') : '' }}</td>
-                                <td class="py-3 px-3 font-bold text-emerald-600">${{ b.total_price }}</td>
+                                <td class="py-3 px-3 font-bold text-emerald-600">₱{{ b.total_price }}</td>
                                 <td class="py-3 px-3 font-semibold capitalize">{{ b.status }}</td>
                             </tr>
 

@@ -28,12 +28,13 @@ class StoreBookingRequest extends FormRequest
             'court_id' => ['required', 'exists:courts,id'],
             'name' => ['required', 'string', 'min:3', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
-            'phone' => ['required', 'string', 'regex:/^\+?[\d\s-]{8,15}$/'],
+            'phone' => ['required', 'string', 'max:50'],
             'date' => ['required', 'date', 'after_or_equal:today'],
             'time' => ['required', 'array', 'min:1'],
             'time.*' => ['required', 'string'],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'receipt' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'], // 5MB
+            'transaction_code' => ['nullable', 'string', 'max:100'], // payment reference no. for staff to verify — optional but preferred
+            'receipt' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'], // 5MB, optional — payment receipt is preferred but not required
         ];
     }
 

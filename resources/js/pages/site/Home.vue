@@ -5,7 +5,7 @@ import SiteVenueCard, { type CatalogVenue } from '@/components/site/SiteVenueCar
 import SiteCourtCard from '@/components/site/SiteCourtCard.vue';
 import BookingModal from '@/components/site/BookingModal.vue';
 import { useSite } from '@/composables/useSite';
-import { courts as courtsRoute, pricing as pricingRoute } from '@/routes/site';
+import { courts as courtsRoute, about as aboutRoute } from '@/routes/site';
 import type { PublicCourt } from '@/types';
 
 interface HomeContent {
@@ -29,6 +29,7 @@ defineProps<{
     content: HomeContent;
     venues?: CatalogVenue[];
     featuredCourts: PublicCourt[];
+    courtsCount: number;
 }>();
 
 const site = useSite();
@@ -118,10 +119,10 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                             Book a Court Now
                         </Link>
                         <Link
-                            :href="pricingRoute()"
+                            :href="aboutRoute()"
                             class="rounded-full border border-line bg-surface-elevated/35 px-8 py-4 text-base font-semibold text-content-inverse transition-all duration-300 hover:-translate-y-0.5 hover:bg-surface-elevated/60"
                         >
-                            See Pricing
+                            Learn More
                         </Link>
                     </div>
                 </div>
@@ -149,15 +150,15 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                         <div
                             class="text-3xl leading-none font-black text-brand"
                         >
-                            12+
+                            {{ courtsCount }}
                         </div>
                         <div
                             class="mt-1.5 text-xs font-extrabold tracking-wider text-content-inverse uppercase"
                         >
-                            Championship Courts
+                            {{ courtsCount === 1 ? 'Court' : 'Courts' }} to play on
                         </div>
                         <div class="mt-1 text-xs text-content-muted">
-                            Tournament-grade cushioned surfaces
+                            Friendly courts for every level
                         </div>
                     </div>
                 </div>
@@ -190,10 +191,10 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                     </div>
                     <div>
                         <h4 class="text-sm font-bold text-content-inverse">
-                            Certified Instructors
+                            Everyone Welcome
                         </h4>
                         <p class="mt-0.5 text-xs text-content-muted">
-                            Learn from pro-level IPTPA trainers.
+                            All ages and skill levels play here.
                         </p>
                     </div>
                 </div>
@@ -253,7 +254,7 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                             All Skill Levels
                         </h4>
                         <p class="mt-0.5 text-xs text-content-muted">
-                            From daily beginner clinics to 5.0 ladder play.
+                            Beginners and regulars share friendly courts.
                         </p>
                     </div>
                 </div>
@@ -273,23 +274,22 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                 <div>
                     <span
                         class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
-                        >OUR VISION</span
+                        >WHY WE PLAY</span
                     >
                     <h2
                         class="mt-3 font-display text-4xl leading-tight font-black tracking-tight text-content sm:text-5xl"
                     >
-                        Where Passion Meets Performance
+                        More than a game — it's a community
                     </h2>
                 </div>
                 <div>
                     <p
                         class="text-lg leading-relaxed text-pretty text-content-muted"
                     >
-                        At Dinkyard, we believe pickleball is more than a
-                        game—it's a vibrant lifestyle and community. Our mission
-                        is to build confidence, foster friendly competition, and
-                        provide Austin with a state-of-the-art facility where
-                        players of all capabilities can connect and thrive.
+                        We believe pickleball is best when it's fun and
+                        welcoming. Our goal is simple: give Oroquieta City a
+                        friendly place where players of every level can book a
+                        court, meet good people, and just enjoy the game.
                     </p>
                 </div>
             </div>
@@ -307,12 +307,11 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                     <h3
                         class="mt-6 font-display text-xl font-extrabold text-content"
                     >
-                        Train Smarter
+                        Book in Seconds
                     </h3>
                     <p class="mt-3 text-sm leading-relaxed text-content-muted">
-                        Reserve a cushioned court instantly. Check real-time
-                        daily availability charts, select dates, and receive
-                        automated check-in details.
+                        Reserve a court instantly. Check real-time availability,
+                        pick your time, and get your booking details right away.
                     </p>
                 </div>
                 <!-- Card 2: Schedule -->
@@ -376,7 +375,7 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                         Explore Sports Facility Venues
                     </h2>
                     <p class="mt-3 max-w-xl text-base text-content-muted">
-                        Select a facility location to view its courts, tournament surfaces, and available reservation slots.
+                        Select a venue to view its courts and available reservation slots.
                     </p>
                 </div>
                 <Link
@@ -430,12 +429,12 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                 <div>
                     <span
                         class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
-                        >LEARN & COMPETE</span
+                        >WAYS TO PLAY</span
                     >
                     <h2
                         class="mt-3 font-display text-3xl font-black tracking-tight text-content-inverse sm:text-4xl"
                     >
-                        Programs Designed for You
+                        However you like to play
                     </h2>
                 </div>
                 <!-- Nav Arrows (Reference Visual) -->
@@ -509,9 +508,9 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                         <p
                             class="mt-3 flex-1 text-sm leading-relaxed text-content-muted"
                         >
-                            Join our open play rotates. Meet local players in
-                            Austin, test your skills, and rank on our community
-                            board.
+                            Join an open-play rotation, meet other players in
+                            Oroquieta City, and just have fun — everyone's
+                            welcome.
                         </p>
                         <div
                             class="mt-6 flex items-center justify-between border-t border-line/50 pt-4"
@@ -534,7 +533,7 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                     <div class="relative aspect-[16/10] overflow-hidden">
                         <img
                             src="/images/hero_pickleball.png"
-                            alt="Clinics & Lessons"
+                            alt="Play with friends"
                             class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                         <div
@@ -545,19 +544,18 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                         <h3
                             class="font-display text-lg font-extrabold text-content-inverse"
                         >
-                            Clinics & Lessons
+                            Play With Friends
                         </h3>
                         <p
                             class="mt-2 text-xs font-semibold tracking-wider text-content-muted uppercase"
                         >
-                            Coaching • Certified Pros
+                            Up to 4 Players • Same Price
                         </p>
                         <p
                             class="mt-3 flex-1 text-sm leading-relaxed text-content-muted"
                         >
-                            Work on your third-shot drops, speed ups, and
-                            kitchen control drills with private or small-group
-                            clinics.
+                            Grab a court for you and your crew — book in seconds
+                            and enjoy a casual game together, any day of the week.
                         </p>
                         <div
                             class="mt-6 flex items-center justify-between border-t border-line/50 pt-4"
@@ -591,19 +589,19 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                         <h3
                             class="font-display text-lg font-extrabold text-content-inverse"
                         >
-                            Tournament play
+                            On Your Schedule
                         </h3>
                         <p
                             class="mt-2 text-xs font-semibold tracking-wider text-content-muted uppercase"
                         >
-                            Leagues • Competitive
+                            Open Daily • Morning to Midnight
                         </p>
                         <p
                             class="mt-3 flex-1 text-sm leading-relaxed text-content-muted"
                         >
-                            Register with a partner for monthly tournament
-                            events, local challenge ladders, and end-of-season
-                            championships.
+                            Early riser or night owl? Book any open slot that
+                            fits your day — we're open from morning all the way
+                            to midnight.
                         </p>
                         <div
                             class="mt-6 flex items-center justify-between border-t border-line/50 pt-4"
@@ -660,8 +658,8 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                         Choose a Court
                     </h3>
                     <p class="mt-2 text-sm leading-relaxed text-content-muted">
-                        Browse our premium cushioned outdoor courts, review
-                        location details, and choose your favorite.
+                        Browse our outdoor courts, review location details, and
+                        choose your favorite.
                     </p>
                 </div>
                 <!-- Step 2 -->

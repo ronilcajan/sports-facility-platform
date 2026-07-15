@@ -8,7 +8,6 @@ test('public pages are reachable by guests', function (string $routeName) {
     'home',
     'site.about',
     'site.courts',
-    'site.pricing',
     'site.gallery',
     'site.privacy',
     'site.terms',

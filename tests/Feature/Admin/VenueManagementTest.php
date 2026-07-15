@@ -2,6 +2,8 @@
 
 use App\Enums\RoleName;
 use App\Models\Venue;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 test('super admin can view venues index', function () {
     $this->actingAs(userWithRole(RoleName::SuperAdmin));
@@ -70,6 +72,44 @@ test('admin can update a venue', function () {
 
     $response->assertRedirect(route('admin.venues.index'));
     expect($venue->fresh()->name)->toBe('Updated Venue Name');
+});
+
+test('admin can save venue payment methods with an optional QR upload', function () {
+    Storage::fake('public');
+    $this->actingAs(userWithRole(RoleName::Admin));
+
+    $qr = UploadedFile::fake()->create('gcash-qr.png', 100, 'image/png');
+
+    $response = $this->post(route('admin.venues.store'), [
+        'name' => 'Pay Ready Venue',
+        'gcash_number' => '0917 123 4567',
+        'gcash_qr' => $qr,
+        'maya_number' => '0918 555 0000',
+        'is_active' => true,
+    ]);
+
+    $response->assertRedirect(route('admin.venues.index'));
+
+    $venue = Venue::query()->where('slug', 'pay-ready-venue')->firstOrFail();
+    expect($venue->gcash_number)->toBe('0917 123 4567');
+    expect($venue->maya_number)->toBe('0918 555 0000');
+    expect($venue->gcash_qr_path)->not->toBeNull();
+    Storage::disk('public')->assertExists($venue->gcash_qr_path);
+});
+
+test('venue payment methods only include configured methods', function () {
+    $venue = Venue::create([
+        'name' => 'Partial Pay Venue',
+        'slug' => 'partial-pay-venue',
+        'gcash_number' => '0917 123 4567',
+    ]);
+
+    $methods = $venue->paymentMethods();
+
+    expect($methods)->toHaveKey('gcash');
+    expect($methods)->not->toHaveKey('maya');
+    expect($methods['gcash']['number'])->toBe('0917 123 4567');
+    expect($methods['gcash']['qr_url'])->toBeNull();
 });
 
 test('super admin can delete a venue', function () {

@@ -144,7 +144,7 @@ function getStatusBadgeClass(status: string) {
                         >
                             <CheckCircle v-if="b.status === 'approved' || b.status === 'confirmed'" class="w-3.5 h-3.5" />
                             <AlertCircle v-else class="w-3.5 h-3.5" />
-                            <span>{{ b.name }} ({{ b.status }}) - ${{ b.total_price }}</span>
+                            <span>{{ b.name }} ({{ b.status }}) - ₱{{ b.total_price }}</span>
                         </div>
                     </template>
 

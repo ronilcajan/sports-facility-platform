@@ -13,6 +13,7 @@ interface Booking {
     total_price: string;
     receipt_path?: string | null;
     receipt_url?: string | null;
+    transaction_code?: string | null;
     status: string;
     created_at: string;
     court?: { id: number; name: string; sport_type: string };
@@ -100,7 +101,12 @@ function updateStatus(newStatus: string) {
                             <p><strong>Court:</strong> {{ booking.court?.name }}</p>
                             <p><strong>Date:</strong> {{ booking.date }}</p>
                             <p><strong>Time Slots:</strong> <span class="font-mono">{{ booking.time_slots ? booking.time_slots.join(', ') : '' }}</span></p>
-                            <p><strong>Total Price:</strong> <span class="font-bold text-emerald-600">${{ booking.total_price }}</span></p>
+                            <p><strong>Total Price:</strong> <span class="font-bold text-emerald-600">₱{{ booking.total_price }}</span></p>
+                            <p>
+                                <strong>Transaction Ref:</strong>
+                                <span v-if="booking.transaction_code" class="font-mono font-bold text-neutral-900 dark:text-white">{{ booking.transaction_code }}</span>
+                                <span v-else class="italic text-neutral-400">Not provided</span>
+                            </p>
                             <p><strong>Current Status:</strong> <span class="font-bold capitalize">{{ booking.status }}</span></p>
                         </div>
                     </div>

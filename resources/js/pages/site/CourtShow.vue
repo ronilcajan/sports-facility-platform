@@ -112,7 +112,7 @@ onUnmounted(() => {
             name="description"
             :content="
                 court.description ||
-                'Austin Dinkyard premium pickleball court reservation details.'
+                'Pickleball court reservation details.'
             "
         />
     </Head>
@@ -250,7 +250,7 @@ onUnmounted(() => {
                         <div class="border-b border-line pb-6">
                             <span
                                 class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
-                                >Premium Sport Facility</span
+                                >Pickleball Court</span
                             >
                             <h1
                                 class="mt-2 font-display text-4xl leading-none font-black tracking-tight text-content"
@@ -260,7 +260,7 @@ onUnmounted(() => {
                             <p
                                 class="mt-2 text-xs font-semibold tracking-wider text-content-muted uppercase"
                             >
-                                {{ court.venue ? court.venue.name + (court.venue.address ? ' • ' + court.venue.address : '') : 'Austin Main Yard' }}
+                                {{ court.venue ? court.venue.name + (court.venue.address ? ' • ' + court.venue.address : '') : 'Our Courts' }}
                             </p>
                         </div>
 
@@ -272,13 +272,10 @@ onUnmounted(() => {
                                 {{ court.description }}
                             </p>
                             <p v-else>
-                                Welcome to Austin's premium playing environment.
-                                This court features professional post-tensioned
-                                concrete finished with a premium cushioned
-                                acrylic surface. Engineered specifically to
-                                reduce joint fatigue and supply a true,
-                                consistent ball bounce under tournament
-                                conditions.
+                                A friendly, well-kept court that's ready whenever
+                                you are. Bring your paddle and up to three
+                                friends, book your time in seconds, and enjoy a
+                                great game — whatever your skill level.
                             </p>
                         </div>
 
@@ -306,12 +303,12 @@ onUnmounted(() => {
                                 </div>
                                 <div>
                                     <h4 class="text-sm font-bold text-content">
-                                        Cushioned Acrylic
+                                        Great Surface
                                     </h4>
                                     <p
                                         class="mt-0.5 text-xs text-content-muted"
                                     >
-                                        True bounce, softer response on knees.
+                                        Smooth and reliable, with true bounce.
                                     </p>
                                 </div>
                             </div>
@@ -337,13 +334,12 @@ onUnmounted(() => {
                                 </div>
                                 <div>
                                     <h4 class="text-sm font-bold text-content">
-                                        Pro-Grade Net System
+                                        Regulation Net
                                     </h4>
                                     <p
                                         class="mt-0.5 text-xs text-content-muted"
                                     >
-                                        Perfect tournament-height steel cord
-                                        nets.
+                                        Standard-height nets, ready to play.
                                     </p>
                                 </div>
                             </div>
@@ -431,7 +427,7 @@ onUnmounted(() => {
                             >
                             <div class="mt-1 flex items-baseline gap-1">
                                 <span class="text-4xl font-black text-content"
-                                    >${{ court.base_price }}</span
+                                    >₱{{ court.base_price }}</span
                                 >
                                 <span class="text-sm text-content-muted"
                                     >/
@@ -497,7 +493,7 @@ onUnmounted(() => {
                         <h2
                             class="mt-2 font-display text-2xl font-black tracking-tight text-content sm:text-3xl"
                         >
-                            Other Premium Courts
+                            Other Courts
                         </h2>
                     </div>
                     <Link

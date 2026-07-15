@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $notes
  * @property string $total_price
  * @property string|null $receipt_path
+ * @property string|null $transaction_code
  * @property string $status
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -37,6 +38,7 @@ use Illuminate\Support\Carbon;
     'notes',
     'total_price',
     'receipt_path',
+    'transaction_code',
     'status',
 ])]
 class Booking extends Model

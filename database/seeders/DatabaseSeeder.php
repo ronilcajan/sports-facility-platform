@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\CourtStatus;
 use App\Enums\RoleName;
 use App\Enums\SportType;
+use App\Models\Booking;
 use App\Models\Court;
 use App\Models\CourtImage;
 use App\Models\User;
@@ -59,6 +60,29 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ]
         );
+
+        // Payment methods — varied configs so the booking modal selector can be fully tested:
+        // Venue 1 → both GCash & Maya (each with a QR); Venue 2 → GCash only (with QR); Venue 3 → Maya only (no QR).
+        $venue1->update([
+            'gcash_number' => '0917 111 2222',
+            'gcash_qr_path' => 'venue-qr/gcash-qr.png',
+            'maya_number' => '0918 333 4444',
+            'maya_qr_path' => 'venue-qr/maya-qr.png',
+        ]);
+
+        $venue2->update([
+            'gcash_number' => '0917 555 6666',
+            'gcash_qr_path' => 'venue-qr/gcash-qr.png',
+            'maya_number' => null,
+            'maya_qr_path' => null,
+        ]);
+
+        $venue3->update([
+            'gcash_number' => null,
+            'gcash_qr_path' => null,
+            'maya_number' => '0920 777 8888',
+            'maya_qr_path' => null,
+        ]);
 
         $superAdmin = User::firstOrCreate(
             ['email' => 'superadmin@example.com'],
@@ -280,6 +304,31 @@ class DatabaseSeeder extends Seeder
                     'path' => 'courts/court_pickleball.png',
                     'is_primary' => false,
                     'sort_order' => 3,
+                ]);
+            }
+        }
+
+        // Seed sample bookings (mixed statuses + payment references) for dashboards & staff/admin views
+        if (Booking::count() === 0) {
+            foreach ($courts as $index => $court) {
+                Booking::factory()->create([
+                    'court_id' => $court->id,
+                    'user_id' => $customer->id,
+                    'status' => 'pending',
+                    'transaction_code' => 'GC-'.fake()->numerify('##########'),
+                ]);
+
+                Booking::factory()->create([
+                    'court_id' => $court->id,
+                    'user_id' => $index % 2 === 0 ? $customer->id : null,
+                    'status' => 'confirmed',
+                    'transaction_code' => 'MAYA-'.fake()->numerify('##########'),
+                ]);
+
+                Booking::factory()->create([
+                    'court_id' => $court->id,
+                    'user_id' => null,
+                    'status' => 'cancelled',
                 ]);
             }
         }

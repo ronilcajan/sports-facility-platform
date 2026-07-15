@@ -54,7 +54,7 @@ function openImageViewer(index = 0) {
     <Head :title="`${venue.name} - Venue Details`">
         <meta
             name="description"
-            :content="venue.description || `Explore tournament courts and book facilities at ${venue.name}.`"
+            :content="venue.description || `Explore courts and book a game at ${venue.name}.`"
         />
     </Head>
 
@@ -170,8 +170,8 @@ function openImageViewer(index = 0) {
                             <ShieldCheck class="size-5" />
                         </div>
                         <div>
-                            <h5 class="text-xs font-black text-content uppercase tracking-wider">Pro Surface</h5>
-                            <p class="text-[11px] text-content-muted">Tournament certified</p>
+                            <h5 class="text-xs font-black text-content uppercase tracking-wider">Great Courts</h5>
+                            <p class="text-[11px] text-content-muted">Well-kept &amp; welcoming</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
@@ -257,14 +257,14 @@ function openImageViewer(index = 0) {
                                     {{ c.description }}
                                 </p>
                                 <p v-else class="text-sm text-content-muted italic">
-                                    Professional-grade court equipped with tournament netting and premium lighting.
+                                    A friendly, well-kept court with good netting and evening lighting.
                                 </p>
                             </div>
 
                             <div class="mt-6 flex items-center justify-between border-t border-line pt-4">
                                 <div>
                                     <span class="block text-[10px] font-bold text-content-muted uppercase tracking-wider">Rate</span>
-                                    <span class="text-xl font-black text-brand">${{ c.base_price }}</span>
+                                    <span class="text-xl font-black text-brand">₱{{ c.base_price }}</span>
                                     <span class="text-xs text-content-muted">/{{ c.slot_duration_minutes }}m</span>
                                 </div>
 

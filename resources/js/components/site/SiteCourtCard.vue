@@ -71,8 +71,7 @@ defineEmits<{
                 {{ court.description }}
             </p>
             <p v-else class="text-sm leading-relaxed text-content-muted italic">
-                Premium professional court featuring tournament-grade netting
-                and cushioned surface.
+                A friendly, well-kept court — book your time and enjoy the game.
             </p>
 
             <div
@@ -85,7 +84,7 @@ defineEmits<{
                     >
                     <div class="flex items-baseline gap-1">
                         <span class="text-2xl font-black text-content"
-                            >${{ court.base_price }}</span
+                            >₱{{ court.base_price }}</span
                         >
                         <span class="text-xs text-content-muted"
                             >/ {{ court.slot_duration_minutes }} min</span

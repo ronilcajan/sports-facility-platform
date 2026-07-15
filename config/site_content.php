@@ -14,34 +14,34 @@
 return [
     'home' => [
         'hero' => [
-            'eyebrow' => 'Austin · Open play daily',
+            'eyebrow' => 'Oroquieta City · Open play daily',
             'title' => 'Find your court. Play your game.',
-            'subtitle' => 'Twelve pro-grade pickleball courts, real-time booking, and open play from dawn to midnight. Reserve in under a minute — no membership required.',
+            'subtitle' => 'Welcoming pickleball courts, easy real-time booking, and open play from morning to midnight. Whether it\'s your first game or your five-hundredth, come have fun — no membership needed.',
             'primary_cta' => 'Book a court',
             'secondary_cta' => 'See open play',
             'stats' => [
-                ['value' => '12', 'label' => 'Championship courts'],
-                ['value' => '17h', 'label' => 'Open every day'],
+                ['value' => '12', 'label' => 'Courts'],
+                ['value' => '19h', 'label' => 'Open every day'],
                 ['value' => '60s', 'label' => 'Average booking time'],
             ],
         ],
         'facilities' => [
-            'title' => 'Built for players who care about the details',
+            'title' => 'Everything you need for a great, fun game',
             'items' => [
-                ['title' => 'Cushioned pro courts', 'body' => 'Post-tensioned concrete with a cushioned acrylic surface — true bounce, easy on the knees.'],
-                ['title' => 'Nightlight play', 'body' => 'Glare-free LED lighting rated for tournament play, so your evening game looks like noon.'],
-                ['title' => 'Paddle & ball shop', 'body' => 'Demo the latest paddles, grab fresh Franklin X-40s, and restring on site.'],
-                ['title' => 'Coaching & clinics', 'body' => 'Certified pros run beginner clinics, drill sessions, and private lessons every week.'],
-                ['title' => 'Cold towels & hydration', 'body' => 'Filtered water stations, electrolytes, and a shaded lounge between games.'],
-                ['title' => 'Easy parking', 'body' => 'Free on-site parking and covered bike racks steps from the courts.'],
+                ['title' => 'Book in seconds', 'body' => 'Pick a court and time online — no calls, no waiting, no membership.'],
+                ['title' => 'Evening play', 'body' => 'Well-lit courts so you can play after work, too.'],
+                ['title' => 'Bring your crew', 'body' => 'Courts fit up to four players — same easy price whether it\'s two or four.'],
+                ['title' => 'All levels welcome', 'body' => 'First-timers and long-time players share the same friendly courts.'],
+                ['title' => 'Relax between games', 'body' => 'A shaded spot and water to catch your breath between matches.'],
+                ['title' => 'Easy parking', 'body' => 'On-site parking just steps from the courts.'],
             ],
         ],
         'testimonials' => [
-            'title' => 'Loved by the local pickleball scene',
+            'title' => 'Loved by players of every level',
             'items' => [
-                ['quote' => 'The surface and lighting are a step above anywhere else in town. I book my Tuesday games here every week.', 'name' => 'Marisol T.', 'role' => '4.0 competitive'],
+                ['quote' => 'Such a fun, welcoming place. I book my Tuesday games here every week and always leave smiling.', 'name' => 'Marisol T.', 'role' => 'Plays for fun'],
                 ['quote' => 'Booked my first court in about a minute, showed up, and the QR check-in just worked. Effortless.', 'name' => 'Devin K.', 'role' => 'Weekend player'],
-                ['quote' => 'The beginner clinic got my whole family playing. Now we come three times a week.', 'name' => 'The Alvarez family', 'role' => 'Open play regulars'],
+                ['quote' => 'We started coming as a family and now it\'s our favorite weekend spot. Everyone\'s so friendly.', 'name' => 'The Alvarez family', 'role' => 'Open play regulars'],
             ],
         ],
         'cta' => [
@@ -52,17 +52,17 @@ return [
     ],
 
     'about' => [
-        'title' => 'We built the court we always wanted to play on.',
-        'lede' => 'Dinkyard started with four friends, two paddles, and a long drive to the nearest decent court. So we built our own — and opened it to everyone.',
+        'title' => 'A happy place to play, for everyone.',
+        'lede' => 'It started with a few friends, a couple of paddles, and a long drive to the nearest court. So we built our own — a fun, welcoming place to play, open to everyone.',
         'body' => [
-            'What began as a weekend obsession became a mission: give Austin a pickleball home that takes the game as seriously as its players do. No worn-out gym floors, no waiting an hour for an open court, no membership gatekeeping.',
-            'Every surface, light, and net at Dinkyard was chosen by people who actually play. We obsess over bounce consistency and glare so you can obsess over your third-shot drop.',
-            'Whether you picked up a paddle last week or you are chasing a 5.0 rating, there is a court and a community here for you.',
+            'What began as a weekend hobby became a simple goal: give Oroquieta City a friendly pickleball home. No worn-out gym floors, no hour-long waits for a court, no membership gatekeeping — just good courts and good vibes.',
+            'Every surface, light, and net here was picked by people who love the game. We keep things easygoing and welcoming so you can just enjoy your time on court.',
+            'Whether you picked up a paddle last week or you have been playing for years, there is a court and a friendly community here for you.',
         ],
         'values' => [
-            ['title' => 'Open to everyone', 'body' => 'Guest booking, no membership required, and clinics for every level.'],
-            ['title' => 'Pro-grade or nothing', 'body' => 'Tournament surfaces and lighting, maintained daily.'],
-            ['title' => 'Respect the game', 'body' => 'We keep courts fair, on-time, and in shape so play stays great.'],
+            ['title' => 'Open to everyone', 'body' => 'Guest booking, no membership required, and clinics for every age and level.'],
+            ['title' => 'Well-kept courts', 'body' => 'Great surfaces and lighting, cared for daily.'],
+            ['title' => 'Good vibes only', 'body' => 'We keep courts fair, on-time, and welcoming so play stays fun for all.'],
         ],
     ],
 
@@ -98,8 +98,8 @@ return [
     ],
 
     'gallery' => [
-        'title' => 'A look around the yard',
-        'lede' => 'Twelve courts, one very good place to spend an evening.',
+        'title' => 'A look around our courts',
+        'lede' => 'Snapshots of our venues and courts — come see where you\'ll play.',
         'items' => [
             ['label' => 'Center court', 'tone' => 'court'],
             ['label' => 'Evening lights', 'tone' => 'ink'],
