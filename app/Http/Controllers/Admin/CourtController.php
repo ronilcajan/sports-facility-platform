@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreCourtRequest;
 use App\Http\Requests\Admin\UpdateCourtRequest;
 use App\Models\Court;
+use App\Models\Venue;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -24,12 +25,16 @@ class CourtController extends Controller
 
         $courts = Court::query()
             ->visibleTo(request()->user())
+            ->with(['venue'])
             ->withCount('staff')
             ->latest('id')
             ->get();
 
         return Inertia::render('admin/courts/Index', [
             'courts' => $courts,
+            'sportTypes' => $this->sportTypeOptions(),
+            'statuses' => $this->statusOptions(),
+            'venues' => Venue::where('is_active', true)->select('id', 'name')->get(),
         ]);
     }
 

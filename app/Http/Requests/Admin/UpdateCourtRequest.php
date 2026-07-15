@@ -29,6 +29,7 @@ class UpdateCourtRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'venue_id' => ['nullable', 'exists:venues,id'],
             'name' => ['required', 'string', 'max:255'],
             'sport_type' => ['required', new Enum(SportType::class)],
             'description' => ['nullable', 'string', 'max:2000'],

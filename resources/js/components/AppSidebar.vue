@@ -96,6 +96,11 @@ const mainNavItems = computed<NavItem[]>(() => {
                 icon: LayoutGrid,
             },
             {
+                title: 'Courts Management',
+                href: '/staff/courts',
+                icon: Dumbbell,
+            },
+            {
                 title: 'Court Bookings',
                 href: '/staff/bookings',
                 icon: CalendarDays,

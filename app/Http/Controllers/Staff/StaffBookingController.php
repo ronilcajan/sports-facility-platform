@@ -59,6 +59,54 @@ class StaffBookingController extends Controller
     }
 
     /**
+     * Create a new booking for an assigned court (CR Bookings for Staff).
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        $this->authorize('create', Booking::class);
+
+        $validated = $request->validate([
+            'court_id' => ['required', 'exists:courts,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'max:50'],
+            'date' => ['required', 'date'],
+            'time_slots' => ['required', 'array', 'min:1'],
+            'time_slots.*' => ['string'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'total_price' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $court = Court::visibleTo($user)->findOrFail($validated['court_id']);
+
+        if (! isset($validated['total_price']) || empty($validated['total_price'])) {
+            $validated['total_price'] = (float) $court->base_price * count($validated['time_slots']);
+        }
+
+        Booking::create([
+            'court_id' => $court->id,
+            'user_id' => null,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'date' => $validated['date'],
+            'time_slots' => $validated['time_slots'],
+            'notes' => $validated['notes'] ?? null,
+            'total_price' => $validated['total_price'],
+            'status' => 'approved',
+        ]);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Booking created successfully.'),
+        ]);
+
+        return back();
+    }
+
+    /**
      * Display details of a booking for an assigned court.
      */
     public function show(Request $request, Booking $booking): Response

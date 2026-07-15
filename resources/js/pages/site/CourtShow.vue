@@ -260,7 +260,7 @@ onUnmounted(() => {
                             <p
                                 class="mt-2 text-xs font-semibold tracking-wider text-content-muted uppercase"
                             >
-                                Austin main yard • Cushioned concrete surface
+                                {{ court.venue ? court.venue.name + (court.venue.address ? ' • ' + court.venue.address : '') : 'Austin Main Yard' }}
                             </p>
                         </div>
 

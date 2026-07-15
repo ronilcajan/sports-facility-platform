@@ -45,9 +45,9 @@ defineEmits<{
             <!-- Bottom Floating Title -->
             <div class="absolute right-4 bottom-4 left-4">
                 <p
-                    class="text-xs font-bold tracking-wider text-brand uppercase"
+                    class="text-xs font-bold tracking-wider text-brand uppercase truncate"
                 >
-                    Austin Main Yard
+                    {{ court.venue ? court.venue.name : 'Main Facility' }}
                 </p>
                 <h3
                     class="mt-0.5 font-display text-xl font-extrabold tracking-tight text-content-inverse"
