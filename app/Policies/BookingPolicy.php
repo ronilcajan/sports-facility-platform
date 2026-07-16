@@ -27,8 +27,13 @@ class BookingPolicy
             return $booking->user_id === $user->id;
         }
 
+        if ($user->isSuperAdmin()) {
+            return $user->canManageAllCourts() || $user->checkPermissionTo('bookings.view');
+        }
+
         return ($user->canManageAllCourts() || $user->checkPermissionTo('bookings.view'))
-            && ($user->canManageAllCourts() || $user->isAssignedToCourt($booking->court));
+            && $booking->court !== null
+            && $user->canManageCourt($booking->court);
     }
 
     /**
@@ -50,8 +55,13 @@ class BookingPolicy
             return $booking->user_id === $user->id;
         }
 
+        if ($user->isSuperAdmin()) {
+            return $user->canManageAllCourts() || $user->checkPermissionTo('bookings.update');
+        }
+
         return ($user->canManageAllCourts() || $user->checkPermissionTo('bookings.update'))
-            && ($user->canManageAllCourts() || $user->isAssignedToCourt($booking->court));
+            && $booking->court !== null
+            && $user->canManageCourt($booking->court);
     }
 
     /**
@@ -63,6 +73,12 @@ class BookingPolicy
             return $booking->user_id === $user->id;
         }
 
-        return $user->canManageAllCourts() || $user->checkPermissionTo('bookings.delete');
+        if ($user->isSuperAdmin()) {
+            return $user->canManageAllCourts() || $user->checkPermissionTo('bookings.delete');
+        }
+
+        return ($user->canManageAllCourts() || $user->checkPermissionTo('bookings.delete'))
+            && $booking->court !== null
+            && $user->canManageCourt($booking->court);
     }
 }

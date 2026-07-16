@@ -2,10 +2,29 @@
 
 namespace App\Policies;
 
+use App\Enums\RoleName;
 use App\Models\User;
 
 class UserPolicy
 {
+    /**
+     * A venue-scoped admin may only manage staff that belong to their own
+     * venue. Customers are global (they book across venues) and remain
+     * manageable; super-admins/other admins are already blocked upstream.
+     */
+    private function deniesCrossVenueStaff(User $user, User $model): bool
+    {
+        if (! $user->isVenueScopedAdmin()) {
+            return false;
+        }
+
+        if ($model->hasRole(RoleName::Staff->value)) {
+            return $model->venue_id !== $user->venue_id;
+        }
+
+        return false;
+    }
+
     /**
      * Determine whether the user can view any models.
      */
@@ -21,6 +40,10 @@ class UserPolicy
     {
         // Admin cannot view/manage super-admins.
         if ($user->isAdmin() && ! $user->isSuperAdmin() && $model->isSuperAdmin()) {
+            return false;
+        }
+
+        if ($this->deniesCrossVenueStaff($user, $model)) {
             return false;
         }
 
@@ -45,6 +68,10 @@ class UserPolicy
             return false;
         }
 
+        if ($this->deniesCrossVenueStaff($user, $model)) {
+            return false;
+        }
+
         return $user->isSuperAdmin() || $user->isAdmin();
     }
 
@@ -55,6 +82,10 @@ class UserPolicy
     {
         // Admin cannot manage super-admins or other admins.
         if ($user->isAdmin() && ! $user->isSuperAdmin() && ($model->isSuperAdmin() || $model->isAdmin())) {
+            return false;
+        }
+
+        if ($this->deniesCrossVenueStaff($user, $model)) {
             return false;
         }
 

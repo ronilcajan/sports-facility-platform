@@ -23,8 +23,10 @@ class CourtController extends Controller
     {
         $this->authorize('viewAny', Court::class);
 
+        $user = request()->user();
+
         $courts = Court::query()
-            ->visibleTo(request()->user())
+            ->visibleTo($user)
             ->with(['venue'])
             ->withCount('staff')
             ->latest('id')
@@ -34,7 +36,11 @@ class CourtController extends Controller
             'courts' => $courts,
             'sportTypes' => $this->sportTypeOptions(),
             'statuses' => $this->statusOptions(),
-            'venues' => Venue::where('is_active', true)->select('id', 'name')->get(),
+            // Venue admins can only file courts under their own venue.
+            'venues' => Venue::where('is_active', true)
+                ->when($user->isVenueScopedAdmin(), fn ($query) => $query->whereKey($user->venue_id))
+                ->select('id', 'name')
+                ->get(),
         ]);
     }
 
@@ -58,6 +64,11 @@ class CourtController extends Controller
     {
         $data = $request->validated();
         $data['slug'] = $this->uniqueSlug($data['name']);
+
+        // Venue admins can only create courts within their own venue.
+        if ($request->user()->isVenueScopedAdmin()) {
+            $data['venue_id'] = $request->user()->venue_id;
+        }
 
         Court::create($data);
 
@@ -103,6 +114,11 @@ class CourtController extends Controller
 
         if ($data['name'] !== $court->name) {
             $data['slug'] = $this->uniqueSlug($data['name'], $court);
+        }
+
+        // Venue admins cannot move a court to a different venue.
+        if ($request->user()->isVenueScopedAdmin()) {
+            $data['venue_id'] = $court->venue_id;
         }
 
         $court->update($data);

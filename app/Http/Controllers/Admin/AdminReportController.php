@@ -19,10 +19,17 @@ class AdminReportController extends Controller
     {
         $this->authorize('viewAny', Court::class);
 
+        $user = $request->user();
+
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
         $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
 
         $bookingsQuery = Booking::whereBetween('date', [$startDate, $endDate]);
+
+        // Venue admins see figures for their own venue only.
+        if ($user->isVenueScopedAdmin()) {
+            $bookingsQuery->visibleTo($user);
+        }
 
         $totalBookings = (clone $bookingsQuery)->count();
         $totalRevenue = (clone $bookingsQuery)->whereIn('status', ['approved', 'confirmed', 'completed'])->sum('total_price');
@@ -30,21 +37,23 @@ class AdminReportController extends Controller
         $rejectedBookings = (clone $bookingsQuery)->where('status', 'rejected')->count();
         $cancelledBookings = (clone $bookingsQuery)->where('status', 'cancelled')->count();
 
-        // Breakdown by court
-        $courtBreakdown = Court::with(['bookings' => function ($query) use ($startDate, $endDate) {
-            $query->whereBetween('date', [$startDate, $endDate]);
-        }])->get()->map(function ($court) {
-            $approved = $court->bookings->whereIn('status', ['approved', 'confirmed', 'completed']);
+        // Breakdown by court (scoped to the venue for admins)
+        $courtBreakdown = Court::query()
+            ->visibleTo($user)
+            ->with(['bookings' => function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('date', [$startDate, $endDate]);
+            }])->get()->map(function ($court) {
+                $approved = $court->bookings->whereIn('status', ['approved', 'confirmed', 'completed']);
 
-            return [
-                'id' => $court->id,
-                'name' => $court->name,
-                'sport_type' => $court->sport_type->label(),
-                'total_bookings' => $court->bookings->count(),
-                'approved_count' => $approved->count(),
-                'revenue' => (float) $approved->sum('total_price'),
-            ];
-        });
+                return [
+                    'id' => $court->id,
+                    'name' => $court->name,
+                    'sport_type' => $court->sport_type->label(),
+                    'total_bookings' => $court->bookings->count(),
+                    'approved_count' => $approved->count(),
+                    'revenue' => (float) $approved->sum('total_price'),
+                ];
+            });
 
         return Inertia::render('admin/reports/Index', [
             'reports' => [

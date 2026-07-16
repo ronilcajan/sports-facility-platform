@@ -108,7 +108,9 @@ class Booking extends Model
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        if ($user->canManageAllCourts()) {
+        // Venue admins are constrained to their venue's courts; only unscoped
+        // managers (super-admins, not-yet-assigned admins) see every booking.
+        if (! $user->isVenueScopedAdmin() && $user->canManageAllCourts()) {
             return $query;
         }
 

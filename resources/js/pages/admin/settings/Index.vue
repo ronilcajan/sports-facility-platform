@@ -9,28 +9,25 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [
-            { title: 'Venues', href: '/admin/venues' },
-            { title: 'Edit Venue' },
-        ],
+        breadcrumbs: [{ title: 'Setting', href: '/admin/settings' }],
     },
 });
 </script>
 
 <template>
-    <Head :title="`Edit ${venue.name}`" />
+    <Head title="Venue Setting" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
             variant="small"
-            :title="`Edit: ${venue.name}`"
-            description="Update this venue's information."
+            :title="`${venue.name} Setting`"
+            description="Manage your venue's details, contact info, and payment methods."
         />
 
         <VenueForm
             :venue="props.venue"
-            :action="`/admin/venues/${props.venue.id}`"
-            cancel-url="/admin/venues"
+            action="/admin/settings"
+            cancel-url="/admin/dashboard"
         />
     </div>
 </template>

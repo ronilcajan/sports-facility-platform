@@ -4,9 +4,9 @@ namespace App\Models;
 
 use App\Enums\CourtStatus;
 use App\Enums\SportType;
+use App\Models\Concerns\ScopesCourtVisibility;
 use Database\Factories\CourtFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -46,7 +46,7 @@ use Illuminate\Support\Carbon;
 class Court extends Model
 {
     /** @use HasFactory<CourtFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, ScopesCourtVisibility, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.
@@ -119,26 +119,5 @@ class Court extends Model
     public function unavailabilities(): HasMany
     {
         return $this->hasMany(CourtUnavailability::class);
-    }
-
-    /**
-     * Limit the query to courts the given user is allowed to see.
-     *
-     * Admins and super-admins see every court; staff see only courts they are
-     * assigned to. This is the single source of truth for court visibility and
-     * must be reused by every downstream (booking) query.
-     *
-     * @param  Builder<Court>  $query
-     * @return Builder<Court>
-     */
-    public function scopeVisibleTo(Builder $query, User $user): Builder
-    {
-        if ($user->canManageAllCourts()) {
-            return $query;
-        }
-
-        return $query->whereHas('staff', function (Builder $staffQuery) use ($user): void {
-            $staffQuery->whereKey($user->getKey());
-        });
     }
 }

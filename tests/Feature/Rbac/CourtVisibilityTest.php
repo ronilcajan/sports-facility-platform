@@ -2,12 +2,18 @@
 
 use App\Enums\RoleName;
 use App\Models\Court;
+use App\Models\Venue;
 
-test('admin can view every court through the policy', function () {
+test('venue admin can view only courts in their own venue', function () {
+    $venue = Venue::factory()->create();
     $admin = userWithRole(RoleName::Admin);
-    $court = Court::factory()->create();
+    $admin->update(['venue_id' => $venue->id]);
 
-    expect($admin->can('view', $court))->toBeTrue();
+    $ownCourt = Court::factory()->for($venue)->create();
+    $otherCourt = Court::factory()->create();
+
+    expect($admin->can('view', $ownCourt))->toBeTrue()
+        ->and($admin->can('view', $otherCourt))->toBeFalse();
 });
 
 test('staff can view only assigned courts', function () {
@@ -21,11 +27,22 @@ test('staff can view only assigned courts', function () {
         ->and($staff->can('view', $unassigned))->toBeFalse();
 });
 
-test('visibleTo scope returns all courts for admins', function () {
+test('visibleTo scope returns only the venue admin\'s courts', function () {
+    $venue = Venue::factory()->create();
     $admin = userWithRole(RoleName::Admin);
+    $admin->update(['venue_id' => $venue->id]);
+
+    Court::factory()->for($venue)->count(2)->create();
     Court::factory()->count(3)->create();
 
-    expect(Court::visibleTo($admin)->count())->toBe(3);
+    expect(Court::visibleTo($admin)->count())->toBe(2);
+});
+
+test('visibleTo scope returns every court for super admins', function () {
+    $superAdmin = userWithRole(RoleName::SuperAdmin);
+    Court::factory()->count(3)->create();
+
+    expect(Court::visibleTo($superAdmin)->count())->toBe(3);
 });
 
 test('visibleTo scope returns only assigned courts for staff', function () {

@@ -20,7 +20,11 @@ class VenuePolicy
      */
     public function view(User $user, Venue $venue): bool
     {
-        return $user->isSuperAdmin() || $user->isAdmin();
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isVenueScopedAdmin() && $user->venue_id === $venue->id;
     }
 
     /**
@@ -28,7 +32,7 @@ class VenuePolicy
      */
     public function create(User $user): bool
     {
-        return $user->isSuperAdmin() || $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     /**
@@ -36,7 +40,11 @@ class VenuePolicy
      */
     public function update(User $user, Venue $venue): bool
     {
-        return $user->isSuperAdmin() || $user->isAdmin();
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isVenueScopedAdmin() && $user->venue_id === $venue->id;
     }
 
     /**

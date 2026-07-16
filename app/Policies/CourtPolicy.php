@@ -23,7 +23,7 @@ class CourtPolicy
     public function view(User $user, Court $court): bool
     {
         return $user->hasPermissionTo('courts.view')
-            && ($user->canManageAllCourts() || $user->isAssignedToCourt($court));
+            && $user->canManageCourt($court);
     }
 
     /**
@@ -42,7 +42,7 @@ class CourtPolicy
     public function update(User $user, Court $court): bool
     {
         return $user->hasPermissionTo('courts.update')
-            && ($user->canManageAllCourts() || $user->isAssignedToCourt($court));
+            && $user->canManageCourt($court);
     }
 
     /**
@@ -50,7 +50,8 @@ class CourtPolicy
      */
     public function delete(User $user, Court $court): bool
     {
-        return $user->hasPermissionTo('courts.delete');
+        return $user->hasPermissionTo('courts.delete')
+            && $user->canManageCourt($court);
     }
 
     /**
@@ -58,6 +59,7 @@ class CourtPolicy
      */
     public function assignStaff(User $user, Court $court): bool
     {
-        return $user->hasPermissionTo('courts.assignStaff');
+        return $user->hasPermissionTo('courts.assignStaff')
+            && $user->canManageCourt($court);
     }
 }

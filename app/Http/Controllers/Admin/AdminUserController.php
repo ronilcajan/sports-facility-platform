@@ -21,8 +21,21 @@ class AdminUserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
+        /** @var User $currentUser */
+        $currentUser = $request->user();
+
         $query = User::withCount('assignedCourts')
             ->latest();
+
+        // Venue admins only manage their own venue's user accounts: staff
+        // assigned to the venue, plus customers who have booked there.
+        if ($currentUser->isVenueScopedAdmin()) {
+            $venueId = $currentUser->venue_id;
+            $query->where(function ($q) use ($venueId, $currentUser) {
+                $q->where('venue_id', $venueId)
+                    ->orWhereHas('bookings', fn ($bookingQuery) => $bookingQuery->visibleTo($currentUser));
+            });
+        }
 
         if ($request->filled('role')) {
             $query->role($request->input('role'));
@@ -46,9 +59,6 @@ class AdminUserController extends Controller
             ];
         })->withQueryString();
 
-        /** @var User $currentUser */
-        $currentUser = $request->user();
-
         // Build available role options based on current user's role
         $roleOptions = collect(RoleName::cases())
             ->filter(function (RoleName $role) use ($currentUser): bool {
@@ -56,6 +66,7 @@ class AdminUserController extends Controller
                 if ($currentUser->isSuperAdmin()) {
                     return true;
                 }
+
                 // Admin can only create staff and customer
                 return in_array($role, [RoleName::Staff, RoleName::Customer]);
             })
@@ -118,11 +129,18 @@ class AdminUserController extends Controller
             abort(403, 'You cannot assign this role.');
         }
 
-        $user = User::create([
+        $attributes = [
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => bcrypt($validated['password']),
-        ]);
+        ];
+
+        // Staff created by a venue admin belong to that admin's venue.
+        if ($currentUser->isVenueScopedAdmin() && $validated['role'] === RoleName::Staff->value) {
+            $attributes['venue_id'] = $currentUser->venue_id;
+        }
+
+        $user = User::create($attributes);
 
         $user->assignRole($validated['role']);
 

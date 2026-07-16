@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
-import { CalendarDays, Search, CheckCircle, XCircle, ArrowUpRight, FileText, Plus, X } from '@lucide/vue';
+import { CalendarDays, LayoutList, Search, CheckCircle, XCircle, ArrowUpRight, FileText, Plus, X } from '@lucide/vue';
+import BookingsCalendar from '@/components/admin/BookingsCalendar.vue';
 
 interface Booking {
     id: number;
@@ -23,10 +24,21 @@ interface PaginatedBookings {
 }
 
 const props = defineProps<{
-    bookings: PaginatedBookings;
+    view: 'calendar' | 'list';
+    days?: any[];
+    window?: any;
+    bookings?: PaginatedBookings;
+    courts: { id: number; name: string }[];
     assignedCourts: { id: number; name: string }[];
     filters: { search?: string; court_id?: string; status?: string; date?: string };
+    basePath: string;
+    canDelete: boolean;
+    showVenueFilter: boolean;
 }>();
+
+function switchView(view: 'calendar' | 'list') {
+    router.get(props.basePath, { view }, { preserveState: false });
+}
 
 defineOptions({
     layout: {
@@ -43,7 +55,8 @@ const status = ref(props.filters.status || '');
 const date = ref(props.filters.date || '');
 
 function applyFilters() {
-    router.get('/staff/bookings', {
+    router.get(props.basePath, {
+        view: 'list',
         search: search.value,
         court_id: court_id.value,
         status: status.value,
@@ -64,7 +77,7 @@ const actionForm = useForm({
 function updateStatus(bookingId: number, newStatus: string) {
     if (!canUpdate.value) return;
     actionForm.status = newStatus;
-    actionForm.patch(`/staff/bookings/${bookingId}/status`, {
+    actionForm.patch(`${props.basePath}/${bookingId}/status`, {
         preserveScroll: true,
     });
 }
@@ -118,13 +131,45 @@ function submitCreate() {
                 <p class="text-xs text-neutral-500">Manage, view, or log new booking entries for your assigned court(s).</p>
             </div>
 
-            <button
-                @click="showCreateModal = true"
-                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow transition-colors flex items-center gap-2 cursor-pointer"
-            >
-                <Plus class="w-4 h-4" /> Create New Booking
-            </button>
+            <div class="flex items-center gap-2">
+                <div class="inline-flex rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-1 shadow-sm">
+                    <button
+                        @click="switchView('calendar')"
+                        :class="['inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors', view === 'calendar' ? 'bg-emerald-600 text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800']"
+                    >
+                        <CalendarDays class="w-4 h-4" /> Calendar
+                    </button>
+                    <button
+                        @click="switchView('list')"
+                        :class="['inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors', view === 'list' ? 'bg-emerald-600 text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800']"
+                    >
+                        <LayoutList class="w-4 h-4" /> List
+                    </button>
+                </div>
+
+                <button
+                    @click="showCreateModal = true"
+                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                    <Plus class="w-4 h-4" /> Create New Booking
+                </button>
+            </div>
         </div>
+
+        <!-- Calendar board -->
+        <BookingsCalendar
+            v-if="view === 'calendar'"
+            :days="days || []"
+            :courts="courts"
+            :filters="filters"
+            :window="window"
+            :base-path="basePath"
+            :can-delete="canDelete"
+            :show-venue-filter="showVenueFilter"
+            :can-update="canUpdate"
+        />
+
+        <template v-else>
 
         <!-- Filters Bar -->
         <div class="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-3">
@@ -189,7 +234,7 @@ function submitCreate() {
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
-                    <tr v-for="b in bookings.data" :key="b.id" class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+                    <tr v-for="b in bookings?.data || []" :key="b.id" class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
                         <td class="py-3 px-3 font-mono font-bold">#{{ b.id }}</td>
                         <td class="py-3 px-3 font-semibold text-neutral-900 dark:text-white">{{ b.name }}</td>
                         <td class="py-3 px-3 text-neutral-500">
@@ -249,12 +294,13 @@ function submitCreate() {
                         </td>
                     </tr>
 
-                    <tr v-if="bookings.data.length === 0">
+                    <tr v-if="(bookings?.data.length || 0) === 0">
                         <td colSpan="10" class="py-8 text-center text-xs text-neutral-400">No bookings recorded for assigned court.</td>
                     </tr>
                 </tbody>
             </table>
         </div>
+        </template>
     </div>
 
     <!-- Centered Create Booking Modal -->

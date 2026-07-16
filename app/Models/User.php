@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -29,6 +30,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
+ * @property int|null $venue_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -74,6 +76,16 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
+     * Bookings this user (customer) has made through their account.
+     *
+     * @return HasMany<Booking, $this>
+     */
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    /**
      * Whether this user may manage (and see) every court, regardless of
      * staff assignment. True for admins and super-admins.
      */
@@ -105,6 +117,38 @@ class User extends Authenticatable implements PasskeyUser
     public function isStaff(): bool
     {
         return $this->hasRole(RoleName::Staff->value);
+    }
+
+    /**
+     * Whether this user is an admin confined to a single venue: an admin (not a
+     * super-admin) who has been assigned to a venue. Super-admins manage every
+     * venue globally; an admin with no venue assignment is not yet scoped.
+     */
+    public function isVenueScopedAdmin(): bool
+    {
+        return $this->hasRole(RoleName::Admin->value)
+            && ! $this->isSuperAdmin()
+            && $this->venue_id !== null;
+    }
+
+    /**
+     * Whether this user may manage the given court. Super-admins (and
+     * not-yet-scoped admins) manage every court; venue admins manage only
+     * courts in their assigned venue; staff manage only courts they are
+     * assigned to. This mirrors {@see Court::scopeVisibleTo()} and is the
+     * authorization counterpart used by the court and booking policies.
+     */
+    public function canManageCourt(Court $court): bool
+    {
+        if ($this->isVenueScopedAdmin()) {
+            return $court->venue_id === $this->venue_id;
+        }
+
+        if ($this->canManageAllCourts()) {
+            return true;
+        }
+
+        return $this->isAssignedToCourt($court);
     }
 
     /**

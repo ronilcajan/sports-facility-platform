@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Court;
+use App\Models\Venue;
+use App\Support\BookingCalendar;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -20,7 +22,65 @@ class AdminBookingController extends Controller
     {
         $this->authorize('viewAny', Booking::class);
 
-        $query = Booking::with(['court', 'user'])->latest();
+        $user = $request->user();
+        $view = $request->input('view') === 'list' ? 'list' : 'calendar';
+
+        $query = Booking::query()->with(['court', 'user']);
+
+        // Venue admins only see bookings on their own venue's courts.
+        if ($user->isVenueScopedAdmin()) {
+            $query->visibleTo($user);
+        }
+
+        // Super-admins may narrow to a single venue.
+        if ($user->isSuperAdmin() && $request->filled('venue_id')) {
+            $venueId = $request->input('venue_id');
+            $query->whereHas('court', fn ($courtQuery) => $courtQuery->where('venue_id', $venueId));
+        }
+
+        if ($request->filled('court_id')) {
+            $query->where('court_id', $request->input('court_id'));
+        }
+
+        $courts = Court::query()
+            ->visibleTo($user)
+            ->when($request->filled('venue_id'), fn ($courtQuery) => $courtQuery->where('venue_id', $request->input('venue_id')))
+            ->orderBy('name')
+            ->get(['id', 'name', 'sport_type']);
+
+        $venues = $user->isSuperAdmin()
+            ? Venue::orderBy('name')->get(['id', 'name'])
+            : null;
+
+        $shared = [
+            'courts' => $courts,
+            'venues' => $venues,
+            'basePath' => '/admin/bookings',
+            'canDelete' => true,
+            'showVenueFilter' => $user->isSuperAdmin(),
+        ];
+
+        if ($view === 'calendar') {
+            // Default board hides rejected/cancelled unless a status is chosen.
+            if ($request->filled('status')) {
+                $query->where('status', $request->input('status'));
+            } else {
+                $query->whereNotIn('status', ['rejected', 'cancelled']);
+            }
+
+            $start = BookingCalendar::resolveStart($request->input('start'));
+
+            return Inertia::render('admin/bookings/Index', [
+                ...$shared,
+                'view' => 'calendar',
+                'days' => BookingCalendar::build($query, $start),
+                'window' => BookingCalendar::window($start),
+                'filters' => $request->only(['court_id', 'status', 'venue_id']),
+            ]);
+        }
+
+        // List view (paginated table).
+        $query->latest();
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -32,10 +92,6 @@ class AdminBookingController extends Controller
             });
         }
 
-        if ($request->filled('court_id')) {
-            $query->where('court_id', $request->input('court_id'));
-        }
-
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
         }
@@ -44,14 +100,11 @@ class AdminBookingController extends Controller
             $query->where('date', $request->input('date'));
         }
 
-        $bookings = $query->paginate(15)->withQueryString();
-
-        $courts = Court::select(['id', 'name', 'sport_type'])->get();
-
         return Inertia::render('admin/bookings/Index', [
-            'bookings' => $bookings,
-            'courts' => $courts,
-            'filters' => $request->only(['search', 'court_id', 'status', 'date']),
+            ...$shared,
+            'view' => 'list',
+            'bookings' => $query->paginate(15)->withQueryString(),
+            'filters' => $request->only(['search', 'court_id', 'status', 'date', 'venue_id']),
         ]);
     }
 

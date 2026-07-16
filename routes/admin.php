@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\AdminVenueController;
 use App\Http\Controllers\Admin\AppearanceController;
 use App\Http\Controllers\Admin\CourtController;
 use App\Http\Controllers\Admin\CourtStaffController;
+use App\Http\Controllers\Admin\SingleVenueController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware([
@@ -52,19 +53,23 @@ Route::middleware([
         Route::put('users/{user}', [AdminUserController::class, 'update'])->name('users.update');
         Route::delete('users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
 
-        // Venues Management (CRUD for SuperAdmin, CRU for Admin)
-        Route::resource('venues', AdminVenueController::class)->except(['show']);
+        // Reports (venue-scoped for admins, global for super-admins)
+        Route::get('reports', [AdminReportController::class, 'index'])->name('reports.index');
 
-        // Super Admin Only (Staff, Reports, Appearance)
+        // Venue Settings — an admin edits their own assigned venue
+        Route::get('settings', [SingleVenueController::class, 'edit'])->name('settings.edit');
+        Route::put('settings', [SingleVenueController::class, 'update'])->name('settings.update');
+
+        // Super Admin Only (Venues, Staff, Appearance)
         Route::middleware(['role:'.RoleName::SuperAdmin->value])->group(function () {
+            // Venues Management (full CRUD)
+            Route::resource('venues', AdminVenueController::class)->except(['show']);
+
             // Staff Accounts Management
             Route::get('staff', [AdminStaffController::class, 'index'])->name('staff.index');
             Route::post('staff', [AdminStaffController::class, 'store'])->name('staff.store');
             Route::put('staff/{user}', [AdminStaffController::class, 'update'])->name('staff.update');
             Route::delete('staff/{user}', [AdminStaffController::class, 'destroy'])->name('staff.destroy');
-
-            // System Reports
-            Route::get('reports', [AdminReportController::class, 'index'])->name('reports.index');
 
             // Appearance Settings
             Route::get('appearance', [AppearanceController::class, 'index'])->name('appearance.index');

@@ -11,17 +11,11 @@ test('super admin can view venues index', function () {
     $this->get(route('admin.venues.index'))->assertOk();
 });
 
-test('admin can view venues index', function () {
-    $this->actingAs(userWithRole(RoleName::Admin));
-
-    $this->get(route('admin.venues.index'))->assertOk();
-});
-
-test('staff and customer cannot view venues index', function (RoleName $role) {
+test('admin, staff and customer cannot view venues index', function (RoleName $role) {
     $this->actingAs(userWithRole($role));
 
     $this->get(route('admin.venues.index'))->assertForbidden();
-})->with([RoleName::Staff, RoleName::Customer]);
+})->with([RoleName::Admin, RoleName::Staff, RoleName::Customer]);
 
 test('super admin can create a venue', function () {
     $this->actingAs(userWithRole(RoleName::SuperAdmin));
@@ -41,24 +35,20 @@ test('super admin can create a venue', function () {
     ]);
 });
 
-test('admin can create a venue', function () {
+test('admin cannot create a venue', function () {
     $this->actingAs(userWithRole(RoleName::Admin));
 
-    $response = $this->post(route('admin.venues.store'), [
+    $this->post(route('admin.venues.store'), [
         'name' => 'Bayside Arena',
         'address' => '789 Harbor Rd',
         'is_active' => true,
-    ]);
+    ])->assertForbidden();
 
-    $response->assertRedirect(route('admin.venues.index'));
-    $this->assertDatabaseHas('venues', [
-        'name' => 'Bayside Arena',
-        'slug' => 'bayside-arena',
-    ]);
+    $this->assertDatabaseMissing('venues', ['name' => 'Bayside Arena']);
 });
 
-test('admin can update a venue', function () {
-    $this->actingAs(userWithRole(RoleName::Admin));
+test('super admin can update a venue', function () {
+    $this->actingAs(userWithRole(RoleName::SuperAdmin));
     $venue = Venue::create([
         'name' => 'Old Venue Name',
         'slug' => 'old-venue-name',
@@ -74,9 +64,9 @@ test('admin can update a venue', function () {
     expect($venue->fresh()->name)->toBe('Updated Venue Name');
 });
 
-test('admin can save venue payment methods with an optional QR upload', function () {
+test('super admin can save venue payment methods with an optional QR upload', function () {
     Storage::fake('public');
-    $this->actingAs(userWithRole(RoleName::Admin));
+    $this->actingAs(userWithRole(RoleName::SuperAdmin));
 
     $qr = UploadedFile::fake()->create('gcash-qr.png', 100, 'image/png');
 

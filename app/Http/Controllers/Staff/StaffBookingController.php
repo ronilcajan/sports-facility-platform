@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Staff;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Court;
+use App\Support\BookingCalendar;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -22,15 +23,46 @@ class StaffBookingController extends Controller
 
         $this->authorize('viewAny', Booking::class);
 
-        $assignedCourts = Court::visibleTo($user)->get();
+        $view = $request->input('view') === 'list' ? 'list' : 'calendar';
 
-        $query = Booking::visibleTo($user)
-            ->with(['court', 'user'])
-            ->latest();
+        $courts = Court::visibleTo($user)->orderBy('name')->get(['id', 'name', 'sport_type']);
+
+        $query = Booking::visibleTo($user)->with(['court', 'user']);
 
         if ($request->filled('court_id')) {
             $query->where('court_id', $request->input('court_id'));
         }
+
+        $shared = [
+            'courts' => $courts,
+            'assignedCourts' => $courts,
+            'venues' => null,
+            'basePath' => '/staff/bookings',
+            'canDelete' => false,
+            'showVenueFilter' => false,
+        ];
+
+        if ($view === 'calendar') {
+            // Default board hides rejected/cancelled unless a status is chosen.
+            if ($request->filled('status')) {
+                $query->where('status', $request->input('status'));
+            } else {
+                $query->whereNotIn('status', ['rejected', 'cancelled']);
+            }
+
+            $start = BookingCalendar::resolveStart($request->input('start'));
+
+            return Inertia::render('staff/bookings/Index', [
+                ...$shared,
+                'view' => 'calendar',
+                'days' => BookingCalendar::build($query, $start),
+                'window' => BookingCalendar::window($start),
+                'filters' => $request->only(['court_id', 'status']),
+            ]);
+        }
+
+        // List view (paginated table).
+        $query->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
@@ -49,11 +81,10 @@ class StaffBookingController extends Controller
             $query->where('date', $request->input('date'));
         }
 
-        $bookings = $query->paginate(15)->withQueryString();
-
         return Inertia::render('staff/bookings/Index', [
-            'bookings' => $bookings,
-            'assignedCourts' => $assignedCourts,
+            ...$shared,
+            'view' => 'list',
+            'bookings' => $query->paginate(15)->withQueryString(),
             'filters' => $request->only(['search', 'court_id', 'status', 'date']),
         ]);
     }

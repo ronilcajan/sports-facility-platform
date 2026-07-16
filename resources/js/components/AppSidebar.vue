@@ -1,7 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { usePage, Link } from '@inertiajs/vue3';
-import { BookOpen, Building, Calendar, CalendarDays, BarChart3, Users, UserCheck, Shield, LayoutGrid, Palette, Dumbbell } from '@lucide/vue';
+import {
+    Building,
+    Calendar,
+    CalendarDays,
+    BarChart3,
+    Users,
+    UserCheck,
+    LayoutGrid,
+    Palette,
+    Dumbbell,
+    Settings,
+} from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -21,108 +32,178 @@ import type { NavItem } from '@/types';
 const page = usePage();
 const user = computed(() => page.props.auth?.user as any);
 
-const mainNavItems = computed<NavItem[]>(() => {
+type NavGroup = {
+    label: string;
+    items: NavItem[];
+};
+
+const navGroups = computed<NavGroup[]>(() => {
     if (!user.value) {
         return [
             {
-                title: 'Dashboard',
-                href: dashboard(),
-                icon: LayoutGrid,
+                label: 'Platform',
+                items: [
+                    {
+                        title: 'Dashboard',
+                        href: dashboard(),
+                        icon: LayoutGrid,
+                    },
+                ],
             },
         ];
     }
 
     if (user.value.can_manage_all_courts) {
-        const items = [
+        // Super admin: global management across every venue.
+        if (user.value.is_super_admin) {
+            return [
+                {
+                    label: 'Platform',
+                    items: [
+                        {
+                            title: 'Dashboard',
+                            href: '/admin/dashboard',
+                            icon: LayoutGrid,
+                        },
+                        {
+                            title: 'Bookings',
+                            href: '/admin/bookings',
+                            icon: CalendarDays,
+                        },
+                        {
+                            title: 'Venues',
+                            href: '/admin/venues',
+                            icon: Building,
+                        },
+                        {
+                            title: 'Courts',
+                            href: '/admin/courts',
+                            icon: Dumbbell,
+                        },
+                        {
+                            title: 'Customers',
+                            href: '/admin/users',
+                            icon: Users,
+                        },
+                    ],
+                },
+                {
+                    label: 'Systems',
+                    items: [
+                        {
+                            title: 'Users',
+                            href: '/admin/staff',
+                            icon: UserCheck,
+                        },
+                        {
+                            title: 'Reports',
+                            href: '/admin/reports',
+                            icon: BarChart3,
+                        },
+                        {
+                            title: 'Appearance',
+                            href: '/admin/appearance',
+                            icon: Palette,
+                        },
+                    ],
+                },
+            ];
+        }
+
+        // Venue admin: scoped to their assigned venue (no venue list; a Setting
+        // page edits their own venue instead).
+        return [
             {
-                title: user.value.is_super_admin ? 'Super Admin Overview' : 'Admin Overview',
-                href: '/admin/dashboard',
-                icon: Shield,
+                label: 'Platform',
+                items: [
+                    {
+                        title: 'Dashboard',
+                        href: '/admin/dashboard',
+                        icon: LayoutGrid,
+                    },
+                    {
+                        title: 'Bookings',
+                        href: '/admin/bookings',
+                        icon: CalendarDays,
+                    },
+                    { title: 'Courts', href: '/admin/courts', icon: Dumbbell },
+                    {
+                        title: 'Customers',
+                        href: '/admin/users?role=customer',
+                        icon: Users,
+                    },
+                ],
             },
             {
-                title: 'Venues Management',
-                href: '/admin/venues',
-                icon: Building,
-            },
-            {
-                title: 'Courts Management',
-                href: '/admin/courts',
-                icon: Dumbbell,
-            },
-            {
-                title: 'All Bookings',
-                href: '/admin/bookings',
-                icon: CalendarDays,
+                label: 'Systems',
+                items: [
+                    { title: 'Users', href: '/admin/users', icon: UserCheck },
+                    {
+                        title: 'Reports',
+                        href: '/admin/reports',
+                        icon: BarChart3,
+                    },
+                    {
+                        title: 'Setting',
+                        href: '/admin/settings',
+                        icon: Settings,
+                    },
+                ],
             },
         ];
-
-        if (user.value.is_super_admin) {
-            items.push({
-                title: 'Court Staff',
-                href: '/admin/staff',
-                icon: UserCheck,
-            });
-        }
-
-        items.push({
-            title: 'User Accounts',
-            href: '/admin/users',
-            icon: Users,
-        });
-
-        if (user.value.is_super_admin) {
-            items.push(
-                {
-                    title: 'System Reports',
-                    href: '/admin/reports',
-                    icon: BarChart3,
-                },
-                {
-                    title: 'Appearance',
-                    href: '/admin/appearance',
-                    icon: Palette,
-                },
-            );
-        }
-
-        return items;
     }
 
     if (user.value.is_staff) {
         return [
             {
-                title: 'Staff Dashboard',
-                href: '/staff/dashboard',
-                icon: LayoutGrid,
-            },
-            {
-                title: 'Courts Management',
-                href: '/staff/courts',
-                icon: Dumbbell,
-            },
-            {
-                title: 'Court Bookings',
-                href: '/staff/bookings',
-                icon: CalendarDays,
-            },
-            {
-                title: 'Schedule & Blackouts',
-                href: '/staff/schedules',
-                icon: Calendar,
-            },
-            {
-                title: 'Court Reports',
-                href: '/staff/reports',
-                icon: BarChart3,
+                label: 'Platform',
+                items: [
+                    {
+                        title: 'Staff Dashboard',
+                        href: '/staff/dashboard',
+                        icon: LayoutGrid,
+                    },
+                    {
+                        title: 'Courts Management',
+                        href: '/staff/courts',
+                        icon: Dumbbell,
+                    },
+                    {
+                        title: 'Court Bookings',
+                        href: '/staff/bookings',
+                        icon: CalendarDays,
+                    },
+                    {
+                        title: 'Schedule & Blackouts',
+                        href: '/staff/schedules',
+                        icon: Calendar,
+                    },
+                    {
+                        title: 'Court Reports',
+                        href: '/staff/reports',
+                        icon: BarChart3,
+                    },
+                ],
             },
         ];
     }
 
+    // Customers: their own dashboard and bookings; they can book at any venue.
     return [
         {
-            title: 'Dashboard',
-            href: dashboard(),
-            icon: LayoutGrid,
+            label: 'Platform',
+            items: [
+                {
+                    title: 'Dashboard',
+                    href: dashboard(),
+                    icon: LayoutGrid,
+                },
+                {
+                    title: 'Bookings',
+                    href: '/my-bookings',
+                    icon: CalendarDays,
+                },
+            ],
         },
     ];
 });
@@ -131,7 +212,7 @@ const footerNavItems: NavItem[] = [];
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar collapsible="icon" variant="sidebar">
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
@@ -145,7 +226,12 @@ const footerNavItems: NavItem[] = [];
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
+            <NavMain
+                v-for="group in navGroups"
+                :key="group.label"
+                :items="group.items"
+                :label="group.label"
+            />
         </SidebarContent>
 
         <SidebarFooter>
