@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
-import { useForm } from '@inertiajs/vue3';
-import { Users, Search, Plus, Pencil, Trash2, X } from '@lucide/vue';
-import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Search, Plus, Pencil, Trash2, X, ArrowUpRight } from '@lucide/vue';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface UserItem {
     id: number;
@@ -45,6 +42,7 @@ defineOptions({
 });
 
 const search = ref(props.filters.search || '');
+const role = ref(props.filters.role || '');
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const editingUser = ref<UserItem | null>(null);
@@ -64,7 +62,13 @@ const editForm = useForm({
 });
 
 function applyFilters() {
-    router.get('/admin/users', { search: search.value }, { preserveState: true, replace: true });
+    router.get('/admin/users', { search: search.value, role: role.value }, { preserveState: true, replace: true });
+}
+
+function clearFilters() {
+    search.value = '';
+    role.value = '';
+    applyFilters();
 }
 
 function openCreateModal() {
@@ -110,98 +114,135 @@ function destroyUser(user: UserItem) {
     }
 }
 
-function getRoleName(role: RoleOption): string {
-    if (typeof role === 'string') return role;
-    return role.label || role.value;
+function getRoleName(r: RoleOption): string {
+    if (typeof r === 'string') return r;
+    return r.label || r.value;
 }
 
-function getRoleValue(role: RoleOption): string {
-    if (typeof role === 'string') return role;
-    return role.value;
+function getRoleValue(r: RoleOption): string {
+    if (typeof r === 'string') return r;
+    return r.value;
+}
+
+function initials(name: string): string {
+    return name
+        .split(' ')
+        .map((p) => p[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+}
+
+function rolePill(r: string): string {
+    const key = r.toLowerCase();
+    if (key.includes('admin')) return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300';
+    if (key.includes('staff')) return 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
+    if (key.includes('customer')) return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
+    return 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300';
 }
 </script>
 
 <template>
     <Head title="User Accounts" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <div class="flex items-center justify-between gap-4">
-            <Heading
-                variant="small"
-                title="User Accounts"
-                description="Manage registered users and their roles."
-            />
-            <Button v-if="canManageUsers" @click="openCreateModal">
-                <Plus class="mr-1.5 h-4 w-4" />
-                Create User
-            </Button>
+    <div class="p-6 space-y-6 w-full">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">User Accounts</h1>
+                <p class="text-xs text-neutral-500">Manage registered users and their roles.</p>
+            </div>
+            <button
+                v-if="canManageUsers"
+                @click="openCreateModal"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow transition-colors hover:bg-emerald-700"
+            >
+                <Plus class="w-4 h-4" /> Create User
+            </button>
         </div>
 
-        <!-- Search Bar -->
-        <div class="flex items-center gap-3">
-            <div class="relative flex-1">
-                <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <input
-                    v-model="search"
-                    @keyup.enter="applyFilters"
-                    type="text"
-                    placeholder="Search user name or email..."
-                    class="w-full rounded-lg border border-input bg-background py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
+        <!-- Filters -->
+        <div class="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="relative sm:col-span-2">
+                    <Search class="w-4 h-4 absolute left-3 top-2.5 text-neutral-400" />
+                    <input
+                        v-model="search"
+                        @keyup.enter="applyFilters"
+                        type="text"
+                        placeholder="Search user name or email..."
+                        class="w-full pl-9 pr-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                    />
+                </div>
+                <select v-model="role" @change="applyFilters" class="w-full px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                    <option value="">All Roles</option>
+                    <option v-for="r in roles" :key="getRoleValue(r)" :value="getRoleValue(r)">{{ getRoleName(r) }}</option>
+                </select>
             </div>
-            <Button @click="applyFilters" size="sm">Search</Button>
+
+            <div class="flex items-center justify-end gap-2">
+                <button @click="applyFilters" class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700">Filter</button>
+                <button @click="clearFilters" class="px-3 py-1.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg text-xs font-semibold">Clear</button>
+            </div>
         </div>
 
         <!-- Table -->
-        <div class="overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-            <table class="w-full text-sm">
-                <thead class="bg-muted/50 text-left text-muted-foreground">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">ID</th>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">Email</th>
-                        <th class="px-4 py-3 font-medium">Roles</th>
-                        <th class="px-4 py-3 font-medium">Registered</th>
-                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+        <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 shadow-sm overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="border-b border-neutral-100 dark:border-neutral-800 text-neutral-400 font-semibold uppercase">
+                        <th class="py-3 px-3">ID</th>
+                        <th class="py-3 px-3">Name</th>
+                        <th class="py-3 px-3">Email</th>
+                        <th class="py-3 px-3">Roles</th>
+                        <th class="py-3 px-3">Registered</th>
+                        <th class="py-3 px-3 text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
                     <tr
                         v-for="user in users.data"
                         :key="user.id"
-                        class="border-t border-sidebar-border/70 dark:border-sidebar-border"
+                        class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors"
                     >
-                        <td class="px-4 py-3 font-mono font-bold">#{{ user.id }}</td>
-                        <td class="px-4 py-3 font-medium">{{ user.name }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ user.email }}</td>
-                        <td class="px-4 py-3">
-                            <Badge v-for="r in user.roles" :key="r" variant="secondary" class="mr-1 capitalize">
-                                {{ r }}
-                            </Badge>
+                        <td class="py-3 px-3 font-mono font-bold text-neutral-900 dark:text-white">#{{ user.id }}</td>
+                        <td class="py-3 px-3">
+                            <div class="flex items-center gap-2.5">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                                    {{ initials(user.name) }}
+                                </span>
+                                <span class="font-semibold text-neutral-900 dark:text-white">{{ user.name }}</span>
+                            </div>
                         </td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ user.created_at }}</td>
-                        <td class="px-4 py-3">
-                            <div v-if="canManageUsers" class="flex justify-end gap-2">
-                                <Button variant="outline" size="sm" @click="openEditModal(user)">
-                                    <Pencil class="mr-1 h-3.5 w-3.5" />
-                                    Edit
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    @click="destroyUser(user)"
-                                    class="text-destructive hover:text-destructive"
-                                >
-                                    <Trash2 class="mr-1 h-3.5 w-3.5" />
-                                    Delete
-                                </Button>
+                        <td class="py-3 px-3 text-neutral-500">{{ user.email }}</td>
+                        <td class="py-3 px-3">
+                            <span
+                                v-for="r in user.roles"
+                                :key="r"
+                                :class="['mr-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold capitalize', rolePill(r)]"
+                            >
+                                {{ r }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-3 text-neutral-500">{{ user.created_at }}</td>
+                        <td class="py-3 px-3 text-right">
+                            <div class="flex items-center justify-end gap-1">
+                                <Link :href="`/admin/users/${user.id}`" class="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white" title="View">
+                                    <ArrowUpRight class="w-4 h-4" />
+                                </Link>
+                                <template v-if="canManageUsers">
+                                    <button @click="openEditModal(user)" class="p-1 text-emerald-600 hover:text-emerald-700" title="Edit">
+                                        <Pencil class="w-4 h-4" />
+                                    </button>
+                                    <button @click="destroyUser(user)" class="p-1 text-rose-400 hover:text-rose-600" title="Delete">
+                                        <Trash2 class="w-4 h-4" />
+                                    </button>
+                                </template>
                             </div>
                         </td>
                     </tr>
                     <tr v-if="users.data.length === 0">
-                        <td colspan="6" class="px-4 py-10 text-center text-muted-foreground">
-                            No users found.
-                        </td>
+                        <td colspan="6" class="py-8 text-center text-xs text-neutral-400">No users found.</td>
                     </tr>
                 </tbody>
             </table>
@@ -210,11 +251,11 @@ function getRoleValue(role: RoleOption): string {
 
     <!-- Create User Modal -->
     <Teleport to="body">
-        <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="showCreateModal = false">
-            <div class="w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-xl">
+        <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" @click.self="showCreateModal = false">
+            <div class="w-full max-w-md rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl">
                 <div class="mb-4 flex items-center justify-between">
-                    <h2 class="text-lg font-semibold">Create User</h2>
-                    <button @click="showCreateModal = false" class="text-muted-foreground hover:text-foreground">
+                    <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Create User</h2>
+                    <button @click="showCreateModal = false" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
                         <X class="h-5 w-5" />
                     </button>
                 </div>
@@ -244,8 +285,8 @@ function getRoleValue(role: RoleOption): string {
                             class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                             <option value="" disabled>Select a role</option>
-                            <option v-for="role in roles" :key="getRoleValue(role)" :value="getRoleValue(role)">
-                                {{ getRoleName(role) }}
+                            <option v-for="r in roles" :key="getRoleValue(r)" :value="getRoleValue(r)">
+                                {{ getRoleName(r) }}
                             </option>
                         </select>
                         <InputError :message="createForm.errors.role" />
@@ -263,11 +304,11 @@ function getRoleValue(role: RoleOption): string {
 
     <!-- Edit User Modal -->
     <Teleport to="body">
-        <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="showEditModal = false">
-            <div class="w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-xl">
+        <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" @click.self="showEditModal = false">
+            <div class="w-full max-w-md rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl">
                 <div class="mb-4 flex items-center justify-between">
-                    <h2 class="text-lg font-semibold">Edit User</h2>
-                    <button @click="showEditModal = false" class="text-muted-foreground hover:text-foreground">
+                    <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Edit User</h2>
+                    <button @click="showEditModal = false" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
                         <X class="h-5 w-5" />
                     </button>
                 </div>
@@ -297,8 +338,8 @@ function getRoleValue(role: RoleOption): string {
                             class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                             <option value="" disabled>Select a role</option>
-                            <option v-for="role in roles" :key="getRoleValue(role)" :value="getRoleValue(role)">
-                                {{ getRoleName(role) }}
+                            <option v-for="r in roles" :key="getRoleValue(r)" :value="getRoleValue(r)">
+                                {{ getRoleName(r) }}
                             </option>
                         </select>
                         <InputError :message="editForm.errors.role" />

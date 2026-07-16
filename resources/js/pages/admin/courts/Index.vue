@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { Plus, Pencil, Trash2, X } from '@lucide/vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
+import { Plus, Pencil, Trash2, X, Dumbbell, Users } from '@lucide/vue';
 import CourtController from '@/actions/App/Http/Controllers/Admin/CourtController';
-import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface Court {
     id: number;
@@ -24,6 +22,7 @@ interface Court {
     buffer_minutes?: number;
     is_active?: boolean;
     staff_count: number;
+    primary_image?: { url: string } | null;
 }
 
 interface SelectOption {
@@ -49,10 +48,10 @@ defineOptions({
     },
 });
 
-const statusVariant: Record<Court['status'], string> = {
-    available: 'default',
-    maintenance: 'secondary',
-    closed: 'destructive',
+const statusPill: Record<Court['status'], string> = {
+    available: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+    maintenance: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+    closed: 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
 };
 
 const showCreateModal = ref(false);
@@ -137,82 +136,86 @@ function destroy(court: Court): void {
 <template>
     <Head title="Courts" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <div class="flex items-center justify-between gap-4">
-            <Heading
-                variant="small"
-                title="Courts"
-                description="Manage courts, pricing, and staff assignments."
-            />
-            <Button @click="openCreateModal">
-                <Plus class="mr-1.5 h-4 w-4" />
-                Add court
-            </Button>
+    <div class="p-6 space-y-6 w-full">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Courts</h1>
+                <p class="text-xs text-neutral-500">Manage courts, pricing, and staff assignments.</p>
+            </div>
+            <button
+                @click="openCreateModal"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow transition-colors hover:bg-emerald-700"
+            >
+                <Plus class="w-4 h-4" /> Add Court
+            </button>
+        </div>
+
+        <!-- Card grid -->
+        <div
+            v-if="courts.length"
+            class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        >
+            <div
+                v-for="court in courts"
+                :key="court.id"
+                class="group flex flex-col overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm transition-shadow hover:shadow-md"
+            >
+                <div class="relative aspect-video overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                    <img
+                        v-if="court.primary_image?.url"
+                        :src="court.primary_image.url"
+                        :alt="court.name"
+                        class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div v-else class="flex h-full w-full items-center justify-center text-neutral-300 dark:text-neutral-600">
+                        <Dumbbell class="h-10 w-10" />
+                    </div>
+                    <span
+                        :class="['absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold capitalize shadow-sm', statusPill[court.status]]"
+                    >
+                        {{ court.status }}
+                    </span>
+                </div>
+
+                <div class="flex flex-1 flex-col gap-2 p-4">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <h3 class="truncate font-semibold leading-tight text-neutral-900 dark:text-white">{{ court.name }}</h3>
+                            <p class="truncate text-xs text-neutral-500">{{ court.venue?.name || 'Unassigned' }}</p>
+                        </div>
+                        <span class="shrink-0 text-sm font-bold text-emerald-600 dark:text-emerald-400">₱{{ court.base_price }}</span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
+                        <span class="rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 capitalize">{{ court.sport_type.replace('-', ' ') }}</span>
+                        <span class="inline-flex items-center gap-1"><Users class="h-3 w-3" /> {{ court.staff_count }} staff</span>
+                    </div>
+
+                    <div class="mt-auto flex items-center gap-2 pt-3">
+                        <button
+                            @click="openEditModal(court)"
+                            class="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                        >
+                            <Pencil class="h-3.5 w-3.5" /> Edit
+                        </button>
+                        <button
+                            @click="destroy(court)"
+                            class="rounded-lg p-2 text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
+                            title="Delete court"
+                        >
+                            <Trash2 class="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div
-            class="overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+            v-else
+            class="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 py-16 text-center text-sm text-neutral-500"
         >
-            <table class="w-full text-sm">
-                <thead class="bg-muted/50 text-left text-muted-foreground">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">Venue</th>
-                        <th class="px-4 py-3 font-medium">Sport</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 font-medium">Price</th>
-                        <th class="px-4 py-3 font-medium">Staff</th>
-                        <th class="px-4 py-3 text-right font-medium">
-                            Actions
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="court in courts"
-                        :key="court.id"
-                        class="border-t border-sidebar-border/70 dark:border-sidebar-border"
-                    >
-                        <td class="px-4 py-3 font-medium">{{ court.name }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ court.venue?.name || 'Unassigned' }}</td>
-                        <td class="px-4 py-3 capitalize">
-                            {{ court.sport_type.replace('-', ' ') }}
-                        </td>
-                        <td class="px-4 py-3">
-                            <Badge
-                                :variant="statusVariant[court.status] as never"
-                            >
-                                {{ court.status }}
-                            </Badge>
-                        </td>
-                        <td class="px-4 py-3">₱{{ court.base_price }}</td>
-                        <td class="px-4 py-3">{{ court.staff_count }}</td>
-                        <td class="px-4 py-3">
-                            <div class="flex justify-end gap-2">
-                                <Button variant="outline" size="sm" @click="openEditModal(court)">
-                                    <Pencil class="mr-1 h-3.5 w-3.5" />
-                                    Edit
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    @click="destroy(court)"
-                                >
-                                    Delete
-                                </Button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr v-if="courts.length === 0">
-                        <td
-                            colspan="6"
-                            class="px-4 py-10 text-center text-muted-foreground"
-                        >
-                            No courts yet. Add your first court to get started.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            No courts yet. Add your first court to get started.
         </div>
     </div>
 
@@ -223,13 +226,13 @@ function destroy(court: Court): void {
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
             @click.self="showCreateModal = false"
         >
-            <div class="w-full max-w-lg rounded-xl border border-border bg-background p-6 shadow-xl space-y-5 my-8">
+            <div class="w-full max-w-lg rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-5 my-8">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold">Add New Court</h2>
-                        <p class="text-xs text-muted-foreground">Create a new court and configure pricing & rules.</p>
+                        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Add New Court</h2>
+                        <p class="text-xs text-neutral-500">Create a new court and configure pricing &amp; rules.</p>
                     </div>
-                    <button @click="showCreateModal = false" class="text-muted-foreground hover:text-foreground">
+                    <button @click="showCreateModal = false" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
                         <X class="h-5 w-5" />
                     </button>
                 </div>
@@ -348,13 +351,13 @@ function destroy(court: Court): void {
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
             @click.self="showEditModal = false"
         >
-            <div class="w-full max-w-lg rounded-xl border border-border bg-background p-6 shadow-xl space-y-5 my-8">
+            <div class="w-full max-w-lg rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-5 my-8">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold">Edit Court</h2>
-                        <p class="text-xs text-muted-foreground">Update court details, pricing, and status.</p>
+                        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Edit Court</h2>
+                        <p class="text-xs text-neutral-500">Update court details, pricing, and status.</p>
                     </div>
-                    <button @click="showEditModal = false" class="text-muted-foreground hover:text-foreground">
+                    <button @click="showEditModal = false" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
                         <X class="h-5 w-5" />
                     </button>
                 </div>

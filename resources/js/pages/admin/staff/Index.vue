@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { UserCheck, Plus, Dumbbell, Trash2, CheckCircle2, Shield, X } from '@lucide/vue';
+import { Plus, Pencil, Trash2, X } from '@lucide/vue';
 
 interface StaffUser {
     id: number;
@@ -80,12 +80,21 @@ function deleteStaff(staffId: number) {
         });
     }
 }
+
+function initials(name: string): string {
+    return name
+        .split(' ')
+        .map((p) => p[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+}
 </script>
 
 <template>
     <Head title="Court Staff Management - Super Admin" />
 
-    <div class="p-6 space-y-6 max-w-7xl mx-auto">
+    <div class="p-6 space-y-6 w-full">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Court Staff Accounts & Assignments</h1>
@@ -117,7 +126,12 @@ function deleteStaff(staffId: number) {
                             <div v-if="editingUserId === staff.id" class="space-y-1">
                                 <input v-model="editForm.name" class="p-1 rounded border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 text-xs" />
                             </div>
-                            <span v-else>{{ staff.name }}</span>
+                            <div v-else class="flex items-center gap-2.5">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                                    {{ initials(staff.name) }}
+                                </span>
+                                <span>{{ staff.name }}</span>
+                            </div>
                         </td>
 
                         <td class="py-3 px-3 text-neutral-600 dark:text-neutral-300">
@@ -154,8 +168,13 @@ function deleteStaff(staffId: number) {
                             </div>
 
                             <div v-else class="flex items-center justify-end gap-2">
-                                <button @click="startEditing(staff)" class="text-xs text-emerald-600 hover:underline">Edit Courts</button>
-                                <button @click="deleteStaff(staff.id)" class="p-1 text-rose-500 hover:text-rose-700">
+                                <button
+                                    @click="startEditing(staff)"
+                                    class="inline-flex items-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 px-2.5 py-1 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                                >
+                                    <Pencil class="w-3.5 h-3.5" /> Edit Courts
+                                </button>
+                                <button @click="deleteStaff(staff.id)" class="p-1 text-rose-400 hover:text-rose-600" title="Remove staff">
                                     <Trash2 class="w-4 h-4" />
                                 </button>
                             </div>

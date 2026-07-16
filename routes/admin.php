@@ -42,6 +42,7 @@ Route::middleware([
 
         // Bookings Management
         Route::get('bookings', [AdminBookingController::class, 'index'])->name('bookings.index');
+        Route::post('bookings', [AdminBookingController::class, 'store'])->name('bookings.store');
         Route::get('bookings/{booking}', [AdminBookingController::class, 'show'])->name('bookings.show');
         Route::patch('bookings/{booking}/status', [AdminBookingController::class, 'updateStatus'])->name('bookings.update-status');
         Route::delete('bookings/{booking}', [AdminBookingController::class, 'destroy'])->name('bookings.destroy');
@@ -71,9 +72,8 @@ Route::middleware([
             Route::put('staff/{user}', [AdminStaffController::class, 'update'])->name('staff.update');
             Route::delete('staff/{user}', [AdminStaffController::class, 'destroy'])->name('staff.destroy');
 
-            // Appearance Settings
+            // Appearance / Branding Settings
             Route::get('appearance', [AppearanceController::class, 'index'])->name('appearance.index');
-            Route::put('appearance', [AppearanceController::class, 'update'])->name('appearance.update');
             Route::post('appearance/branding', [AppearanceController::class, 'updateBranding'])->name('appearance.branding');
         });
     });

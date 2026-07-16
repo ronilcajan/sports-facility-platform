@@ -48,7 +48,7 @@ function updateStatus(newStatus: string) {
 <template>
     <Head :title="`Booking #${booking.id} Details`" />
 
-    <div class="p-6 space-y-6 max-w-4xl mx-auto">
+    <div class="p-6 space-y-6 w-full">
             <div class="flex items-center justify-between">
                 <Link href="/admin/bookings" class="text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1">
                     <ArrowLeft class="w-4 h-4" /> Back to Bookings

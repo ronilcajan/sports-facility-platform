@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Search, Plus, Pencil, Trash2, X } from '@lucide/vue';
-import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Search, Plus, Pencil, Trash2, X, Building } from '@lucide/vue';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface Venue {
     id: number;
@@ -19,6 +17,7 @@ interface Venue {
     email: string | null;
     is_active: boolean;
     courts_count: number;
+    cover_image_url?: string | null;
     created_at: string;
 }
 
@@ -120,92 +119,104 @@ function destroy(venue: Venue): void {
 <template>
     <Head title="Venues Management" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <div class="flex items-center justify-between gap-4">
-            <Heading
-                variant="small"
-                title="Venues"
-                description="Manage your sports facility venues."
-            />
-            <Button @click="openCreateModal">
-                <Plus class="mr-1.5 h-4 w-4" />
-                Add Venue
-            </Button>
+    <div class="p-6 space-y-6 w-full">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Venues</h1>
+                <p class="text-xs text-neutral-500">Manage your sports facility venues.</p>
+            </div>
+            <button
+                @click="openCreateModal"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow transition-colors hover:bg-emerald-700"
+            >
+                <Plus class="w-4 h-4" /> Add Venue
+            </button>
         </div>
 
-        <!-- Search Bar -->
-        <div class="flex items-center gap-3">
+        <!-- Search bar -->
+        <div class="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex items-center gap-3">
             <div class="relative flex-1">
-                <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search class="w-4 h-4 absolute left-3 top-2.5 text-neutral-400" />
                 <input
                     v-model="search"
                     @keyup.enter="applyFilters"
                     type="text"
                     placeholder="Search venue name or address..."
-                    class="w-full rounded-lg border border-input bg-background py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    class="w-full pl-9 pr-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
                 />
             </div>
-            <Button @click="applyFilters" size="sm">Search</Button>
+            <button @click="applyFilters" class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700">Search</button>
         </div>
 
-        <!-- Table -->
-        <div class="overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-            <table class="w-full text-sm">
-                <thead class="bg-muted/50 text-left text-muted-foreground">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">Address</th>
-                        <th class="px-4 py-3 font-medium">Contact</th>
-                        <th class="px-4 py-3 font-medium">Courts</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 text-right font-medium">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="venue in venues.data"
-                        :key="venue.id"
-                        class="border-t border-sidebar-border/70 dark:border-sidebar-border"
+        <!-- Card grid -->
+        <div
+            v-if="venues.data.length"
+            class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        >
+            <div
+                v-for="venue in venues.data"
+                :key="venue.id"
+                class="group flex flex-col overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm transition-shadow hover:shadow-md"
+            >
+                <div class="relative aspect-video overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                    <img
+                        v-if="venue.cover_image_url"
+                        :src="venue.cover_image_url"
+                        :alt="venue.name"
+                        class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div v-else class="flex h-full w-full items-center justify-center text-neutral-300 dark:text-neutral-600">
+                        <Building class="h-10 w-10" />
+                    </div>
+                    <span
+                        :class="[
+                            'absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold capitalize shadow-sm',
+                            venue.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
+                        ]"
                     >
-                        <td class="px-4 py-3 font-medium">{{ venue.name }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ venue.address || '—' }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">
-                            <div v-if="venue.phone" class="text-xs">{{ venue.phone }}</div>
-                            <div v-if="venue.email" class="text-xs">{{ venue.email }}</div>
-                            <span v-if="!venue.phone && !venue.email">—</span>
-                        </td>
-                        <td class="px-4 py-3">{{ venue.courts_count }}</td>
-                        <td class="px-4 py-3">
-                            <Badge :variant="venue.is_active ? 'default' : 'secondary'">
-                                {{ venue.is_active ? 'Active' : 'Inactive' }}
-                            </Badge>
-                        </td>
-                        <td class="px-4 py-3">
-                            <div class="flex justify-end gap-2">
-                                <Button variant="outline" size="sm" @click="openEditModal(venue)">
-                                    <Pencil class="mr-1 h-3.5 w-3.5" />
-                                    Edit
-                                </Button>
-                                <Button
-                                    v-if="canDelete"
-                                    variant="ghost"
-                                    size="sm"
-                                    @click="destroy(venue)"
-                                    class="text-destructive hover:text-destructive"
-                                >
-                                    <Trash2 class="mr-1 h-3.5 w-3.5" />
-                                    Delete
-                                </Button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr v-if="venues.data.length === 0">
-                        <td colspan="6" class="px-4 py-10 text-center text-muted-foreground">
-                            No venues yet. Add your first venue to get started.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                        {{ venue.is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                </div>
+
+                <div class="flex flex-1 flex-col gap-2 p-4">
+                    <div class="flex items-start justify-between gap-2">
+                        <h3 class="font-semibold leading-tight text-neutral-900 dark:text-white">{{ venue.name }}</h3>
+                        <span class="shrink-0 rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-[11px] font-medium text-neutral-500">
+                            {{ venue.courts_count }} {{ venue.courts_count === 1 ? 'court' : 'courts' }}
+                        </span>
+                    </div>
+                    <p class="line-clamp-1 text-xs text-neutral-500">{{ venue.address || 'No address set' }}</p>
+                    <div v-if="venue.phone || venue.email" class="text-xs text-neutral-500">
+                        <div v-if="venue.phone">{{ venue.phone }}</div>
+                        <div v-if="venue.email" class="truncate">{{ venue.email }}</div>
+                    </div>
+
+                    <div class="mt-auto flex items-center gap-2 pt-3">
+                        <button
+                            @click="openEditModal(venue)"
+                            class="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                        >
+                            <Pencil class="h-3.5 w-3.5" /> Edit
+                        </button>
+                        <button
+                            v-if="canDelete"
+                            @click="destroy(venue)"
+                            class="rounded-lg p-2 text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
+                            title="Delete venue"
+                        >
+                            <Trash2 class="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div
+            v-else
+            class="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 py-16 text-center text-sm text-neutral-500"
+        >
+            No venues yet. Add your first venue to get started.
         </div>
     </div>
 
@@ -216,13 +227,13 @@ function destroy(venue: Venue): void {
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
             @click.self="showCreateModal = false"
         >
-            <div class="w-full max-w-lg rounded-xl border border-border bg-background p-6 shadow-xl space-y-5">
+            <div class="w-full max-w-lg rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-5">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold">Add New Venue</h2>
-                        <p class="text-xs text-muted-foreground">Create a new sports facility venue location.</p>
+                        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Add New Venue</h2>
+                        <p class="text-xs text-neutral-500">Create a new sports facility venue location.</p>
                     </div>
-                    <button @click="showCreateModal = false" class="text-muted-foreground hover:text-foreground">
+                    <button @click="showCreateModal = false" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
                         <X class="h-5 w-5" />
                     </button>
                 </div>
@@ -293,13 +304,13 @@ function destroy(venue: Venue): void {
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
             @click.self="showEditModal = false"
         >
-            <div class="w-full max-w-lg rounded-xl border border-border bg-background p-6 shadow-xl space-y-5">
+            <div class="w-full max-w-lg rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-5">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold">Edit Venue</h2>
-                        <p class="text-xs text-muted-foreground">Update venue location and contact information.</p>
+                        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Edit Venue</h2>
+                        <p class="text-xs text-neutral-500">Update venue location and contact information.</p>
                     </div>
-                    <button @click="showEditModal = false" class="text-muted-foreground hover:text-foreground">
+                    <button @click="showEditModal = false" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
                         <X class="h-5 w-5" />
                     </button>
                 </div>

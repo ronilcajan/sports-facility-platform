@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3';
-import { Button } from '@/components/ui/button';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -50,7 +49,7 @@ function submit() {
 </script>
 
 <template>
-    <form @submit.prevent="submit" class="max-w-2xl space-y-6">
+    <form @submit.prevent="submit" class="space-y-6">
         <div class="space-y-2">
             <Label for="name">Venue Name *</Label>
             <Input id="name" v-model="form.name" type="text" required />
@@ -146,12 +145,20 @@ function submit() {
         </div>
 
         <div class="flex gap-3">
-            <Button type="submit" :disabled="form.processing">
+            <button
+                type="submit"
+                :disabled="form.processing"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow transition-colors hover:bg-emerald-700 disabled:opacity-60"
+            >
                 {{ form.processing ? 'Saving...' : 'Save Changes' }}
-            </Button>
-            <Button variant="outline" type="button" @click="router.visit(cancelUrl)">
+            </button>
+            <button
+                type="button"
+                @click="router.visit(cancelUrl)"
+                class="rounded-xl bg-neutral-200 dark:bg-neutral-800 px-4 py-2 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:bg-neutral-300 dark:hover:bg-neutral-700"
+            >
                 Cancel
-            </Button>
+            </button>
         </div>
     </form>
 </template>

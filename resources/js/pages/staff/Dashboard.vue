@@ -98,7 +98,7 @@ function updateStatus(bookingId: number, status: string) {
 <template>
     <Head title="Court Staff Dashboard" />
 
-    <div class="p-6 space-y-6 max-w-7xl mx-auto">
+    <div class="p-6 space-y-6 w-full">
             <!-- Header bar with Notification Bell & Court Switcher -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
                 <div class="space-y-1">

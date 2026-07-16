@@ -19,7 +19,7 @@ defineOptions({
 <template>
     <Head title="My Bookings" />
 
-    <div class="p-6 space-y-6 max-w-7xl mx-auto pb-16">
+    <div class="p-6 space-y-6 w-full pb-16">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-600/10 via-teal-600/5 to-transparent p-6 rounded-2xl border border-emerald-500/10 dark:border-emerald-500/5">
             <div>
                 <h1 class="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">My Bookings</h1>

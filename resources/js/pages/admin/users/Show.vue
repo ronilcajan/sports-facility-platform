@@ -40,7 +40,7 @@ setLayoutProps({
 <template>
     <Head :title="`${user.name} - User Profile & History`" />
 
-    <div class="p-6 space-y-6 max-w-5xl mx-auto">
+    <div class="p-6 space-y-6 w-full">
             <Link href="/admin/users" class="text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1">
                 <ArrowLeft class="w-4 h-4" /> Back to Users
             </Link>

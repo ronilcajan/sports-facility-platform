@@ -54,7 +54,7 @@ function updateStatus(newStatus: string) {
 <template>
     <Head :title="`Booking #${booking.id} - Staff View`" />
 
-    <div class="p-6 space-y-6 max-w-4xl mx-auto">
+    <div class="p-6 space-y-6 w-full">
             <Link href="/staff/bookings" class="text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1">
                 <ArrowLeft class="w-4 h-4" /> Back to Court Bookings
             </Link>

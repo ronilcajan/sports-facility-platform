@@ -46,7 +46,7 @@ class AdminBookingController extends Controller
             ->visibleTo($user)
             ->when($request->filled('venue_id'), fn ($courtQuery) => $courtQuery->where('venue_id', $request->input('venue_id')))
             ->orderBy('name')
-            ->get(['id', 'name', 'sport_type']);
+            ->get(['id', 'name', 'sport_type', 'base_price']);
 
         $venues = $user->isSuperAdmin()
             ? Venue::orderBy('name')->get(['id', 'name'])
@@ -106,6 +106,50 @@ class AdminBookingController extends Controller
             'bookings' => $query->paginate(15)->withQueryString(),
             'filters' => $request->only(['search', 'court_id', 'status', 'date', 'venue_id']),
         ]);
+    }
+
+    /**
+     * Create a booking manually (walk-in / phone reservation).
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $this->authorize('create', Booking::class);
+
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'court_id' => ['required', 'exists:courts,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'max:50'],
+            'date' => ['required', 'date'],
+            'time_slots' => ['required', 'array', 'min:1'],
+            'time_slots.*' => ['string'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        // Scope the court to what the user may manage (venue admins → own venue).
+        $court = Court::visibleTo($user)->findOrFail($validated['court_id']);
+
+        Booking::create([
+            'court_id' => $court->id,
+            'user_id' => null,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'date' => $validated['date'],
+            'time_slots' => $validated['time_slots'],
+            'notes' => $validated['notes'] ?? null,
+            'total_price' => (float) $court->base_price * count($validated['time_slots']),
+            'status' => 'approved',
+        ]);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Booking created successfully.'),
+        ]);
+
+        return back();
     }
 
     /**

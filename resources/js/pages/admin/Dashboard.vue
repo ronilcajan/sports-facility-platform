@@ -83,7 +83,7 @@ function quickUpdateStatus(bookingId: number, status: string) {
 <template>
     <Head title="Super Admin Dashboard" />
 
-    <div class="p-6 space-y-8 max-w-7xl mx-auto">
+    <div class="p-6 space-y-8 w-full">
             <!-- Header Banner -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-950 via-neutral-900 to-neutral-900 text-white p-6 rounded-2xl border border-emerald-900/50 shadow-xl">
                 <div class="space-y-1">

@@ -25,7 +25,7 @@ class StaffBookingController extends Controller
 
         $view = $request->input('view') === 'list' ? 'list' : 'calendar';
 
-        $courts = Court::visibleTo($user)->orderBy('name')->get(['id', 'name', 'sport_type']);
+        $courts = Court::visibleTo($user)->orderBy('name')->get(['id', 'name', 'sport_type', 'base_price']);
 
         $query = Booking::visibleTo($user)->with(['court', 'user']);
 

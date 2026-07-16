@@ -88,7 +88,7 @@ function deleteUnavailability(id: number) {
 <template>
     <Head title="Court Schedules & Blackout Dates - Court Staff" />
 
-    <div class="p-6 space-y-6 max-w-7xl mx-auto">
+    <div class="p-6 space-y-6 w-full">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Court Schedule & Unavailable Dates</h1>

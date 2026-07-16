@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
-import { CalendarDays, LayoutList, Search, CheckCircle, XCircle, Trash2, ArrowUpRight, FileText } from '@lucide/vue';
+import { CalendarDays, LayoutList, Search, CheckCircle, XCircle, Trash2, ArrowUpRight, FileText, Plus } from '@lucide/vue';
 import BookingsCalendar from '@/components/admin/BookingsCalendar.vue';
+import CreateBookingModal from '@/components/admin/CreateBookingModal.vue';
 
 interface Booking {
     id: number;
@@ -52,6 +53,8 @@ function switchView(view: 'calendar' | 'list') {
     router.get(props.basePath, { view }, { preserveState: false });
 }
 
+const showCreateModal = ref(false);
+
 // --- List view state ---
 const search = ref(props.filters.search || '');
 const court_id = ref(props.filters.court_id || '');
@@ -96,29 +99,45 @@ function deleteBooking(bookingId: number) {
 <template>
     <Head title="Bookings" />
 
-    <div class="p-6 space-y-6 max-w-7xl mx-auto">
+    <div class="p-6 space-y-6 w-full">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Facility Bookings</h1>
                 <p class="text-xs text-neutral-500">Monitor, approve, and manage reservations by day or in a list.</p>
             </div>
 
-            <!-- View toggle -->
-            <div class="inline-flex rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-1 shadow-sm">
+            <div class="flex items-center gap-2">
+                <!-- View toggle -->
+                <div class="inline-flex rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-1 shadow-sm">
+                    <button
+                        @click="switchView('calendar')"
+                        :class="['inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors', view === 'calendar' ? 'bg-emerald-600 text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800']"
+                    >
+                        <CalendarDays class="w-4 h-4" /> Calendar
+                    </button>
+                    <button
+                        @click="switchView('list')"
+                        :class="['inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors', view === 'list' ? 'bg-emerald-600 text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800']"
+                    >
+                        <LayoutList class="w-4 h-4" /> List
+                    </button>
+                </div>
+
                 <button
-                    @click="switchView('calendar')"
-                    :class="['inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors', view === 'calendar' ? 'bg-emerald-600 text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800']"
+                    @click="showCreateModal = true"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow transition-colors hover:bg-emerald-700"
                 >
-                    <CalendarDays class="w-4 h-4" /> Calendar
-                </button>
-                <button
-                    @click="switchView('list')"
-                    :class="['inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors', view === 'list' ? 'bg-emerald-600 text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800']"
-                >
-                    <LayoutList class="w-4 h-4" /> List
+                    <Plus class="w-4 h-4" /> New Booking
                 </button>
             </div>
         </div>
+
+        <CreateBookingModal
+            :open="showCreateModal"
+            :courts="courts"
+            :action="basePath"
+            @close="showCreateModal = false"
+        />
 
         <!-- Calendar board -->
         <BookingsCalendar

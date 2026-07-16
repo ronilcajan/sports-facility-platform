@@ -20,6 +20,7 @@ class AdminVenueController extends Controller
         $this->authorize('viewAny', Venue::class);
 
         $query = Venue::withCount('courts')
+            ->with('courts.primaryImage')
             ->latest();
 
         if ($request->filled('search')) {
@@ -39,6 +40,10 @@ class AdminVenueController extends Controller
             'email' => $venue->email,
             'is_active' => $venue->is_active,
             'courts_count' => $venue->courts_count,
+            'cover_image_url' => $venue->courts
+                ->map(fn ($court) => $court->primaryImage?->url)
+                ->filter()
+                ->first(),
             'created_at' => $venue->created_at?->toFormattedDateString(),
         ])->withQueryString();
 

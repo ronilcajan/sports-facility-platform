@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Link, router, useForm } from '@inertiajs/vue3';
-import { ChevronLeft, ChevronRight, CalendarCheck, FileText, ArrowUpRight, X, CheckCircle, XCircle, Trash2, Dumbbell } from '@lucide/vue';
+import { router, useForm } from '@inertiajs/vue3';
+import { ChevronLeft, ChevronRight, CalendarCheck, FileText, X, CheckCircle, XCircle, Trash2, Dumbbell } from '@lucide/vue';
 
 interface CourtRef {
     id: number;
@@ -344,9 +344,14 @@ function deleteBooking() {
                     >
                         Complete
                     </button>
-                    <Link :href="`${basePath}/${selected.id}`" class="inline-flex items-center gap-1 rounded-lg border border-neutral-300 dark:border-neutral-700 px-2.5 py-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800">
-                        <ArrowUpRight class="w-3.5 h-3.5" /> Details
-                    </Link>
+                    <button
+                        v-if="canUpdateStatus && selected.status !== 'cancelled'"
+                        @click="updateStatus('cancelled')"
+                        :disabled="actionForm.processing"
+                        class="rounded-lg border border-neutral-300 dark:border-neutral-700 px-2.5 py-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                        Cancel
+                    </button>
                     <button
                         v-if="canDelete"
                         @click="deleteBooking"

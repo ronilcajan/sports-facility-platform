@@ -97,6 +97,51 @@ test('bookings list view still returns paginated data', function () {
             ->has('bookings.data'));
 });
 
+test('an admin can manually create a booking with a computed price', function () {
+    $superAdmin = userWithRole(RoleName::SuperAdmin);
+    $court = Court::factory()->for(Venue::factory()->create())->create(['base_price' => 30]);
+
+    $this->actingAs($superAdmin)
+        ->post(route('admin.bookings.store'), [
+            'court_id' => $court->id,
+            'name' => 'Walk In',
+            'email' => 'walkin@example.com',
+            'phone' => '09170000000',
+            'date' => Carbon::now()->toDateString(),
+            'time_slots' => ['08:00 AM', '09:00 AM'],
+        ])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('bookings', [
+        'court_id' => $court->id,
+        'email' => 'walkin@example.com',
+        'status' => 'approved',
+    ]);
+
+    expect(Booking::where('email', 'walkin@example.com')->first()->total_price)->toBe('60.00');
+});
+
+test('a venue admin cannot manually create a booking for another venue court', function () {
+    $venue = Venue::factory()->create();
+    $admin = userWithRole(RoleName::Admin);
+    $admin->update(['venue_id' => $venue->id]);
+
+    $foreignCourt = Court::factory()->for(Venue::factory()->create())->create();
+
+    $this->actingAs($admin)
+        ->post(route('admin.bookings.store'), [
+            'court_id' => $foreignCourt->id,
+            'name' => 'Blocked',
+            'email' => 'blocked@example.com',
+            'phone' => '09170000000',
+            'date' => Carbon::now()->toDateString(),
+            'time_slots' => ['08:00 AM'],
+        ])
+        ->assertNotFound();
+
+    $this->assertDatabaseMissing('bookings', ['email' => 'blocked@example.com']);
+});
+
 test('staff calendar only shows bookings for their assigned courts', function () {
     $staff = userWithRole(RoleName::Staff);
     $assigned = Court::factory()->for(Venue::factory()->create())->create();

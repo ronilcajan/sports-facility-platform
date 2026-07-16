@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\SiteTheme;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\UpdateAppearanceRequest;
 use App\Models\SiteSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,17 +12,11 @@ use Inertia\Response;
 class AppearanceController extends Controller
 {
     /**
-     * Show the theme picker.
+     * Show the appearance (branding) settings.
      */
     public function index(): Response
     {
         return Inertia::render('admin/appearance/Index', [
-            'themes' => array_map(fn (SiteTheme $theme): array => [
-                'value' => $theme->value,
-                'label' => $theme->label(),
-                'description' => $theme->description(),
-            ], SiteTheme::cases()),
-            'activeTheme' => SiteSetting::get('active_theme', SiteTheme::default()->value),
             'siteName' => SiteSetting::get('site_name', config('site.name')),
             'logoUrl' => $this->logoUrl(),
             'contact' => [
@@ -33,18 +25,6 @@ class AppearanceController extends Controller
                 'address' => SiteSetting::get('contact_address', config('site.contact.address_line')),
             ],
         ]);
-    }
-
-    /**
-     * Persist the operator-selected active theme.
-     */
-    public function update(UpdateAppearanceRequest $request): RedirectResponse
-    {
-        SiteSetting::set('active_theme', $request->validated('theme'));
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Theme updated.')]);
-
-        return back();
     }
 
     /**

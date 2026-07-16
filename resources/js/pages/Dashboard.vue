@@ -52,7 +52,7 @@ const recentBookings = computed(() => props.bookings.slice(0, 5));
 <template>
     <Head title="Dashboard" />
 
-    <div class="p-6 space-y-6 max-w-7xl mx-auto pb-16">
+    <div class="p-6 space-y-6 w-full pb-16">
         <!-- Hero Header -->
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-600/10 via-teal-600/5 to-transparent p-6 rounded-2xl border border-emerald-500/10 dark:border-emerald-500/5">
             <div>

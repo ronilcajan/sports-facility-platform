@@ -27,7 +27,7 @@ class CourtController extends Controller
 
         $courts = Court::query()
             ->visibleTo($user)
-            ->with(['venue'])
+            ->with(['venue', 'primaryImage'])
             ->withCount('staff')
             ->latest('id')
             ->get();
