@@ -71,20 +71,26 @@ class AdminDashboardController extends Controller
 
         // Recent bookings
         $recentBookings = $this->bookings($user)
-            ->with('court')
+            ->with(['court.venue'])
             ->latest()
             ->take(10)
             ->get()
             ->map(function ($booking) {
                 return [
                     'id' => $booking->id,
+                    'reference_code' => 'DY-RESRV-'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
                     'customer_name' => $booking->name,
+                    'email' => $booking->email,
+                    'phone' => $booking->phone,
                     'court_name' => $booking->court?->name ?? 'Deleted Court',
-                    'date' => $booking->date,
+                    'sport_type' => $booking->court?->sport_type?->label() ?? 'N/A',
+                    'venue_name' => $booking->court?->venue?->name ?? 'N/A',
+                    'date' => (string) $booking->date,
                     'time_slots' => $booking->time_slots,
-                    'total_price' => $booking->total_price,
+                    'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
                     'receipt_url' => $booking->receipt_url,
                     'status' => $booking->status,
+                    'notes' => $booking->notes,
                     'created_at' => $booking->created_at?->toDateTimeString(),
                 ];
             });

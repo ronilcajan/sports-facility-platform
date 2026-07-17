@@ -3,6 +3,8 @@ import { computed, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight, CalendarCheck, FileText, X, CheckCircle, XCircle, Trash2, Dumbbell } from '@lucide/vue';
 
+import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
+
 interface CourtRef {
     id: number;
     name: string;
@@ -18,6 +20,8 @@ interface BoardBooking {
     total_price: string;
     status: string;
     receipt_url?: string | null;
+    receipt_path?: string | null;
+    notes?: string | null;
     court: CourtRef | null;
 }
 
@@ -38,17 +42,22 @@ interface CalendarWindow {
     isToday: boolean;
 }
 
-const props = defineProps<{
-    days: Day[];
-    courts: { id: number; name: string }[];
-    venues?: { id: number; name: string }[] | null;
-    filters: { court_id?: string; status?: string; venue_id?: string };
-    window: CalendarWindow;
-    basePath: string;
-    canDelete: boolean;
-    showVenueFilter: boolean;
-    canUpdate?: boolean;
-}>();
+const props = withDefaults(
+    defineProps<{
+        days: Day[];
+        courts: { id: number; name: string }[];
+        venues?: { id: number; name: string }[] | null;
+        filters: { court_id?: string; status?: string; venue_id?: string };
+        window: CalendarWindow;
+        basePath: string;
+        canDelete: boolean;
+        showVenueFilter: boolean;
+        canUpdate?: boolean;
+    }>(),
+    {
+        canUpdate: true,
+    }
+);
 
 const canUpdateStatus = computed(() => props.canUpdate !== false);
 
@@ -137,6 +146,24 @@ function openBooking(booking: BoardBooking) {
 function closeModal() {
     selected.value = null;
 }
+
+const selectedBookingDetail = computed<BookingDetail | null>(() => {
+    if (!selected.value) return null;
+    return {
+        id: selected.value.id,
+        reference_code: `DY-RESRV-${String(selected.value.id).padStart(6, '0')}`,
+        customer_name: selected.value.name,
+        email: selected.value.email,
+        phone: selected.value.phone,
+        date: selected.value.date,
+        time_slots: selected.value.time_slots,
+        total_price: selected.value.total_price,
+        receipt_url: selected.value.receipt_url || (selected.value.receipt_path ? `/storage/${selected.value.receipt_path}` : null),
+        status: selected.value.status,
+        notes: selected.value.notes,
+        court_name: selected.value.court?.name || 'Assigned Court',
+    };
+});
 
 function updateStatus(newStatus: string) {
     if (!selected.value) return;
@@ -293,75 +320,12 @@ function deleteBooking() {
         </div>
 
         <!-- Booking detail / action modal -->
-        <div v-if="selected" class="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/60 p-4 backdrop-blur-sm" @click.self="closeModal">
-            <div class="w-full max-w-md space-y-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-2xl">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <h3 class="text-base font-black tracking-tight text-neutral-900 dark:text-white">{{ selected.name }}</h3>
-                        <p class="text-[11px] text-neutral-500">{{ selected.court?.name || 'Unassigned court' }} · {{ selected.date }}</p>
-                    </div>
-                    <button @click="closeModal" class="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
-                        <X class="w-4 h-4" />
-                    </button>
-                </div>
-
-                <div class="space-y-1.5 text-xs text-neutral-600 dark:text-neutral-300">
-                    <div class="flex justify-between"><span class="text-neutral-400">Time</span><span class="font-mono">{{ selected.time_slots?.join(', ') || 'N/A' }}</span></div>
-                    <div class="flex justify-between"><span class="text-neutral-400">Amount</span><span class="font-bold text-neutral-900 dark:text-white">₱{{ selected.total_price }}</span></div>
-                    <div class="flex justify-between"><span class="text-neutral-400">Status</span><span :class="['rounded-full px-2 py-0.5 text-[10px] font-bold capitalize', statusClasses(selected.status)]">{{ selected.status }}</span></div>
-                    <div class="flex justify-between"><span class="text-neutral-400">Email</span><span class="truncate">{{ selected.email }}</span></div>
-                    <div class="flex justify-between"><span class="text-neutral-400">Phone</span><span>{{ selected.phone }}</span></div>
-                    <div v-if="selected.receipt_url" class="flex justify-between">
-                        <span class="text-neutral-400">Receipt</span>
-                        <a :href="selected.receipt_url" target="_blank" class="inline-flex items-center gap-1 font-semibold text-emerald-600 hover:underline">
-                            <FileText class="w-3.5 h-3.5" /> View
-                        </a>
-                    </div>
-                </div>
-
-                <div class="flex flex-wrap gap-2 border-t border-neutral-100 dark:border-neutral-800 pt-3">
-                    <button
-                        v-if="canUpdateStatus && selected.status !== 'approved' && selected.status !== 'confirmed'"
-                        @click="updateStatus('approved')"
-                        :disabled="actionForm.processing"
-                        class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
-                    >
-                        <CheckCircle class="w-3.5 h-3.5" /> Approve
-                    </button>
-                    <button
-                        v-if="canUpdateStatus && selected.status !== 'rejected'"
-                        @click="updateStatus('rejected')"
-                        :disabled="actionForm.processing"
-                        class="inline-flex items-center gap-1 rounded-lg border border-rose-300 dark:border-rose-900 px-2.5 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:opacity-50"
-                    >
-                        <XCircle class="w-3.5 h-3.5" /> Reject
-                    </button>
-                    <button
-                        v-if="canUpdateStatus && selected.status !== 'completed'"
-                        @click="updateStatus('completed')"
-                        :disabled="actionForm.processing"
-                        class="rounded-lg border border-neutral-300 dark:border-neutral-700 px-2.5 py-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50"
-                    >
-                        Complete
-                    </button>
-                    <button
-                        v-if="canUpdateStatus && selected.status !== 'cancelled'"
-                        @click="updateStatus('cancelled')"
-                        :disabled="actionForm.processing"
-                        class="rounded-lg border border-neutral-300 dark:border-neutral-700 px-2.5 py-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        v-if="canDelete"
-                        @click="deleteBooking"
-                        :disabled="actionForm.processing"
-                        class="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:opacity-50"
-                    >
-                        <Trash2 class="w-3.5 h-3.5" /> Delete
-                    </button>
-                </div>
-            </div>
-        </div>
+        <BookingDetailModal
+            :is-open="!!selected"
+            :booking="selectedBookingDetail"
+            :update-route-prefix="basePath"
+            :can-update="canUpdateStatus"
+            @close="closeModal"
+        />
     </div>
 </template>

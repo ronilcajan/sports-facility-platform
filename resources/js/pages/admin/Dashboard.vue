@@ -15,6 +15,9 @@ import {
     FileText,
 } from '@lucide/vue';
 
+import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
+import { ref } from 'vue';
+
 interface Stats {
     totalCourts: number;
     activeCourts: number;
@@ -43,13 +46,19 @@ interface CourtSummary {
 
 interface RecentBooking {
     id: number;
+    reference_code?: string;
     customer_name: string;
+    email: string;
+    phone: string;
     court_name: string;
+    sport_type?: string;
+    venue_name?: string;
     date: string;
     time_slots: string[];
     total_price: string;
     receipt_url?: string | null;
     status: string;
+    notes?: string | null;
     created_at: string;
 }
 
@@ -67,6 +76,14 @@ defineOptions({
         ],
     },
 });
+
+const isDetailModalOpen = ref(false);
+const selectedBookingForModal = ref<BookingDetail | null>(null);
+
+function openBookingDetails(booking: RecentBooking) {
+    selectedBookingForModal.value = booking as any;
+    isDetailModalOpen.value = true;
+}
 
 const statusForm = useForm({
     status: '',
@@ -328,7 +345,7 @@ function quickUpdateStatus(bookingId: number, status: string) {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
-                            <tr v-for="b in recentBookings" :key="b.id" class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
+                            <tr v-for="b in recentBookings" :key="b.id" @click="openBookingDetails(b)" class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors cursor-pointer">
                                 <td class="py-3 px-3 font-mono font-bold text-neutral-900 dark:text-white">
                                     #{{ b.id }}
                                 </td>
@@ -338,7 +355,7 @@ function quickUpdateStatus(bookingId: number, status: string) {
                                 <td class="py-3 px-3 text-neutral-600 dark:text-neutral-300">
                                     {{ b.court_name }}
                                 </td>
-                                <td class="py-3 px-3 text-neutral-600 dark:text-neutral-300">
+                                <td class="py-3 px-3 font-semibold text-emerald-600 dark:text-emerald-400 underline decoration-dotted">
                                     {{ b.date }}
                                 </td>
                                 <td class="py-3 px-3 font-mono text-[11px] text-neutral-500">
@@ -358,7 +375,7 @@ function quickUpdateStatus(bookingId: number, status: string) {
                                         {{ b.status }}
                                     </span>
                                 </td>
-                                <td class="py-3 px-3">
+                                <td class="py-3 px-3" @click.stop>
                                     <a
                                         v-if="b.receipt_url"
                                         :href="b.receipt_url"
@@ -369,7 +386,7 @@ function quickUpdateStatus(bookingId: number, status: string) {
                                     </a>
                                     <span v-else class="text-neutral-400 text-[11px]">N/A</span>
                                 </td>
-                                <td class="py-3 px-3 text-right">
+                                <td class="py-3 px-3 text-right" @click.stop>
                                     <div class="flex items-center justify-end gap-1">
                                         <button
                                             v-if="b.status === 'pending'"
@@ -387,9 +404,14 @@ function quickUpdateStatus(bookingId: number, status: string) {
                                         >
                                             <XCircle class="w-4 h-4" />
                                         </button>
-                                        <Link :href="`/admin/bookings/${b.id}`" class="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
+                                        <button
+                                            type="button"
+                                            @click="openBookingDetails(b)"
+                                            class="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                                            title="View Full Booking Details"
+                                        >
                                             <ArrowUpRight class="w-4 h-4" />
-                                        </Link>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -397,5 +419,13 @@ function quickUpdateStatus(bookingId: number, status: string) {
                     </table>
                 </div>
             </div>
+
+            <!-- Booking Details Modal -->
+            <BookingDetailModal
+                :is-open="isDetailModalOpen"
+                :booking="selectedBookingForModal"
+                update-route-prefix="/admin/bookings"
+                @close="isDetailModalOpen = false"
+            />
         </div>
 </template>

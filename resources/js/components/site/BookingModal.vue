@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useSite } from '@/composables/useSite';
 import type { PublicCourt } from '@/types';
 import type { CatalogVenue } from '@/components/site/SiteVenueCard.vue';
 
@@ -14,6 +15,8 @@ const props = defineProps<{
 const emit = defineEmits<{
     (e: 'close'): void;
 }>();
+
+const site = useSite();
 
 const page = usePage();
 const currentUser = computed(
@@ -809,23 +812,54 @@ async function downloadVoucher() {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, H);
 
-    // Header band
+    // Header band with logo
     ctx.fillStyle = brand;
-    ctx.fillRect(0, 0, W, 96);
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
-    ctx.font = '700 24px Arial, sans-serif';
-    ctx.fillText('COURT RESERVATION', W / 2, 44);
-    ctx.font = '400 14px Arial, sans-serif';
-    ctx.fillText(venueName || 'Sports Facility', W / 2, 72);
+    const headerHeight = 120;
+    ctx.fillRect(0, 0, W, headerHeight);
+
+    const logoUrl = site.logo || '/logo.jpg';
+    try {
+        const logoImg = await loadImage(logoUrl);
+        const logoSize = 44;
+        const logoX = (W - logoSize) / 2;
+        const logoY = 12;
+
+        // Draw white circle background ring for logo
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2 + 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+
+        // Clip logo inside circle
+        ctx.beginPath();
+        ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+        ctx.restore();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.font = '700 20px Arial, sans-serif';
+        ctx.fillText('COURT RESERVATION', W / 2, logoY + logoSize + 22);
+        ctx.font = '400 13px Arial, sans-serif';
+        ctx.fillText(venueName || site.name || 'Sports Facility', W / 2, logoY + logoSize + 40);
+    } catch {
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.font = '700 24px Arial, sans-serif';
+        ctx.fillText('COURT RESERVATION', W / 2, 48);
+        ctx.font = '400 14px Arial, sans-serif';
+        ctx.fillText(venueName || site.name || 'Sports Facility', W / 2, 78);
+    }
 
     // Reference
     ctx.fillStyle = '#111827';
     ctx.font = '700 13px monospace';
-    ctx.fillText(`REF: ${reference}`, W / 2, 128);
+    ctx.fillText(`REF: ${reference}`, W / 2, 148);
 
     // QR code
-    let y = 156;
+    let y = 176;
     if (qrSrc) {
         try {
             const qrImg = await loadImage(qrSrc);
@@ -1691,10 +1725,13 @@ async function downloadVoucher() {
 
                 <!-- Stage 3: Booking Received Screen -->
                 <div v-else-if="step === 'confirmed'" class="min-h-0 flex-1 space-y-5 overflow-y-auto p-8 text-center">
-                    <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
-                        <svg class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                    <div class="mx-auto flex items-center justify-center gap-3">
+                        <img v-if="site.logo" :src="site.logo" :alt="site.name" class="size-14 rounded-full object-cover ring-2 ring-emerald-500/30 shadow-sm" />
+                        <div class="flex size-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+                            <svg class="size-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
                     </div>
                     <div>
                         <span class="inline-block rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-500 uppercase tracking-wider">

@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import { CalendarDays, LayoutList, Search, CheckCircle, XCircle, ArrowUpRight, FileText, Plus, X } from '@lucide/vue';
-import BookingsCalendar from '@/components/admin/BookingsCalendar.vue';
+import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
 
 interface Booking {
     id: number;
@@ -15,6 +15,7 @@ interface Booking {
     receipt_path?: string | null;
     receipt_url?: string | null;
     status: string;
+    notes?: string;
     court?: { id: number; name: string };
 }
 
@@ -67,8 +68,30 @@ function applyFilters() {
 const page = usePage();
 const user = computed(() => page.props.auth?.user as any);
 const canUpdate = computed(() => {
-    return user.value?.is_super_admin || user.value?.is_admin;
+    return user.value?.is_super_admin || user.value?.is_admin || user.value?.is_staff;
 });
+
+const showDetailModal = ref(false);
+const selectedBookingForModal = ref<BookingDetail | null>(null);
+
+function openBookingDetails(booking: Booking) {
+    const detail: BookingDetail = {
+        id: booking.id,
+        reference_code: `DY-RESRV-${String(booking.id).padStart(6, '0')}`,
+        customer_name: booking.name,
+        email: booking.email,
+        phone: booking.phone,
+        date: booking.date,
+        time_slots: booking.time_slots,
+        total_price: booking.total_price,
+        receipt_url: booking.receipt_url || (booking.receipt_path ? `/storage/${booking.receipt_path}` : null),
+        status: booking.status,
+        notes: booking.notes,
+        court_name: booking.court?.name || 'Assigned Court',
+    };
+    selectedBookingForModal.value = detail;
+    showDetailModal.value = true;
+}
 
 const actionForm = useForm({
     status: '',
@@ -234,7 +257,7 @@ function submitCreate() {
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
-                    <tr v-for="b in bookings?.data || []" :key="b.id" class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+                    <tr v-for="b in bookings?.data || []" :key="b.id" @click="openBookingDetails(b)" class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 cursor-pointer transition-colors">
                         <td class="py-3 px-3 font-mono font-bold">#{{ b.id }}</td>
                         <td class="py-3 px-3 font-semibold text-neutral-900 dark:text-white">{{ b.name }}</td>
                         <td class="py-3 px-3 text-neutral-500">
@@ -242,7 +265,7 @@ function submitCreate() {
                             <div>{{ b.phone }}</div>
                         </td>
                         <td class="py-3 px-3 text-neutral-800 dark:text-neutral-200">{{ b.court?.name }}</td>
-                        <td class="py-3 px-3 text-neutral-700 dark:text-neutral-300">{{ b.date }}</td>
+                        <td class="py-3 px-3 font-semibold text-emerald-600 dark:text-emerald-400 underline decoration-dotted">{{ b.date }}</td>
                         <td class="py-3 px-3 font-mono text-[11px] text-neutral-500">{{ b.time_slots ? b.time_slots.join(', ') : '' }}</td>
                         <td class="py-3 px-3 font-bold text-emerald-600">₱{{ b.total_price }}</td>
                         <td class="py-3 px-3">
@@ -256,7 +279,7 @@ function submitCreate() {
                                 {{ b.status }}
                             </span>
                         </td>
-                        <td class="py-3 px-3">
+                        <td class="py-3 px-3" @click.stop>
                             <a
                                 v-if="b.receipt_url || b.receipt_path"
                                 :href="b.receipt_url || '/storage/' + b.receipt_path"
@@ -267,7 +290,7 @@ function submitCreate() {
                             </a>
                             <span v-else class="text-neutral-400 text-[11px]">N/A</span>
                         </td>
-                        <td class="py-3 px-3 text-right">
+                        <td class="py-3 px-3 text-right" @click.stop>
                             <div class="flex items-center justify-end gap-1">
                                 <template v-if="canUpdate">
                                     <button
@@ -287,9 +310,14 @@ function submitCreate() {
                                         <XCircle class="w-4 h-4" />
                                     </button>
                                 </template>
-                                <Link :href="`/staff/bookings/${b.id}`" class="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
+                                <button
+                                    type="button"
+                                    @click="openBookingDetails(b)"
+                                    class="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                                    title="View Details"
+                                >
                                     <ArrowUpRight class="w-4 h-4" />
-                                </Link>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -374,4 +402,11 @@ function submitCreate() {
             </div>
         </div>
     </Teleport>
+
+    <BookingDetailModal
+        :is-open="showDetailModal"
+        :booking="selectedBookingForModal"
+        :update-route-prefix="basePath"
+        @close="showDetailModal = false"
+    />
 </template>

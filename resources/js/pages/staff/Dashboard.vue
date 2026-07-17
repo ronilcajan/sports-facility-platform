@@ -16,6 +16,8 @@ import {
     FileText,
 } from '@lucide/vue';
 
+import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
+
 interface CourtItem {
     id: number;
     name: string;
@@ -42,6 +44,7 @@ interface BookingItem {
     receipt_url?: string | null;
     status: string;
     notes?: string;
+    court?: { id: number; name: string };
 }
 
 interface UnavailabilityItem {
@@ -79,8 +82,31 @@ function selectCourt(courtId: number) {
 const page = usePage();
 const user = computed(() => page.props.auth?.user as any);
 const canUpdate = computed(() => {
-    return user.value?.is_super_admin || user.value?.is_admin;
+    return user.value?.is_super_admin || user.value?.is_admin || user.value?.is_staff;
 });
+
+const isDetailModalOpen = ref(false);
+const selectedBookingForModal = ref<BookingDetail | null>(null);
+
+function openBookingDetails(booking: BookingItem) {
+    const detail: BookingDetail = {
+        id: booking.id,
+        reference_code: `DY-RESRV-${String(booking.id).padStart(6, '0')}`,
+        customer_name: booking.name,
+        email: booking.email,
+        phone: booking.phone,
+        date: booking.date,
+        time_slots: booking.time_slots,
+        total_price: booking.total_price,
+        receipt_url: booking.receipt_url || (booking.receipt_path ? `/storage/${booking.receipt_path}` : null),
+        status: booking.status,
+        notes: booking.notes,
+        court_name: props.selectedCourt?.name || booking.court?.name || 'Assigned Court',
+        sport_type: props.selectedCourt?.sport_type || '',
+    };
+    selectedBookingForModal.value = detail;
+    isDetailModalOpen.value = true;
+}
 
 const actionForm = useForm({
     status: '',
@@ -196,7 +222,8 @@ function updateStatus(bookingId: number, status: string) {
                             <div
                                 v-for="booking in pendingBookings"
                                 :key="booking.id"
-                                class="p-4 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40 space-y-2"
+                                @click="openBookingDetails(booking)"
+                                class="p-4 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40 space-y-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                             >
                                 <div class="flex items-center justify-between text-xs">
                                     <span class="font-bold text-neutral-900 dark:text-white">#{{ booking.id }} - {{ booking.name }}</span>
@@ -204,12 +231,12 @@ function updateStatus(bookingId: number, status: string) {
                                 </div>
 
                                 <div class="text-xs text-neutral-500 flex flex-wrap gap-x-4 gap-y-1">
-                                    <span>Date: <strong>{{ booking.date }}</strong></span>
+                                    <span>Date: <strong class="text-emerald-600 dark:text-emerald-400 underline decoration-dotted">{{ booking.date }}</strong></span>
                                     <span>Slots: <strong class="font-mono text-neutral-800 dark:text-neutral-200">{{ booking.time_slots ? booking.time_slots.join(', ') : 'N/A' }}</strong></span>
                                     <span>Phone: {{ booking.phone }}</span>
                                 </div>
 
-                                <div class="flex items-center justify-between pt-2 border-t border-neutral-200/50 dark:border-neutral-700/50">
+                                <div class="flex items-center justify-between pt-2 border-t border-neutral-200/50 dark:border-neutral-700/50" @click.stop>
                                     <div>
                                         <a
                                             v-if="booking.receipt_url || booking.receipt_path"
@@ -224,13 +251,13 @@ function updateStatus(bookingId: number, status: string) {
                                     <div v-if="canUpdate" class="flex items-center gap-2">
                                         <button
                                             @click="updateStatus(booking.id, 'approved')"
-                                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+                                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
                                         >
                                             <CheckCircle class="w-3.5 h-3.5" /> Approve
                                         </button>
                                         <button
                                             @click="updateStatus(booking.id, 'rejected')"
-                                            class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+                                            class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
                                         >
                                             <XCircle class="w-3.5 h-3.5" /> Reject
                                         </button>
@@ -260,7 +287,8 @@ function updateStatus(bookingId: number, status: string) {
                             <div
                                 v-for="b in todayBookings"
                                 :key="b.id"
-                                class="p-3 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-800/60 flex items-center justify-between"
+                                @click="openBookingDetails(b)"
+                                class="p-3 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-800/60 flex items-center justify-between cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                             >
                                 <div class="space-y-0.5 text-xs">
                                     <p class="font-bold text-neutral-900 dark:text-white">{{ b.name }}</p>
@@ -315,5 +343,13 @@ function updateStatus(bookingId: number, status: string) {
                     </div>
                 </div>
             </template>
+
+            <!-- Booking Detail Modal -->
+            <BookingDetailModal
+                :is-open="isDetailModalOpen"
+                :booking="selectedBookingForModal"
+                update-route-prefix="/staff/bookings"
+                @close="isDetailModalOpen = false"
+            />
         </div>
 </template>

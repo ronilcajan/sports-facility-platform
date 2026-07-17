@@ -5,6 +5,8 @@ import { CalendarDays, LayoutList, Search, CheckCircle, XCircle, Trash2, ArrowUp
 import BookingsCalendar from '@/components/admin/BookingsCalendar.vue';
 import CreateBookingModal from '@/components/admin/CreateBookingModal.vue';
 
+import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
+
 interface Booking {
     id: number;
     name: string;
@@ -16,6 +18,7 @@ interface Booking {
     receipt_path?: string | null;
     receipt_url?: string | null;
     status: string;
+    notes?: string;
     court?: { id: number; name: string };
     user?: { id: number; name: string };
 }
@@ -54,6 +57,27 @@ function switchView(view: 'calendar' | 'list') {
 }
 
 const showCreateModal = ref(false);
+const showDetailModal = ref(false);
+const selectedBookingForModal = ref<BookingDetail | null>(null);
+
+function openBookingDetails(booking: Booking) {
+    const detail: BookingDetail = {
+        id: booking.id,
+        reference_code: `DY-RESRV-${String(booking.id).padStart(6, '0')}`,
+        customer_name: booking.name,
+        email: booking.email,
+        phone: booking.phone,
+        date: booking.date,
+        time_slots: booking.time_slots,
+        total_price: booking.total_price,
+        receipt_url: booking.receipt_url || (booking.receipt_path ? `/storage/${booking.receipt_path}` : null),
+        status: booking.status,
+        notes: booking.notes,
+        court_name: booking.court?.name || 'Assigned Court',
+    };
+    selectedBookingForModal.value = detail;
+    showDetailModal.value = true;
+}
 
 // --- List view state ---
 const search = ref(props.filters.search || '');
@@ -150,6 +174,7 @@ function deleteBooking(bookingId: number) {
             :base-path="basePath"
             :can-delete="canDelete"
             :show-venue-filter="showVenueFilter"
+            :can-update="true"
         />
 
         <!-- List view -->
@@ -212,7 +237,7 @@ function deleteBooking(bookingId: number) {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
-                        <tr v-for="b in bookings?.data || []" :key="b.id" class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
+                        <tr v-for="b in bookings?.data || []" :key="b.id" @click="openBookingDetails(b)" class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors cursor-pointer">
                             <td class="py-3 px-3 font-mono font-bold text-neutral-900 dark:text-white">#{{ b.id }}</td>
                             <td class="py-3 px-3 font-semibold text-neutral-900 dark:text-white">{{ b.name }}</td>
                             <td class="py-3 px-3 text-neutral-500">
@@ -220,7 +245,7 @@ function deleteBooking(bookingId: number) {
                                 <div>{{ b.phone }}</div>
                             </td>
                             <td class="py-3 px-3 font-medium text-neutral-800 dark:text-neutral-200">{{ b.court?.name || 'N/A' }}</td>
-                            <td class="py-3 px-3 text-neutral-700 dark:text-neutral-300">{{ b.date }}</td>
+                            <td class="py-3 px-3 font-semibold text-emerald-600 dark:text-emerald-400 underline decoration-dotted">{{ b.date }}</td>
                             <td class="py-3 px-3 font-mono text-[11px] text-neutral-500">{{ b.time_slots ? b.time_slots.join(', ') : 'N/A' }}</td>
                             <td class="py-3 px-3 font-bold text-neutral-900 dark:text-white">₱{{ b.total_price }}</td>
                             <td class="py-3 px-3">
@@ -234,7 +259,7 @@ function deleteBooking(bookingId: number) {
                                     {{ b.status }}
                                 </span>
                             </td>
-                            <td class="py-3 px-3">
+                            <td class="py-3 px-3" @click.stop>
                                 <a
                                     v-if="b.receipt_url || b.receipt_path"
                                     :href="b.receipt_url || '/storage/' + b.receipt_path"
@@ -245,7 +270,7 @@ function deleteBooking(bookingId: number) {
                                 </a>
                                 <span v-else class="text-neutral-400 text-[11px]">N/A</span>
                             </td>
-                            <td class="py-3 px-3 text-right">
+                            <td class="py-3 px-3 text-right" @click.stop>
                                 <div class="flex items-center justify-end gap-1">
                                     <button
                                         v-if="b.status !== 'approved' && b.status !== 'confirmed'"
@@ -263,9 +288,14 @@ function deleteBooking(bookingId: number) {
                                     >
                                         <XCircle class="w-4 h-4" />
                                     </button>
-                                    <Link :href="`${basePath}/${b.id}`" class="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
+                                    <button
+                                        type="button"
+                                        @click="openBookingDetails(b)"
+                                        class="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                                        title="View Details"
+                                    >
                                         <ArrowUpRight class="w-4 h-4" />
-                                    </Link>
+                                    </button>
                                     <button v-if="canDelete" @click="deleteBooking(b.id)" class="p-1 text-rose-400 hover:text-rose-600">
                                         <Trash2 class="w-4 h-4" />
                                     </button>
@@ -280,5 +310,12 @@ function deleteBooking(bookingId: number) {
                 </table>
             </div>
         </template>
+        
+        <BookingDetailModal
+            :is-open="showDetailModal"
+            :booking="selectedBookingForModal"
+            :update-route-prefix="basePath"
+            @close="showDetailModal = false"
+        />
     </div>
 </template>
