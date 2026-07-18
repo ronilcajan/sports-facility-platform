@@ -4,6 +4,7 @@ import { computed, ref } from 'vue';
 import SiteWordmark from '@/components/site/SiteWordmark.vue';
 import { useSite } from '@/composables/useSite';
 import { login, register } from '@/routes';
+import { courts } from '@/routes/site';
 
 const site = useSite();
 const page = usePage();
@@ -71,6 +72,13 @@ const open = ref(false);
                         Register
                     </Link>
                 </template>
+
+                <Link
+                    :href="courts()"
+                    class="relative inline-flex items-center justify-center rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-lg shadow-brand/20 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-brand/35"
+                >
+                    Book a Court Now
+                </Link>
             </div>
 
             <!-- Mobile Hamburger Button -->
@@ -157,6 +165,13 @@ const open = ref(false);
                                 </Link>
                             </div>
                         </template>
+                        <Link
+                            :href="courts()"
+                            class="rounded-full bg-brand py-3.5 text-center text-base font-bold text-brand-foreground shadow-lg shadow-brand/15 transition-colors hover:bg-brand/90"
+                            @click="open = false"
+                        >
+                            Book a Court Now
+                        </Link>
                     </div>
                 </nav>
             </div>
