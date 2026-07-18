@@ -4,6 +4,7 @@ import VenueForm, { type VenueData } from '@/components/admin/VenueForm.vue';
 
 const props = defineProps<{
     venue: VenueData;
+    canManageVenueImages?: boolean;
 }>();
 
 defineOptions({
@@ -30,6 +31,7 @@ defineOptions({
                 :venue="props.venue"
                 :action="`/admin/venues/${props.venue.id}`"
                 cancel-url="/admin/venues"
+                :can-manage-venue-images="props.canManageVenueImages"
             />
         </div>
     </div>

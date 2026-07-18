@@ -44,6 +44,30 @@ class StaffReportController extends Controller
         $rejectedBookings = (clone $bookingsQuery)->where('status', 'rejected')->count();
         $cancelledBookings = (clone $bookingsQuery)->where('status', 'cancelled')->count();
 
+        $courtBreakdown = Court::visibleTo($user)
+            ->withCount(['bookings as total_bookings' => function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('date', [$startDate, $endDate]);
+            }])
+            ->withCount(['bookings as approved_count' => function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('date', [$startDate, $endDate])
+                    ->whereIn('status', ['approved', 'confirmed', 'completed']);
+            }])
+            ->withSum(['bookings as revenue' => function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('date', [$startDate, $endDate])
+                    ->whereIn('status', ['approved', 'confirmed', 'completed']);
+            }], 'total_price')
+            ->get()
+            ->map(function ($court) {
+                return [
+                    'id' => $court->id,
+                    'name' => $court->name,
+                    'sport_type' => $court->sport_type->label(),
+                    'total_bookings' => $court->total_bookings,
+                    'approved_count' => $court->approved_count,
+                    'revenue' => (float) ($court->revenue ?? 0),
+                ];
+            });
+
         return Inertia::render('staff/reports/Index', [
             'assignedCourts' => $assignedCourts,
             'selectedCourt' => $selectedCourt,
@@ -56,6 +80,7 @@ class StaffReportController extends Controller
                 'pendingBookings' => $pendingBookings,
                 'rejectedBookings' => $rejectedBookings,
                 'cancelledBookings' => $cancelledBookings,
+                'courtBreakdown' => $courtBreakdown,
             ],
         ]);
     }

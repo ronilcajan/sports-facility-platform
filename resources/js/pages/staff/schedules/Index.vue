@@ -73,16 +73,6 @@ function submitAdd() {
     });
 }
 
-const deleteForm = useForm({});
-
-function deleteUnavailability(id: number) {
-    if (!canManageSchedule.value) return;
-    if (confirm('Remove this unavailable date entry?')) {
-        deleteForm.delete(`/staff/schedules/${id}`, {
-            preserveScroll: true,
-        });
-    }
-}
 </script>
 
 <template>
@@ -123,7 +113,6 @@ function deleteUnavailability(id: number) {
                             <th class="py-2.5 px-3">Date</th>
                             <th class="py-2.5 px-3">Duration</th>
                             <th class="py-2.5 px-3">Reason</th>
-                            <th v-if="canManageSchedule" class="py-2.5 px-3 text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -131,15 +120,10 @@ function deleteUnavailability(id: number) {
                             <td class="py-3 px-3 font-bold text-neutral-900 dark:text-white">{{ u.date }}</td>
                             <td class="py-3 px-3 text-neutral-600 dark:text-neutral-300">{{ u.all_day ? 'Full Day Closed' : u.start_time + ' - ' + u.end_time }}</td>
                             <td class="py-3 px-3 text-neutral-500">{{ u.reason || 'Maintenance' }}</td>
-                            <td v-if="canManageSchedule" class="py-3 px-3 text-right">
-                                <button @click="deleteUnavailability(u.id)" class="p-1 text-rose-500 hover:text-rose-700 cursor-pointer">
-                                    <Trash2 class="w-4 h-4" />
-                                </button>
-                            </td>
                         </tr>
 
                         <tr v-if="unavailabilities.length === 0">
-                            <td :colSpan="canManageSchedule ? 4 : 3" class="py-6 text-center text-xs text-neutral-400">No active blackout slots recorded.</td>
+                            <td colSpan="3" class="py-6 text-center text-xs text-neutral-400">No active blackout slots recorded.</td>
                         </tr>
                     </tbody>
                 </table>

@@ -121,6 +121,18 @@ function groupByCourt(bookings: BoardBooking[]): CourtGroup[] {
 
 const dayGroups = computed(() => props.days.map((day) => groupByCourt(day.bookings)));
 
+const confirmedStatuses = ['approved', 'confirmed', 'completed'];
+
+function dayTotalCount(day: Day): number {
+    return day.bookings.filter((b) => confirmedStatuses.includes(b.status)).length;
+}
+
+function dayTotalAmount(day: Day): number {
+    return day.bookings
+        .filter((b) => confirmedStatuses.includes(b.status))
+        .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
+}
+
 function statusClasses(s: string): string {
     if (s === 'approved' || s === 'confirmed') return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300';
     if (s === 'pending') return 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300';
@@ -255,7 +267,7 @@ function deleteBooking() {
                 :key="day.date"
                 @click="activeDayIndex = i"
                 :class="[
-                    'flex shrink-0 flex-col items-center rounded-xl border px-3 py-2 text-center transition-colors',
+                    'flex min-w-[80px] shrink-0 flex-col items-center rounded-xl border px-3 py-2 text-center transition-colors',
                     i === activeDayIndex
                         ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40'
                         : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900',
@@ -263,6 +275,8 @@ function deleteBooking() {
             >
                 <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">{{ day.weekday }}</span>
                 <span class="text-base font-black text-neutral-900 dark:text-white">{{ day.dayNum }}</span>
+                <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">₱{{ dayTotalAmount(day).toLocaleString('en-US', { minimumFractionDigits: 0 }) }}</span>
+                <span class="text-[9px] font-medium text-neutral-400">{{ dayTotalCount(day) }} {{ dayTotalCount(day) === 1 ? 'booking' : 'bkgs' }}</span>
                 <span v-if="day.isToday" class="mt-0.5 h-1 w-1 rounded-full bg-emerald-500"></span>
             </button>
         </div>
@@ -278,12 +292,33 @@ function deleteBooking() {
                 ]"
             >
                 <!-- Column header (desktop) -->
-                <div class="mb-3 hidden items-center justify-between lg:flex">
-                    <div>
-                        <div class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">{{ day.weekday }}</div>
+                <div class="mb-3 hidden flex-col border-b border-neutral-200/70 dark:border-neutral-800 pb-2 lg:flex">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">{{ day.weekday }}</span>
+                        <span v-if="day.isToday" class="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">Today</span>
+                    </div>
+
+                    <div class="mt-1 flex items-baseline justify-between gap-1 flex-wrap">
                         <div class="text-lg font-black text-neutral-900 dark:text-white leading-none">
                             {{ day.dayNum }} <span class="text-xs font-semibold text-neutral-400">{{ day.month }}</span>
                         </div>
+                        <div class="flex items-center gap-1 text-xs">
+                            <span class="font-bold text-emerald-600 dark:text-emerald-400">
+                                ₱{{ dayTotalAmount(day).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                            </span>
+                            <span class="text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
+                                ({{ dayTotalCount(day) }})
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column header (mobile active day) -->
+                <div class="mb-3 flex items-center justify-between border-b border-neutral-200/70 dark:border-neutral-800 pb-2 lg:hidden">
+                    <div class="flex items-baseline gap-2 flex-wrap">
+                        <span class="text-base font-black text-neutral-900 dark:text-white">{{ day.weekday }}, {{ day.month }} {{ day.dayNum }}</span>
+                        <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">₱{{ dayTotalAmount(day).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+                        <span class="text-[10px] font-medium text-neutral-500">({{ dayTotalCount(day) }} {{ dayTotalCount(day) === 1 ? 'booking' : 'bookings' }})</span>
                     </div>
                     <span v-if="day.isToday" class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">Today</span>
                 </div>

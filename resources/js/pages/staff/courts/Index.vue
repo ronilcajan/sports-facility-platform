@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { Plus, Dumbbell, X } from '@lucide/vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Plus, Pencil, X, Dumbbell, Users, Image as ImageIcon } from '@lucide/vue';
+import CourtImageManagerModal from '@/components/admin/CourtImageManagerModal.vue';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+
+interface CourtImage {
+    id: number;
+    path: string;
+    url: string;
+    is_primary: boolean;
+}
 
 interface Court {
     id: number;
@@ -19,7 +26,11 @@ interface Court {
     status: 'available' | 'maintenance' | 'closed';
     base_price: string;
     slot_duration_minutes: number;
+    buffer_minutes?: number;
+    is_active?: boolean;
     staff_count: number;
+    primary_image?: CourtImage | null;
+    images?: CourtImage[];
 }
 
 interface SelectOption {
@@ -48,18 +59,39 @@ defineOptions({
     },
 });
 
-const statusVariant: Record<Court['status'], string> = {
-    available: 'default',
-    maintenance: 'secondary',
-    closed: 'destructive',
+const statusPill: Record<Court['status'], string> = {
+    available: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+    maintenance: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+    closed: 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
 };
 
 const showCreateModal = ref(false);
+const showEditModal = ref(false);
+const editingCourt = ref<Court | null>(null);
+const showImageModal = ref(false);
+const selectedCourtForImages = ref<Court | null>(null);
+
+function openImageModal(court: Court) {
+    selectedCourtForImages.value = court;
+    showImageModal.value = true;
+}
 
 const createForm = useForm({
     name: '',
     venue_id: '' as string | number,
     sport_type: props.sportTypes?.[0]?.value || 'pickleball',
+    description: '',
+    status: 'available',
+    base_price: '25.00',
+    slot_duration_minutes: 60,
+    buffer_minutes: 0,
+    is_active: true,
+});
+
+const editForm = useForm({
+    name: '',
+    venue_id: '' as string | number,
+    sport_type: 'pickleball',
     description: '',
     status: 'available',
     base_price: '25.00',
@@ -83,98 +115,153 @@ function submitCreate() {
         preserveScroll: true,
     });
 }
+
+function openEditModal(court: Court) {
+    editingCourt.value = court;
+    editForm.name = court.name;
+    editForm.venue_id = court.venue_id || '';
+    editForm.sport_type = court.sport_type;
+    editForm.description = court.description || '';
+    editForm.status = court.status;
+    editForm.base_price = court.base_price;
+    editForm.slot_duration_minutes = court.slot_duration_minutes || 60;
+    editForm.buffer_minutes = court.buffer_minutes || 0;
+    editForm.is_active = court.is_active ?? true;
+    editForm.clearErrors();
+    showEditModal.value = true;
+}
+
+function submitEdit() {
+    if (!editingCourt.value) return;
+    editForm.put(`/staff/courts/${editingCourt.value.id}`, {
+        onSuccess: () => {
+            showEditModal.value = false;
+            editingCourt.value = null;
+        },
+        preserveScroll: true,
+    });
+}
 </script>
 
 <template>
     <Head title="Assigned Courts - Staff" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-6 w-full w-full">
-        <div class="flex items-center justify-between gap-4">
+    <div class="p-6 space-y-6 w-full">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Assigned Courts</h1>
-                <p class="text-xs text-neutral-500">View your assigned courts or register a new court to your schedule.</p>
+                <p class="text-xs text-neutral-500">Manage courts, pricing, and operational configurations.</p>
             </div>
-
-            <Button @click="openCreateModal" class="bg-emerald-600 hover:bg-emerald-700 text-white">
-                <Plus class="mr-1.5 h-4 w-4" />
-                Add Court
-            </Button>
+            <button
+                @click="openCreateModal"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow transition-colors hover:bg-emerald-700"
+            >
+                <Plus class="w-4 h-4" /> Add Court
+            </button>
         </div>
 
-        <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
-            <table class="w-full text-sm">
-                <thead class="bg-muted/50 text-left text-muted-foreground">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">Court Name</th>
-                        <th class="px-4 py-3 font-medium">Venue</th>
-                        <th class="px-4 py-3 font-medium">Sport Type</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 font-medium">Hourly Rate</th>
-                        <th class="px-4 py-3 font-medium">Slot Duration</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
-                    <tr
-                        v-for="court in courts"
-                        :key="court.id"
-                        class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
+        <!-- Card grid matching Admin Courts layout -->
+        <div
+            v-if="courts.length"
+            class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        >
+            <div
+                v-for="court in courts"
+                :key="court.id"
+                class="group flex flex-col overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm transition-shadow hover:shadow-md"
+            >
+                <div class="relative aspect-video overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                    <img
+                        v-if="court.primary_image?.url"
+                        :src="court.primary_image.url"
+                        :alt="court.name"
+                        class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div v-else class="flex h-full w-full items-center justify-center text-neutral-300 dark:text-neutral-600">
+                        <Dumbbell class="h-10 w-10" />
+                    </div>
+                    <span
+                        :class="['absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold capitalize shadow-sm', statusPill[court.status]]"
                     >
-                        <td class="px-4 py-3 font-medium text-neutral-900 dark:text-white">{{ court.name }}</td>
-                        <td class="px-4 py-3 text-neutral-600 dark:text-neutral-300">{{ court.venue?.name || 'Unassigned' }}</td>
-                        <td class="px-4 py-3 capitalize text-neutral-600 dark:text-neutral-300">
-                            {{ court.sport_type.replace('-', ' ') }}
-                        </td>
-                        <td class="px-4 py-3">
-                            <Badge :variant="statusVariant[court.status] as never">
-                                {{ court.status }}
-                            </Badge>
-                        </td>
-                        <td class="px-4 py-3 font-medium">₱{{ court.base_price }}</td>
-                        <td class="px-4 py-3 text-neutral-600 dark:text-neutral-300">{{ court.slot_duration_minutes }} mins</td>
-                    </tr>
-                    <tr v-if="courts.length === 0">
-                        <td colspan="5" class="px-4 py-10 text-center text-muted-foreground">
-                            No assigned courts found. Click "Add Court" to register a court.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                        {{ court.status }}
+                    </span>
+                </div>
+
+                <div class="flex flex-1 flex-col gap-2 p-4">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <h3 class="truncate font-semibold leading-tight text-neutral-900 dark:text-white">{{ court.name }}</h3>
+                            <p class="truncate text-xs text-neutral-500">{{ court.venue?.name || 'Unassigned' }}</p>
+                        </div>
+                        <span class="shrink-0 text-sm font-bold text-emerald-600 dark:text-emerald-400">₱{{ court.base_price }}</span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
+                        <span class="rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 capitalize">{{ court.sport_type.replace('-', ' ') }}</span>
+                        <span class="inline-flex items-center gap-1"><Users class="h-3 w-3" /> {{ court.staff_count }} staff</span>
+                    </div>
+
+                    <div class="mt-auto flex items-center gap-2 pt-3">
+                        <button
+                            @click="openImageModal(court)"
+                            class="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                            title="Upload Court Photos"
+                        >
+                            <ImageIcon class="h-3.5 w-3.5 text-emerald-600" /> Photos
+                        </button>
+                        <button
+                            @click="openEditModal(court)"
+                            class="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                        >
+                            <Pencil class="h-3.5 w-3.5" /> Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div
+            v-else
+            class="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 py-16 text-center text-sm text-neutral-500"
+        >
+            No courts assigned yet. Add your court to get started.
         </div>
     </div>
 
-    <!-- Centered Add Court Modal for Staff -->
+    <!-- Centered Create Court Modal -->
     <Teleport to="body">
         <div
             v-if="showCreateModal"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
             @click.self="showCreateModal = false"
         >
-            <div class="w-full max-w-lg rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-2xl space-y-5 my-8">
+            <div class="w-full max-w-lg rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-5 my-8">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Add Court</h2>
-                        <p class="text-xs text-neutral-500">Create a court entry for your assigned facility.</p>
+                        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Add New Court</h2>
+                        <p class="text-xs text-neutral-500">Create a new court and configure pricing &amp; rules.</p>
                     </div>
-                    <button @click="showCreateModal = false" class="text-neutral-400 hover:text-neutral-600 dark:hover:text-white">
+                    <button @click="showCreateModal = false" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
                         <X class="h-5 w-5" />
                     </button>
                 </div>
 
-                <form @submit.prevent="submitCreate" class="space-y-4 text-xs">
+                <form @submit.prevent="submitCreate" class="space-y-4">
                     <div class="space-y-2">
-                        <Label for="staff-court-name">Court Name *</Label>
-                        <Input id="staff-court-name" v-model="createForm.name" type="text" placeholder="e.g. Court 4 - Indoor" required />
+                        <Label for="create-court-name">Court Name *</Label>
+                        <Input id="create-court-name" v-model="createForm.name" type="text" placeholder="e.g. Center Court" required />
                         <InputError :message="createForm.errors.name" />
                     </div>
 
                     <div v-if="venues && venues.length > 0" class="space-y-2">
-                        <Label for="staff-court-venue">Assigned Venue</Label>
+                        <Label for="create-court-venue">Assigned Venue</Label>
                         <select
-                            id="staff-court-venue"
+                            id="create-court-venue"
                             v-model="createForm.venue_id"
-                            class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 p-2.5 dark:bg-neutral-800 text-neutral-900 dark:text-white"
+                            class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         >
-                            <option value="">No Venue Selected</option>
+                            <option value="">No Venue Assigned</option>
                             <option v-for="v in venues" :key="v.id" :value="v.id">
                                 {{ v.name }}
                             </option>
@@ -184,12 +271,12 @@ function submitCreate() {
 
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-2">
-                            <Label for="staff-court-sport">Sport Type *</Label>
+                            <Label for="create-court-sport">Sport Type *</Label>
                             <select
-                                id="staff-court-sport"
+                                id="create-court-sport"
                                 v-model="createForm.sport_type"
                                 required
-                                class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 p-2.5 dark:bg-neutral-800 text-neutral-900 dark:text-white capitalize"
+                                class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring capitalize"
                             >
                                 <option v-for="st in (sportTypes || [{ value: 'pickleball', label: 'Pickleball' }])" :key="st.value" :value="st.value">
                                     {{ st.label }}
@@ -199,14 +286,14 @@ function submitCreate() {
                         </div>
 
                         <div class="space-y-2">
-                            <Label for="staff-court-status">Status *</Label>
+                            <Label for="create-court-status">Status *</Label>
                             <select
-                                id="staff-court-status"
+                                id="create-court-status"
                                 v-model="createForm.status"
                                 required
-                                class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 p-2.5 dark:bg-neutral-800 text-neutral-900 dark:text-white capitalize"
+                                class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring capitalize"
                             >
-                                <option v-for="st in (statuses || [{ value: 'available', label: 'Available' }, { value: 'maintenance', label: 'Maintenance' }])" :key="st.value" :value="st.value">
+                                <option v-for="st in (statuses || [{ value: 'available', label: 'Available' }, { value: 'maintenance', label: 'Maintenance' }, { value: 'closed', label: 'Closed' }])" :key="st.value" :value="st.value">
                                     {{ st.label }}
                                 </option>
                             </select>
@@ -216,39 +303,49 @@ function submitCreate() {
 
                     <div class="grid grid-cols-3 gap-3">
                         <div class="space-y-2">
-                            <Label for="staff-court-price">Hourly Rate ($) *</Label>
-                            <Input id="staff-court-price" v-model="createForm.base_price" type="number" step="0.01" min="0" required />
+                            <Label for="create-court-price">Hourly Rate ($) *</Label>
+                            <Input id="create-court-price" v-model="createForm.base_price" type="number" step="0.01" min="0" required />
                             <InputError :message="createForm.errors.base_price" />
                         </div>
 
                         <div class="space-y-2">
-                            <Label for="staff-court-duration">Slot Mins *</Label>
-                            <Input id="staff-court-duration" v-model.number="createForm.slot_duration_minutes" type="number" min="15" step="15" required />
+                            <Label for="create-court-duration">Slot Mins *</Label>
+                            <Input id="create-court-duration" v-model.number="createForm.slot_duration_minutes" type="number" min="15" step="15" required />
                             <InputError :message="createForm.errors.slot_duration_minutes" />
                         </div>
 
                         <div class="space-y-2">
-                            <Label for="staff-court-buffer">Buffer Mins *</Label>
-                            <Input id="staff-court-buffer" v-model.number="createForm.buffer_minutes" type="number" min="0" step="5" required />
+                            <Label for="create-court-buffer">Buffer Mins *</Label>
+                            <Input id="create-court-buffer" v-model.number="createForm.buffer_minutes" type="number" min="0" step="5" required />
                             <InputError :message="createForm.errors.buffer_minutes" />
                         </div>
                     </div>
 
                     <div class="space-y-2">
-                        <Label for="staff-court-description">Description</Label>
+                        <Label for="create-court-description">Description</Label>
                         <textarea
-                            id="staff-court-description"
+                            id="create-court-description"
                             v-model="createForm.description"
                             rows="2"
-                            placeholder="Court details or surface info..."
-                            class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 p-2.5 dark:bg-neutral-800 text-neutral-900 dark:text-white"
+                            placeholder="Brief description of surface, lighting, or indoor/outdoor..."
+                            class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                         <InputError :message="createForm.errors.description" />
                     </div>
 
+                    <div class="flex items-center gap-2 pt-1">
+                        <input
+                            id="create-court-active"
+                            v-model="createForm.is_active"
+                            type="checkbox"
+                            class="rounded border-input text-primary focus:ring-primary"
+                        />
+                        <Label for="create-court-active" class="cursor-pointer">Active for online booking</Label>
+                    </div>
+
                     <div class="flex justify-end gap-3 pt-3">
                         <Button variant="outline" type="button" @click="showCreateModal = false">Cancel</Button>
-                        <Button type="submit" :disabled="createForm.processing" class="bg-emerald-600 hover:bg-emerald-700 text-white">
+                        <Button type="submit" :disabled="createForm.processing">
                             {{ createForm.processing ? 'Creating...' : 'Create Court' }}
                         </Button>
                     </div>
@@ -256,4 +353,138 @@ function submitCreate() {
             </div>
         </div>
     </Teleport>
+
+    <!-- Centered Edit Court Modal -->
+    <Teleport to="body">
+        <div
+            v-if="showEditModal"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
+            @click.self="showEditModal = false"
+        >
+            <div class="w-full max-w-lg rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-5 my-8">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Edit Court</h2>
+                        <p class="text-xs text-neutral-500">Update court details, pricing, and status.</p>
+                    </div>
+                    <button @click="showEditModal = false" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
+                        <X class="h-5 w-5" />
+                    </button>
+                </div>
+
+                <form @submit.prevent="submitEdit" class="space-y-4">
+                    <div class="space-y-2">
+                        <Label for="edit-court-name">Court Name *</Label>
+                        <Input id="edit-court-name" v-model="editForm.name" type="text" required />
+                        <InputError :message="editForm.errors.name" />
+                    </div>
+
+                    <div v-if="venues && venues.length > 0" class="space-y-2">
+                        <Label for="edit-court-venue">Assigned Venue</Label>
+                        <select
+                            id="edit-court-venue"
+                            v-model="editForm.venue_id"
+                            class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                            <option value="">No Venue Assigned</option>
+                            <option v-for="v in venues" :key="v.id" :value="v.id">
+                                {{ v.name }}
+                            </option>
+                        </select>
+                        <InputError :message="editForm.errors.venue_id" />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-2">
+                            <Label for="edit-court-sport">Sport Type *</Label>
+                            <select
+                                id="edit-court-sport"
+                                v-model="editForm.sport_type"
+                                required
+                                class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring capitalize"
+                            >
+                                <option v-for="st in (sportTypes || [{ value: 'pickleball', label: 'Pickleball' }])" :key="st.value" :value="st.value">
+                                    {{ st.label }}
+                                </option>
+                            </select>
+                            <InputError :message="editForm.errors.sport_type" />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label for="edit-court-status">Status *</Label>
+                            <select
+                                id="edit-court-status"
+                                v-model="editForm.status"
+                                required
+                                class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring capitalize"
+                            >
+                                <option v-for="st in (statuses || [{ value: 'available', label: 'Available' }, { value: 'maintenance', label: 'Maintenance' }, { value: 'closed', label: 'Closed' }])" :key="st.value" :value="st.value">
+                                    {{ st.label }}
+                                </option>
+                            </select>
+                            <InputError :message="editForm.errors.status" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="space-y-2">
+                            <Label for="edit-court-price">Hourly Rate ($) *</Label>
+                            <Input id="edit-court-price" v-model="editForm.base_price" type="number" step="0.01" min="0" required />
+                            <InputError :message="editForm.errors.base_price" />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label for="edit-court-duration">Slot Mins *</Label>
+                            <Input id="edit-court-duration" v-model.number="editForm.slot_duration_minutes" type="number" min="15" step="15" required />
+                            <InputError :message="editForm.errors.slot_duration_minutes" />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label for="edit-court-buffer">Buffer Mins *</Label>
+                            <Input id="edit-court-buffer" v-model.number="editForm.buffer_minutes" type="number" min="0" step="5" required />
+                            <InputError :message="editForm.errors.buffer_minutes" />
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="edit-court-description">Description</Label>
+                        <textarea
+                            id="edit-court-description"
+                            v-model="editForm.description"
+                            rows="2"
+                            class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                        <InputError :message="editForm.errors.description" />
+                    </div>
+
+                    <div class="flex items-center gap-2 pt-1">
+                        <input
+                            id="edit-court-active"
+                            v-model="editForm.is_active"
+                            type="checkbox"
+                            class="rounded border-input text-primary focus:ring-primary"
+                        />
+                        <Label for="edit-court-active" class="cursor-pointer">Active for online booking</Label>
+                    </div>
+
+                    <div class="flex justify-end gap-3 pt-3">
+                        <Button variant="outline" type="button" @click="showEditModal = false">Cancel</Button>
+                        <Button type="submit" :disabled="editForm.processing">
+                            {{ editForm.processing ? 'Saving...' : 'Save Changes' }}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Court Image Manager Modal (No Delete Permission for Staff) -->
+    <CourtImageManagerModal
+        :is-open="showImageModal"
+        :court="selectedCourtForImages"
+        :upload-route="`/staff/courts/${selectedCourtForImages?.id}/images`"
+        :primary-route-prefix="`/staff/courts/${selectedCourtForImages?.id}/images`"
+        :can-delete="false"
+        @close="showImageModal = false"
+    />
 </template>

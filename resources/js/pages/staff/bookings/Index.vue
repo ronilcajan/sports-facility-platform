@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import { CalendarDays, LayoutList, Search, CheckCircle, XCircle, ArrowUpRight, FileText, Plus, X } from '@lucide/vue';
+import BookingsCalendar from '@/components/admin/BookingsCalendar.vue';
 import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
 
 interface Booking {

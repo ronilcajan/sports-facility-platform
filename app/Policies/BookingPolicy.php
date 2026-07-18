@@ -59,7 +59,7 @@ class BookingPolicy
             return $user->canManageAllCourts() || $user->checkPermissionTo('bookings.update');
         }
 
-        return ($user->canManageAllCourts() || $user->checkPermissionTo('bookings.update'))
+        return ($user->canManageAllCourts() || $user->isStaff() || $user->checkPermissionTo('bookings.update'))
             && $booking->court !== null
             && $user->canManageCourt($booking->court);
     }

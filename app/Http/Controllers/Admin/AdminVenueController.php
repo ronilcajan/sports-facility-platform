@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Venue;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -40,10 +41,12 @@ class AdminVenueController extends Controller
             'email' => $venue->email,
             'is_active' => $venue->is_active,
             'courts_count' => $venue->courts_count,
-            'cover_image_url' => $venue->courts
-                ->map(fn ($court) => $court->primaryImage?->url)
-                ->filter()
-                ->first(),
+            'image_url' => $venue->image_url,
+            'cover_image_url' => $venue->image_url
+                ?? $venue->courts
+                    ->map(fn ($court) => $court->primaryImage?->url)
+                    ->filter()
+                    ->first(),
             'created_at' => $venue->created_at?->toFormattedDateString(),
         ])->withQueryString();
 
@@ -51,6 +54,7 @@ class AdminVenueController extends Controller
             'venues' => $venues,
             'filters' => $request->only(['search']),
             'canDelete' => $request->user()?->isSuperAdmin() ?? false,
+            'canManageVenueImages' => $request->user()?->isSuperAdmin() ?? false,
         ]);
     }
 
@@ -75,6 +79,13 @@ class AdminVenueController extends Controller
 
         $validated['slug'] = Str::slug($validated['name']);
 
+        if ($request->hasFile('image')) {
+            if (! $request->user()?->isSuperAdmin()) {
+                abort(403, 'Only Super Admin can upload venue images.');
+            }
+            $validated['image_path'] = $request->file('image')->store('venues', 'public');
+        }
+
         if ($request->hasFile('gcash_qr')) {
             $validated['gcash_qr_path'] = $request->file('gcash_qr')->store('venue-qr', 'public');
         }
@@ -83,7 +94,7 @@ class AdminVenueController extends Controller
             $validated['maya_qr_path'] = $request->file('maya_qr')->store('venue-qr', 'public');
         }
 
-        unset($validated['gcash_qr'], $validated['maya_qr']);
+        unset($validated['image'], $validated['gcash_qr'], $validated['maya_qr']);
 
         Venue::create($validated);
 
@@ -107,12 +118,14 @@ class AdminVenueController extends Controller
                 'address' => $venue->address,
                 'phone' => $venue->phone,
                 'email' => $venue->email,
+                'image_url' => $venue->image_url,
                 'gcash_number' => $venue->gcash_number,
                 'gcash_qr_url' => $venue->paymentMethods()['gcash']['qr_url'] ?? null,
                 'maya_number' => $venue->maya_number,
                 'maya_qr_url' => $venue->paymentMethods()['maya']['qr_url'] ?? null,
                 'is_active' => $venue->is_active,
             ],
+            'canManageVenueImages' => request()->user()?->isSuperAdmin() ?? false,
         ]);
     }
 
@@ -127,6 +140,24 @@ class AdminVenueController extends Controller
 
         $validated['slug'] = Str::slug($validated['name']);
 
+        if ($request->hasFile('image')) {
+            if (! $request->user()?->isSuperAdmin()) {
+                abort(403, 'Only Super Admin can upload venue images.');
+            }
+            if ($venue->image_path && Storage::disk('public')->exists($venue->image_path)) {
+                Storage::disk('public')->delete($venue->image_path);
+            }
+            $validated['image_path'] = $request->file('image')->store('venues', 'public');
+        } elseif ($request->boolean('delete_image')) {
+            if (! $request->user()?->isSuperAdmin()) {
+                abort(403, 'Only Super Admin can delete venue images.');
+            }
+            if ($venue->image_path && Storage::disk('public')->exists($venue->image_path)) {
+                Storage::disk('public')->delete($venue->image_path);
+            }
+            $validated['image_path'] = null;
+        }
+
         if ($request->hasFile('gcash_qr')) {
             $validated['gcash_qr_path'] = $request->file('gcash_qr')->store('venue-qr', 'public');
         }
@@ -135,7 +166,7 @@ class AdminVenueController extends Controller
             $validated['maya_qr_path'] = $request->file('maya_qr')->store('venue-qr', 'public');
         }
 
-        unset($validated['gcash_qr'], $validated['maya_qr']);
+        unset($validated['image'], $validated['delete_image'], $validated['gcash_qr'], $validated['maya_qr']);
 
         $venue->update($validated);
 
@@ -156,6 +187,8 @@ class AdminVenueController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
+            'delete_image' => ['nullable', 'boolean'],
             'gcash_number' => ['nullable', 'string', 'max:50'],
             'gcash_qr' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
             'maya_number' => ['nullable', 'string', 'max:50'],

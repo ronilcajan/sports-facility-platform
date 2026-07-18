@@ -17,6 +17,8 @@ const emit = defineEmits<{
 }>();
 
 const site = useSite();
+const siteLogo = computed(() => site.value?.logo || '/logo.jpg');
+const siteName = computed(() => site.value?.name || 'Sports Facility');
 
 const page = usePage();
 const currentUser = computed(
@@ -94,6 +96,7 @@ const errors = ref({
     time: '',
     court: '',
 });
+const submissionError = ref<string | null>(null);
 
 const bookingDetails = ref<{
     id: number;
@@ -649,6 +652,7 @@ function prevStep() {
 
 // Persist booking to database
 function handleSubmit() {
+    submissionError.value = null;
     if (!validateStep1() || !validateStep2()) {
         return;
     }
@@ -681,7 +685,7 @@ function handleSubmit() {
         body: formData,
     }).then(async (res) => {
         if (!res.ok) {
-            const errData = await res.json();
+            const errData = await res.json().catch(() => ({ message: 'Failed to submit booking.' }));
             throw errData;
         }
         return res.json();
@@ -710,6 +714,9 @@ function handleSubmit() {
         })
         .catch((err) => {
             step.value = 'form';
+            const generalMsg = err?.message || err?.error || (typeof err === 'string' ? err : null);
+            submissionError.value = generalMsg || 'Unable to submit your booking reservation. Please check your inputs and try again.';
+
             if (err && err.errors) {
                 if (err.errors.name) {
                     errors.value.name = err.errors.name[0];
@@ -728,15 +735,14 @@ function handleSubmit() {
                     errors.value.time = err.errors.time[0];
                     currentWizardStep.value = 1;
                 }
+                if (err.errors.court_id) {
+                    errors.value.court = err.errors.court_id[0];
+                    currentWizardStep.value = 1;
+                }
                 if (err.errors.receipt) {
                     receiptError.value = err.errors.receipt[0];
                     currentWizardStep.value = 3;
                 }
-            } else {
-                receiptError.value =
-                    err?.message ||
-                    'An unexpected error occurred. Please try again.';
-                currentWizardStep.value = 3;
             }
         });
 }
@@ -817,7 +823,7 @@ async function downloadVoucher() {
     const headerHeight = 120;
     ctx.fillRect(0, 0, W, headerHeight);
 
-    const logoUrl = site.logo || '/logo.jpg';
+    const logoUrl = siteLogo.value;
     try {
         const logoImg = await loadImage(logoUrl);
         const logoSize = 44;
@@ -843,14 +849,14 @@ async function downloadVoucher() {
         ctx.font = '700 20px Arial, sans-serif';
         ctx.fillText('COURT RESERVATION', W / 2, logoY + logoSize + 22);
         ctx.font = '400 13px Arial, sans-serif';
-        ctx.fillText(venueName || site.name || 'Sports Facility', W / 2, logoY + logoSize + 40);
+        ctx.fillText(venueName || siteName.value, W / 2, logoY + logoSize + 40);
     } catch {
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         ctx.font = '700 24px Arial, sans-serif';
         ctx.fillText('COURT RESERVATION', W / 2, 48);
         ctx.font = '400 14px Arial, sans-serif';
-        ctx.fillText(venueName || site.name || 'Sports Facility', W / 2, 78);
+        ctx.fillText(venueName || siteName.value, W / 2, 78);
     }
 
     // Reference
@@ -1073,6 +1079,30 @@ async function downloadVoucher() {
                     <form @submit.prevent="handleSubmit" class="flex min-h-0 flex-1 flex-col">
                         <!-- Scrollable Body -->
                         <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5 sm:px-8">
+                            <!-- Global / Server Submission Error Alert Banner -->
+                            <div
+                                v-if="submissionError"
+                                class="flex items-start justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3.5 text-xs text-destructive shadow-sm"
+                            >
+                                <div class="flex items-start gap-2.5">
+                                    <svg class="mt-0.5 size-4 shrink-0 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                    <div>
+                                        <strong class="block font-bold text-sm">Booking Error</strong>
+                                        <p class="mt-0.5 leading-relaxed font-semibold">{{ submissionError }}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    @click="submissionError = null"
+                                    class="rounded p-1 font-bold text-destructive hover:bg-destructive/10 cursor-pointer"
+                                    aria-label="Dismiss error"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
                         <!-- Step 1: Venue & Court Selection -->
                         <div v-if="currentWizardStep === 1" class="space-y-4">
                             <!-- Venue banner shown when a venue is already chosen -->
@@ -1726,7 +1756,7 @@ async function downloadVoucher() {
                 <!-- Stage 3: Booking Received Screen -->
                 <div v-else-if="step === 'confirmed'" class="min-h-0 flex-1 space-y-5 overflow-y-auto p-8 text-center">
                     <div class="mx-auto flex items-center justify-center gap-3">
-                        <img v-if="site.logo" :src="site.logo" :alt="site.name" class="size-14 rounded-full object-cover ring-2 ring-emerald-500/30 shadow-sm" />
+                        <img v-if="siteLogo" :src="siteLogo" :alt="siteName" class="size-14 rounded-full object-cover ring-2 ring-emerald-500/30 shadow-sm" />
                         <div class="flex size-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
                             <svg class="size-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />

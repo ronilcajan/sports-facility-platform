@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, onUnmounted } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { useForm } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
@@ -22,12 +23,31 @@ const form = useForm({
     address: '',
     phone: '',
     email: '',
+    image: null as File | null,
     gcash_number: '',
     gcash_qr: null as File | null,
     maya_number: '',
     maya_qr: null as File | null,
     is_active: true,
 });
+
+const imagePreview = ref<string | null>(null);
+
+function onImageChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+        const file = target.files[0];
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size exceeds 5MB limit.');
+            return;
+        }
+        form.image = file;
+        if (imagePreview.value) {
+            URL.revokeObjectURL(imagePreview.value);
+        }
+        imagePreview.value = URL.createObjectURL(file);
+    }
+}
 
 function onQrChange(e: Event, key: 'gcash_qr' | 'maya_qr') {
     form[key] = (e.target as HTMLInputElement).files?.[0] ?? null;
@@ -38,6 +58,12 @@ function submit() {
         onSuccess: () => form.reset(),
     });
 }
+
+onUnmounted(() => {
+    if (imagePreview.value) {
+        URL.revokeObjectURL(imagePreview.value);
+    }
+});
 </script>
 
 <template>
@@ -85,6 +111,28 @@ function submit() {
                     <Input id="email" v-model="form.email" type="email" />
                     <InputError :message="form.errors.email" />
                 </div>
+            </div>
+
+            <!-- Venue Cover Photo Upload -->
+            <div class="space-y-3 rounded-xl border border-input p-4">
+                <div>
+                    <h3 class="text-sm font-semibold">Venue Cover Photo</h3>
+                    <p class="text-xs text-muted-foreground">Upload a hero cover photo for this venue (JPG, PNG, WEBP max 5MB).</p>
+                </div>
+
+                <div class="flex items-center gap-4 flex-wrap">
+                    <div v-if="imagePreview" class="relative">
+                        <img :src="imagePreview" alt="Preview" class="h-20 w-32 rounded-lg object-cover border border-input shadow-sm" />
+                    </div>
+                    <div v-else class="h-20 w-32 rounded-lg border border-dashed border-input flex items-center justify-center text-xs text-muted-foreground">
+                        No Cover
+                    </div>
+
+                    <div class="space-y-2">
+                        <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp" @change="onImageChange" class="text-xs" />
+                    </div>
+                </div>
+                <InputError :message="form.errors.image" />
             </div>
 
             <!-- Payment Methods (Optional) -->

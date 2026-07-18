@@ -3,6 +3,7 @@
 use App\Enums\RoleName;
 use App\Http\Controllers\Staff\StaffBookingController;
 use App\Http\Controllers\Staff\StaffCourtController;
+use App\Http\Controllers\Staff\StaffCourtImageController;
 use App\Http\Controllers\Staff\StaffDashboardController;
 use App\Http\Controllers\Staff\StaffNotificationController;
 use App\Http\Controllers\Staff\StaffReportController;
@@ -19,9 +20,13 @@ Route::middleware([
     ->group(function () {
         Route::get('dashboard', [StaffDashboardController::class, 'index'])->name('dashboard');
 
-        // Courts (Assigned Scoped - CR Court)
+        // Courts (Assigned Scoped)
         Route::get('courts', [StaffCourtController::class, 'index'])->name('courts.index');
         Route::post('courts', [StaffCourtController::class, 'store'])->name('courts.store');
+        Route::put('courts/{court}', [StaffCourtController::class, 'update'])->name('courts.update');
+        Route::post('courts/{court}/images', [StaffCourtImageController::class, 'store'])->name('courts.images.store');
+        Route::patch('courts/{court}/images/{image}/primary', [StaffCourtImageController::class, 'setPrimary'])->name('courts.images.primary');
+        Route::delete('courts/{court}/images/{image}', [StaffCourtImageController::class, 'destroy'])->name('courts.images.destroy');
 
         // Bookings (Assigned Court Scoped - CR Bookings)
         Route::get('bookings', [StaffBookingController::class, 'index'])->name('bookings.index');
@@ -32,7 +37,6 @@ Route::middleware([
         // Schedules & Blackout Management
         Route::get('schedules', [StaffScheduleController::class, 'index'])->name('schedules.index');
         Route::post('schedules', [StaffScheduleController::class, 'store'])->name('schedules.store');
-        Route::delete('schedules/{unavailability}', [StaffScheduleController::class, 'destroy'])->name('schedules.destroy');
 
         // Court Reports
         Route::get('reports', [StaffReportController::class, 'index'])->name('reports.index');

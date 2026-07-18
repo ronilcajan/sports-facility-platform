@@ -41,7 +41,7 @@ class CourtPolicy
      */
     public function update(User $user, Court $court): bool
     {
-        return $user->hasPermissionTo('courts.update')
+        return ($user->isStaff() || $user->hasPermissionTo('courts.update'))
             && $user->canManageCourt($court);
     }
 

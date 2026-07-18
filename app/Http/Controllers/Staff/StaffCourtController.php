@@ -25,7 +25,7 @@ class StaffCourtController extends Controller
 
         $user = $request->user();
         $courts = Court::visibleTo($user)
-            ->with(['venue'])
+            ->with(['venue', 'primaryImage', 'images'])
             ->withCount('staff')
             ->latest('id')
             ->get();
@@ -75,6 +75,35 @@ class StaffCourtController extends Controller
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => __('Court created and assigned successfully.'),
+        ]);
+
+        return back();
+    }
+
+    /**
+     * Update an assigned court.
+     */
+    public function update(Request $request, Court $court): RedirectResponse
+    {
+        $this->authorize('update', $court);
+
+        $validated = $request->validate([
+            'venue_id' => ['nullable', 'exists:venues,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'sport_type' => ['required', new Enum(SportType::class)],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'status' => ['required', new Enum(CourtStatus::class)],
+            'base_price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'slot_duration_minutes' => ['required', 'integer', 'min:1', 'max:1440'],
+            'buffer_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
+            'is_active' => ['required', 'boolean'],
+        ]);
+
+        $court->update($validated);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Court updated successfully.'),
         ]);
 
         return back();

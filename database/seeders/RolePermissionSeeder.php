@@ -72,9 +72,12 @@ class RolePermissionSeeder extends Seeder
             'courts.viewAny',
             'courts.view',
             'courts.create',
+            'courts.update',
             'bookings.viewAny',
             'bookings.view',
             'bookings.create',
+            'bookings.update',
+            'schedules.manage',
             'reports.view',
         ]);
 

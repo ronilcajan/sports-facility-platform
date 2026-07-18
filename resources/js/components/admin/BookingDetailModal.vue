@@ -5,6 +5,7 @@ import {
     X,
     CheckCircle,
     XCircle,
+    AlertCircle,
     User,
     Mail,
     Phone,
@@ -174,6 +175,20 @@ function statusClasses(s: string): string {
 
                     <!-- Modal Body -->
                     <div class="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+                        <!-- Error Banner -->
+                        <div
+                            v-if="Object.keys(actionForm.errors).length > 0"
+                            class="flex items-start gap-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-600 dark:text-rose-400 shadow-sm"
+                        >
+                            <AlertCircle class="mt-0.5 size-4 shrink-0 text-rose-600" />
+                            <div>
+                                <strong class="block font-bold text-sm">Action Failed</strong>
+                                <ul class="mt-1 space-y-0.5 list-disc list-inside">
+                                    <li v-for="(err, key) in actionForm.errors" :key="key" class="font-medium">{{ err }}</li>
+                                </ul>
+                            </div>
+                        </div>
+
                         <!-- Customer Information Card -->
                         <div class="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 space-y-3 shadow-sm">
                             <div class="flex items-center gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-2">

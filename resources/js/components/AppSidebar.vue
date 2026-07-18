@@ -159,27 +159,32 @@ const navGroups = computed<NavGroup[]>(() => {
                 label: 'Platform',
                 items: [
                     {
-                        title: 'Staff Dashboard',
+                        title: 'Dashboard',
                         href: '/staff/dashboard',
                         icon: LayoutGrid,
                     },
                     {
-                        title: 'Courts Management',
-                        href: '/staff/courts',
-                        icon: Dumbbell,
-                    },
-                    {
-                        title: 'Court Bookings',
+                        title: 'Bookings',
                         href: '/staff/bookings',
                         icon: CalendarDays,
                     },
                     {
-                        title: 'Schedule & Blackouts',
+                        title: 'Courts',
+                        href: '/staff/courts',
+                        icon: Dumbbell,
+                    },
+                ],
+            },
+            {
+                label: 'Systems',
+                items: [
+                    {
+                        title: 'Schedules',
                         href: '/staff/schedules',
                         icon: Calendar,
                     },
                     {
-                        title: 'Court Reports',
+                        title: 'Reports',
                         href: '/staff/reports',
                         icon: BarChart3,
                     },

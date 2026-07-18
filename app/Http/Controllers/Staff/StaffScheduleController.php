@@ -88,18 +88,4 @@ class StaffScheduleController extends Controller
 
         return back();
     }
-
-    /**
-     * Delete an unavailable blackout entry.
-     */
-    public function destroy(CourtUnavailability $unavailability): RedirectResponse
-    {
-        $this->authorize('delete', $unavailability);
-
-        $unavailability->delete();
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unavailable slot removed.')]);
-
-        return back();
-    }
 }

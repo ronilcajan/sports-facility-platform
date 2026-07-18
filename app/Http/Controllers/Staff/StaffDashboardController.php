@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Staff;
 
+use App\Enums\RoleName;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Court;
 use App\Models\CourtUnavailability;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -28,6 +31,21 @@ class StaffDashboardController extends Controller
                 'assignedCourts' => [],
                 'selectedCourt' => null,
                 'hasNoCourts' => true,
+                'stats' => [
+                    'totalCourts' => 0,
+                    'activeCourts' => 0,
+                    'totalBookings' => 0,
+                    'pendingBookings' => 0,
+                    'totalRevenue' => 0.0,
+                    'totalCustomers' => 0,
+                ],
+                'monthsTrend' => [],
+                'courtsSummary' => [],
+                'recentBookings' => [],
+                'todayBookings' => [],
+                'pendingBookings' => [],
+                'unavailabilities' => [],
+                'unreadNotifications' => [],
             ]);
         }
 
@@ -36,24 +54,87 @@ class StaffDashboardController extends Controller
 
         $today = Carbon::today()->toDateString();
 
+        $totalCourts = Court::visibleTo($user)->count();
+        $activeCourts = Court::visibleTo($user)->where('is_active', true)->count();
+        $totalBookings = Booking::visibleTo($user)->count();
+        $pendingBookingsCount = Booking::visibleTo($user)->where('status', 'pending')->count();
+        $totalRevenue = Booking::visibleTo($user)->whereIn('status', ['approved', 'confirmed', 'completed'])->sum('total_price');
+        $totalCustomers = User::role(RoleName::Customer->value)
+            ->whereHas('bookings', fn (Builder $query) => $query->visibleTo($user))
+            ->count();
+
+        // 6 months trend
+        $monthsTrend = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $monthStart = Carbon::now()->subMonths($i)->startOfMonth();
+            $monthEnd = Carbon::now()->subMonths($i)->endOfMonth();
+
+            $monthBookings = Booking::visibleTo($user)->whereBetween('created_at', [$monthStart, $monthEnd]);
+
+            $monthsTrend[] = [
+                'month' => $monthStart->format('M Y'),
+                'bookings' => (clone $monthBookings)->count(),
+                'revenue' => (float) (clone $monthBookings)->whereIn('status', ['approved', 'confirmed', 'completed'])->sum('total_price'),
+            ];
+        }
+
+        // Courts summary
+        $courtsSummary = Court::visibleTo($user)
+            ->withCount('staff')
+            ->withCount(['bookings as total_bookings'])
+            ->withSum(['bookings as total_revenue' => function ($query) {
+                $query->whereIn('status', ['approved', 'confirmed', 'completed']);
+            }], 'total_price')
+            ->get()
+            ->map(function ($court) {
+                return [
+                    'id' => $court->id,
+                    'name' => $court->name,
+                    'sport_type' => $court->sport_type->label(),
+                    'status' => $court->status->label(),
+                    'is_active' => $court->is_active,
+                    'staff_count' => $court->staff_count,
+                    'total_bookings' => $court->total_bookings,
+                    'total_revenue' => (float) ($court->total_revenue ?? 0),
+                ];
+            });
+
+        // Recent bookings
+        $recentBookings = Booking::visibleTo($user)
+            ->with(['court.venue'])
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(function ($booking) {
+                return [
+                    'id' => $booking->id,
+                    'reference_code' => 'DY-RESRV-'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
+                    'customer_name' => $booking->name,
+                    'email' => $booking->email,
+                    'phone' => $booking->phone,
+                    'court_name' => $booking->court?->name ?? 'Deleted Court',
+                    'sport_type' => $booking->court?->sport_type?->label() ?? 'N/A',
+                    'venue_name' => $booking->court?->venue?->name ?? 'N/A',
+                    'date' => (string) $booking->date,
+                    'time_slots' => $booking->time_slots,
+                    'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
+                    'receipt_url' => $booking->receipt_url,
+                    'status' => $booking->status,
+                    'notes' => $booking->notes,
+                    'created_at' => $booking->created_at?->toDateTimeString(),
+                ];
+            });
+
         // Today's reservations for assigned court
         $todayBookings = Booking::where('court_id', $selectedCourt->id)
             ->where('date', $today)
             ->get();
 
         // Pending approval queue for assigned court
-        $pendingBookings = Booking::where('court_id', $selectedCourt->id)
+        $pendingBookingsList = Booking::where('court_id', $selectedCourt->id)
             ->where('status', 'pending')
             ->latest()
             ->get();
-
-        // Total revenue for assigned court
-        $courtRevenue = Booking::where('court_id', $selectedCourt->id)
-            ->whereIn('status', ['approved', 'confirmed', 'completed'])
-            ->sum('total_price');
-
-        // Total bookings count for assigned court
-        $totalCourtBookings = Booking::where('court_id', $selectedCourt->id)->count();
 
         // Court unavailabilities/blackouts
         $unavailabilities = CourtUnavailability::where('court_id', $selectedCourt->id)
@@ -71,13 +152,18 @@ class StaffDashboardController extends Controller
             'selectedCourt' => $selectedCourt->load('primaryImage'),
             'hasNoCourts' => false,
             'stats' => [
-                'todayBookingsCount' => $todayBookings->count(),
-                'pendingCount' => $pendingBookings->count(),
-                'totalBookings' => $totalCourtBookings,
-                'totalRevenue' => (float) $courtRevenue,
+                'totalCourts' => $totalCourts,
+                'activeCourts' => $activeCourts,
+                'totalBookings' => $totalBookings,
+                'pendingBookings' => $pendingBookingsCount,
+                'totalRevenue' => (float) $totalRevenue,
+                'totalCustomers' => $totalCustomers,
             ],
+            'monthsTrend' => $monthsTrend,
+            'courtsSummary' => $courtsSummary,
+            'recentBookings' => $recentBookings,
             'todayBookings' => $todayBookings,
-            'pendingBookings' => $pendingBookings,
+            'pendingBookings' => $pendingBookingsList,
             'unavailabilities' => $unavailabilities,
             'unreadNotifications' => $unreadNotifications,
         ]);

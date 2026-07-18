@@ -1,355 +1,444 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
-import NotificationMenu from '@/components/dashboard/NotificationMenu.vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
-    Calendar,
+    Dumbbell,
     CalendarDays,
-    Clock,
     DollarSign,
+    Users,
+    UserCheck,
+    Clock,
     CheckCircle,
     XCircle,
-    Building,
-    Plus,
-    ShieldAlert,
-    AlertCircle,
+    ArrowUpRight,
+    TrendingUp,
     FileText,
 } from '@lucide/vue';
 
 import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
+import NotificationMenu from '@/components/dashboard/NotificationMenu.vue';
+import { ref } from 'vue';
+
+interface Stats {
+    totalCourts: number;
+    activeCourts: number;
+    totalBookings: number;
+    pendingBookings: number;
+    totalRevenue: number;
+    totalCustomers: number;
+}
+
+interface MonthTrend {
+    month: string;
+    bookings: number;
+    revenue: number;
+}
+
+interface CourtSummary {
+    id: number;
+    name: string;
+    sport_type: string;
+    status: string;
+    is_active: boolean;
+    staff_count: number;
+    total_bookings: number;
+    total_revenue: number;
+}
+
+interface RecentBooking {
+    id: number;
+    reference_code?: string;
+    customer_name: string;
+    email: string;
+    phone: string;
+    court_name: string;
+    sport_type?: string;
+    venue_name?: string;
+    date: string;
+    time_slots: string[];
+    total_price: string;
+    receipt_url?: string | null;
+    status: string;
+    notes?: string | null;
+    created_at: string;
+}
 
 interface CourtItem {
     id: number;
     name: string;
     sport_type: string;
-    primary_image?: { url: string };
-}
-
-interface Stats {
-    todayBookingsCount: number;
-    pendingCount: number;
-    totalBookings: number;
-    totalRevenue: number;
-}
-
-interface BookingItem {
-    id: number;
-    name: string;
-    email: string;
-    phone: string;
-    date: string;
-    time_slots: string[];
-    total_price: string;
-    receipt_path?: string | null;
-    receipt_url?: string | null;
-    status: string;
-    notes?: string;
-    court?: { id: number; name: string };
-}
-
-interface UnavailabilityItem {
-    id: number;
-    date: string;
-    start_time?: string;
-    end_time?: string;
-    all_day: boolean;
-    reason?: string;
 }
 
 const props = defineProps<{
-    assignedCourts: CourtItem[];
-    selectedCourt: CourtItem | null;
-    hasNoCourts: boolean;
     stats: Stats;
-    todayBookings: BookingItem[];
-    pendingBookings: BookingItem[];
-    unavailabilities: UnavailabilityItem[];
-    unreadNotifications: any[];
+    monthsTrend: MonthTrend[];
+    courtsSummary: CourtSummary[];
+    recentBookings: RecentBooking[];
+    assignedCourts?: CourtItem[];
+    selectedCourt?: CourtItem | null;
+    unreadNotifications?: any[];
 }>();
 
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Court Staff Dashboard', href: '/staff/dashboard' },
+            { title: 'Court Staff Overview', href: '/staff/dashboard' },
         ],
     },
-});
-
-function selectCourt(courtId: number) {
-    router.get('/staff/dashboard', { court_id: courtId }, { preserveState: true });
-}
-
-const page = usePage();
-const user = computed(() => page.props.auth?.user as any);
-const canUpdate = computed(() => {
-    return user.value?.is_super_admin || user.value?.is_admin || user.value?.is_staff;
 });
 
 const isDetailModalOpen = ref(false);
 const selectedBookingForModal = ref<BookingDetail | null>(null);
 
-function openBookingDetails(booking: BookingItem) {
-    const detail: BookingDetail = {
-        id: booking.id,
-        reference_code: `DY-RESRV-${String(booking.id).padStart(6, '0')}`,
-        customer_name: booking.name,
-        email: booking.email,
-        phone: booking.phone,
-        date: booking.date,
-        time_slots: booking.time_slots,
-        total_price: booking.total_price,
-        receipt_url: booking.receipt_url || (booking.receipt_path ? `/storage/${booking.receipt_path}` : null),
-        status: booking.status,
-        notes: booking.notes,
-        court_name: props.selectedCourt?.name || booking.court?.name || 'Assigned Court',
-        sport_type: props.selectedCourt?.sport_type || '',
-    };
-    selectedBookingForModal.value = detail;
+function openBookingDetails(booking: RecentBooking) {
+    selectedBookingForModal.value = booking as any;
     isDetailModalOpen.value = true;
 }
 
-const actionForm = useForm({
+const statusForm = useForm({
     status: '',
 });
 
-function updateStatus(bookingId: number, status: string) {
-    if (!canUpdate.value) return;
-    actionForm.status = status;
-    actionForm.patch(`/staff/bookings/${bookingId}/status`, {
+function quickUpdateStatus(bookingId: number, status: string) {
+    statusForm.status = status;
+    statusForm.patch(`/staff/bookings/${bookingId}/status`, {
         preserveScroll: true,
     });
 }
 </script>
 
 <template>
-    <Head title="Court Staff Dashboard" />
+    <Head title="Staff Dashboard" />
 
-    <div class="p-6 space-y-6 w-full">
-            <!-- Header bar with Notification Bell & Court Switcher -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
-                <div class="space-y-1">
-                    <div class="flex items-center gap-2">
-                        <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs font-bold">
-                            Court Staff Control
-                        </span>
-                        <span v-if="selectedCourt" class="text-xs font-semibold text-neutral-500">
-                            Assigned: {{ selectedCourt.name }}
-                        </span>
+    <div class="p-6 space-y-8 w-full">
+        <!-- Header Banner matching Admin Dashboard style -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-950 via-neutral-900 to-neutral-900 text-white p-6 rounded-2xl border border-emerald-900/50 shadow-xl">
+            <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">
+                        Court Staff Console
+                    </span>
+                    <span v-if="selectedCourt" class="text-xs font-semibold text-emerald-400">
+                        Assigned: {{ selectedCourt.name }}
+                    </span>
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight">Staff Administrative Control Hub</h1>
+                <p class="text-xs text-neutral-400">Manage assigned facility courts, customer bookings, staff schedules, and daily operations.</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <NotificationMenu v-if="unreadNotifications" :notifications="unreadNotifications" />
+                <Link
+                    href="/staff/courts"
+                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow transition-all flex items-center gap-2"
+                >
+                    <Dumbbell class="w-4 h-4" />
+                    <span>View Assigned Courts</span>
+                </Link>
+            </div>
+        </div>
+
+        <!-- Metrics Grid matching Admin Dashboard design -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-neutral-500 dark:text-neutral-400">Total System Revenue</span>
+                    <div class="p-2 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+                        <DollarSign class="w-5 h-5" />
                     </div>
-                    <h1 class="text-xl font-bold text-neutral-900 dark:text-white">
-                        {{ selectedCourt ? selectedCourt.name + ' Dashboard' : 'Staff Dashboard' }}
-                    </h1>
+                </div>
+                <div class="text-2xl font-bold text-neutral-900 dark:text-white">
+                    ₱{{ stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                </div>
+                <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                    <TrendingUp class="w-3.5 h-3.5" /> All confirmed & completed bookings
+                </span>
+            </div>
+
+            <div class="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-neutral-500 dark:text-neutral-400">Courts Managed</span>
+                    <div class="p-2 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
+                        <Dumbbell class="w-5 h-5" />
+                    </div>
+                </div>
+                <div class="text-2xl font-bold text-neutral-900 dark:text-white">
+                    {{ stats.totalCourts }}
+                </div>
+                <span class="text-[11px] text-neutral-500">
+                    {{ stats.activeCourts }} Active Courts operational
+                </span>
+            </div>
+
+            <div class="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-neutral-500 dark:text-neutral-400">Total Bookings</span>
+                    <div class="p-2 rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400">
+                        <CalendarDays class="w-5 h-5" />
+                    </div>
+                </div>
+                <div class="text-2xl font-bold text-neutral-900 dark:text-white">
+                    {{ stats.totalBookings }}
+                </div>
+                <span class="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                    {{ stats.pendingBookings }} Pending Approval
+                </span>
+            </div>
+
+            <div class="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-neutral-500 dark:text-neutral-400">Registered Customers</span>
+                    <div class="p-2 rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-400">
+                        <Users class="w-5 h-5" />
+                    </div>
+                </div>
+                <div class="text-2xl font-bold text-neutral-900 dark:text-white">
+                    {{ stats.totalCustomers }}
+                </div>
+                <span class="text-[11px] text-neutral-500">
+                    Active facility user accounts
+                </span>
+            </div>
+        </div>
+
+        <!-- Court Overview & Quick Matrix matching Admin Dashboard -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Courts Matrix -->
+            <div class="lg:col-span-2 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 shadow-sm space-y-4">
+                <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+                    <div>
+                        <h3 class="font-bold text-neutral-900 dark:text-white text-base">Facility Courts Matrix</h3>
+                        <p class="text-xs text-neutral-500">Overview of active court status, staff assignments, and earnings.</p>
+                    </div>
+                    <Link href="/staff/courts" class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1">
+                        <span>Manage All</span>
+                        <ArrowUpRight class="w-3.5 h-3.5" />
+                    </Link>
                 </div>
 
-                <div class="flex items-center gap-3">
-                    <!-- Court Switcher Dropdown if multiple courts -->
-                    <div v-if="assignedCourts && assignedCourts.length > 1" class="flex items-center gap-2">
-                        <span class="text-xs text-neutral-500 font-medium">Switch Court:</span>
-                        <select
-                            :value="selectedCourt?.id"
-                            @change="selectCourt(Number(($event.target as HTMLSelectElement).value))"
-                            class="rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-                        >
-                            <option v-for="c in assignedCourts" :key="c.id" :value="c.id">
-                                {{ c.name }}
-                            </option>
-                        </select>
-                    </div>
-
-                    <!-- In-App Header Notification Bell -->
-                    <NotificationMenu :notifications="unreadNotifications" />
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-neutral-100 dark:border-neutral-800 text-neutral-400 font-semibold uppercase">
+                                <th class="py-2.5 px-3">Court Name</th>
+                                <th class="py-2.5 px-3">Sport</th>
+                                <th class="py-2.5 px-3">Status</th>
+                                <th class="py-2.5 px-3">Assigned Staff</th>
+                                <th class="py-2.5 px-3 text-right">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
+                            <tr v-for="court in courtsSummary" :key="court.id" class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
+                                <td class="py-3 px-3 font-semibold text-neutral-900 dark:text-white">
+                                    <Link href="/staff/courts" class="hover:text-emerald-600">
+                                        {{ court.name }}
+                                    </Link>
+                                </td>
+                                <td class="py-3 px-3 text-neutral-600 dark:text-neutral-300">
+                                    {{ court.sport_type }}
+                                </td>
+                                <td class="py-3 px-3">
+                                    <span
+                                        :class="[
+                                            'px-2 py-0.5 rounded-full text-[10px] font-bold',
+                                            court.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                        ]"
+                                    >
+                                        {{ court.status }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-3 text-neutral-600 dark:text-neutral-300">
+                                    <span class="inline-flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md font-mono">
+                                        <UserCheck class="w-3 h-3 text-emerald-600" />
+                                        {{ court.staff_count }} Staff
+                                    </span>
+                                </td>
+                                <td class="py-3 px-3 text-right font-bold text-neutral-900 dark:text-white">
+                                    ₱{{ court.total_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Warning if not assigned to any court -->
-            <div v-if="hasNoCourts" class="p-8 text-center rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300">
-                <AlertCircle class="w-8 h-8 mx-auto mb-2 text-amber-600" />
-                <h3 class="font-bold text-base">No Court Assigned</h3>
-                <p class="text-xs text-amber-700 dark:text-amber-400 mt-1">You are currently not assigned to manage any court. Please contact the Super Admin to assign you a court.</p>
+            <!-- Staff Controls -->
+            <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 shadow-sm space-y-4">
+                <h3 class="font-bold text-neutral-900 dark:text-white text-base">Staff Controls</h3>
+
+                <div class="space-y-2.5">
+                    <Link
+                        href="/staff/courts"
+                        class="flex items-center justify-between p-3 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                                <Dumbbell class="w-4 h-4" />
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-neutral-900 dark:text-white">Courts & Schedules</p>
+                                <p class="text-[10px] text-neutral-500">View courts & operational details</p>
+                            </div>
+                        </div>
+                        <ArrowUpRight class="w-4 h-4 text-neutral-400" />
+                    </Link>
+
+                    <Link
+                        href="/staff/bookings"
+                        class="flex items-center justify-between p-3 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                                <CalendarDays class="w-4 h-4" />
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-neutral-900 dark:text-white">Bookings Management</p>
+                                <p class="text-[10px] text-neutral-500">Approve/reject court reservations</p>
+                            </div>
+                        </div>
+                        <ArrowUpRight class="w-4 h-4 text-neutral-400" />
+                    </Link>
+
+                    <Link
+                        href="/staff/schedules"
+                        class="flex items-center justify-between p-3 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 rounded-lg bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                                <Clock class="w-4 h-4" />
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-neutral-900 dark:text-white">Maintenance & Blackouts</p>
+                                <p class="text-[10px] text-neutral-500">Block off maintenance dates</p>
+                            </div>
+                        </div>
+                        <ArrowUpRight class="w-4 h-4 text-neutral-400" />
+                    </Link>
+
+                    <Link
+                        href="/staff/reports"
+                        class="flex items-center justify-between p-3 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                                <FileText class="w-4 h-4" />
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-neutral-900 dark:text-white">Court Activity Reports</p>
+                                <p class="text-[10px] text-neutral-500">View court utilization metrics</p>
+                            </div>
+                        </div>
+                        <ArrowUpRight class="w-4 h-4 text-neutral-400" />
+                    </Link>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Bookings Table matching Admin Dashboard -->
+        <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+                <h3 class="font-bold text-neutral-900 dark:text-white text-base">Recent Bookings Across All Courts</h3>
+                <Link href="/staff/bookings" class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">
+                    View All Bookings &rarr;
+                </Link>
             </div>
 
-            <template v-else-if="selectedCourt">
-                <!-- Metrics Bar -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-1">
-                        <span class="text-xs text-neutral-500 font-medium">Today's Reservations</span>
-                        <div class="text-2xl font-bold text-neutral-900 dark:text-white">
-                            {{ stats.todayBookingsCount }}
-                        </div>
-                        <span class="text-[11px] text-emerald-600 font-medium">Assigned court schedule</span>
-                    </div>
-
-                    <div class="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-1">
-                        <span class="text-xs text-neutral-500 font-medium">Pending Approvals</span>
-                        <div class="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                            {{ stats.pendingCount }}
-                        </div>
-                        <span class="text-[11px] text-amber-600 font-medium">Requires staff action</span>
-                    </div>
-
-                    <div class="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-1">
-                        <span class="text-xs text-neutral-500 font-medium">Assigned Court Revenue</span>
-                        <div class="text-2xl font-bold text-neutral-900 dark:text-white">
-                            ₱{{ stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
-                        </div>
-                        <span class="text-[11px] text-neutral-500">Confirmed booking earnings</span>
-                    </div>
-
-                    <div class="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-1">
-                        <span class="text-xs text-neutral-500 font-medium">Total Lifetime Bookings</span>
-                        <div class="text-2xl font-bold text-neutral-900 dark:text-white">
-                            {{ stats.totalBookings }}
-                        </div>
-                        <span class="text-[11px] text-neutral-500">Recorded for {{ selectedCourt.name }}</span>
-                    </div>
-                </div>
-
-                <!-- Two-Column Section: Pending Requests & Today's Schedule -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Pending Booking Requests Queue -->
-                    <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 shadow-sm space-y-4">
-                        <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
-                            <div>
-                                <h3 class="font-bold text-neutral-900 dark:text-white text-base">Pending Booking Requests</h3>
-                                <p class="text-xs text-neutral-500">Approve or reject customer requests for {{ selectedCourt.name }}</p>
-                            </div>
-                            <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-xs font-bold">
-                                {{ pendingBookings.length }} Pending
-                            </span>
-                        </div>
-
-                        <div class="space-y-3 max-h-96 overflow-y-auto">
-                            <div
-                                v-for="booking in pendingBookings"
-                                :key="booking.id"
-                                @click="openBookingDetails(booking)"
-                                class="p-4 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40 space-y-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                            >
-                                <div class="flex items-center justify-between text-xs">
-                                    <span class="font-bold text-neutral-900 dark:text-white">#{{ booking.id }} - {{ booking.name }}</span>
-                                    <span class="font-semibold text-emerald-600">₱{{ booking.total_price }}</span>
-                                </div>
-
-                                <div class="text-xs text-neutral-500 flex flex-wrap gap-x-4 gap-y-1">
-                                    <span>Date: <strong class="text-emerald-600 dark:text-emerald-400 underline decoration-dotted">{{ booking.date }}</strong></span>
-                                    <span>Slots: <strong class="font-mono text-neutral-800 dark:text-neutral-200">{{ booking.time_slots ? booking.time_slots.join(', ') : 'N/A' }}</strong></span>
-                                    <span>Phone: {{ booking.phone }}</span>
-                                </div>
-
-                                <div class="flex items-center justify-between pt-2 border-t border-neutral-200/50 dark:border-neutral-700/50" @click.stop>
-                                    <div>
-                                        <a
-                                            v-if="booking.receipt_url || booking.receipt_path"
-                                            :href="booking.receipt_url || '/storage/' + booking.receipt_path"
-                                            target="_blank"
-                                            class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
-                                        >
-                                            <FileText class="w-3.5 h-3.5" /> View Receipt
-                                        </a>
-                                    </div>
-
-                                    <div v-if="canUpdate" class="flex items-center gap-2">
-                                        <button
-                                            @click="updateStatus(booking.id, 'approved')"
-                                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
-                                        >
-                                            <CheckCircle class="w-3.5 h-3.5" /> Approve
-                                        </button>
-                                        <button
-                                            @click="updateStatus(booking.id, 'rejected')"
-                                            class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
-                                        >
-                                            <XCircle class="w-3.5 h-3.5" /> Reject
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div v-if="pendingBookings.length === 0" class="p-6 text-center text-xs text-neutral-400">
-                                No pending booking requests for this court.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Today's Reservations Timeline -->
-                    <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 shadow-sm space-y-4">
-                        <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
-                            <div>
-                                <h3 class="font-bold text-neutral-900 dark:text-white text-base">Today's Reservations</h3>
-                                <p class="text-xs text-neutral-500">Confirmed schedule for today</p>
-                            </div>
-                            <Link href="/staff/schedules" class="text-xs text-emerald-600 hover:underline font-semibold">
-                                Full Schedule &rarr;
-                            </Link>
-                        </div>
-
-                        <div class="space-y-3 max-h-96 overflow-y-auto">
-                            <div
-                                v-for="b in todayBookings"
-                                :key="b.id"
-                                @click="openBookingDetails(b)"
-                                class="p-3 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-800/60 flex items-center justify-between cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                            >
-                                <div class="space-y-0.5 text-xs">
-                                    <p class="font-bold text-neutral-900 dark:text-white">{{ b.name }}</p>
-                                    <p class="font-mono text-neutral-500">{{ b.time_slots ? b.time_slots.join(', ') : '' }}</p>
-                                </div>
-
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="border-b border-neutral-100 dark:border-neutral-800 text-neutral-400 font-semibold uppercase">
+                            <th class="py-2.5 px-3">Booking ID</th>
+                            <th class="py-2.5 px-3">Customer</th>
+                            <th class="py-2.5 px-3">Court</th>
+                            <th class="py-2.5 px-3">Date</th>
+                            <th class="py-2.5 px-3">Time Slots</th>
+                            <th class="py-2.5 px-3">Total</th>
+                            <th class="py-2.5 px-3">Status</th>
+                            <th class="py-2.5 px-3">Receipt</th>
+                            <th class="py-2.5 px-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
+                        <tr v-for="b in recentBookings" :key="b.id" @click="openBookingDetails(b)" class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors cursor-pointer">
+                            <td class="py-3 px-3 font-mono font-bold text-neutral-900 dark:text-white">
+                                #{{ b.id }}
+                            </td>
+                            <td class="py-3 px-3 font-medium text-neutral-900 dark:text-white">
+                                {{ b.customer_name }}
+                            </td>
+                            <td class="py-3 px-3 text-neutral-600 dark:text-neutral-300">
+                                {{ b.court_name }}
+                            </td>
+                            <td class="py-3 px-3 font-semibold text-emerald-600 dark:text-emerald-400 underline decoration-dotted">
+                                {{ b.date }}
+                            </td>
+                            <td class="py-3 px-3 font-mono text-[11px] text-neutral-500">
+                                {{ b.time_slots ? b.time_slots.join(', ') : 'N/A' }}
+                            </td>
+                            <td class="py-3 px-3 font-bold text-neutral-900 dark:text-white">
+                                ₱{{ b.total_price }}
+                            </td>
+                            <td class="py-3 px-3">
                                 <span
                                     :class="[
-                                        'px-2.5 py-1 rounded-full text-[10px] font-bold capitalize',
-                                        b.status === 'approved' || b.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-300'
+                                        'px-2 py-0.5 rounded-full text-[10px] font-bold capitalize',
+                                        b.status === 'approved' || b.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' :
+                                        b.status === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                                     ]"
                                 >
                                     {{ b.status }}
                                 </span>
-                            </div>
-
-                            <div v-if="todayBookings.length === 0" class="p-6 text-center text-xs text-neutral-400">
-                                No reservations scheduled for today.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Unavailable Dates / Maintenance Quick Blockouts -->
-                <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 shadow-sm space-y-4">
-                    <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
-                        <div>
-                            <h3 class="font-bold text-neutral-900 dark:text-white text-base">Court Schedule Blackout & Maintenance Dates</h3>
-                            <p class="text-xs text-neutral-500">Dates blocked off for maintenance or holidays</p>
-                        </div>
-                        <Link href="/staff/schedules" class="px-3 py-1.5 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity flex items-center gap-1">
-                            <Plus class="w-3.5 h-3.5" /> Block Date
-                        </Link>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                        <div
-                            v-for="u in unavailabilities"
-                            :key="u.id"
-                            class="p-3 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 text-xs space-y-1"
-                        >
-                            <div class="flex items-center justify-between text-rose-800 dark:text-rose-300 font-bold">
-                                <span>{{ u.date }}</span>
-                                <span class="text-[10px] uppercase font-mono">{{ u.all_day ? 'All Day' : u.start_time + ' - ' + u.end_time }}</span>
-                            </div>
-                            <p class="text-neutral-600 dark:text-neutral-400 text-[11px]">{{ u.reason || 'Maintenance' }}</p>
-                        </div>
-
-                        <div v-if="unavailabilities.length === 0" class="col-span-full py-4 text-center text-xs text-neutral-400">
-                            No active blackout or maintenance dates set for this court.
-                        </div>
-                    </div>
-                </div>
-            </template>
-
-            <!-- Booking Detail Modal -->
-            <BookingDetailModal
-                :is-open="isDetailModalOpen"
-                :booking="selectedBookingForModal"
-                update-route-prefix="/staff/bookings"
-                @close="isDetailModalOpen = false"
-            />
+                            </td>
+                            <td class="py-3 px-3" @click.stop>
+                                <a
+                                    v-if="b.receipt_url"
+                                    :href="b.receipt_url"
+                                    target="_blank"
+                                    class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                                >
+                                    <FileText class="w-3.5 h-3.5" /> View
+                                </a>
+                                <span v-else class="text-neutral-400 text-[11px]">N/A</span>
+                            </td>
+                            <td class="py-3 px-3 text-right" @click.stop>
+                                <div class="flex items-center justify-end gap-1">
+                                    <button
+                                        v-if="b.status === 'pending'"
+                                        @click="quickUpdateStatus(b.id, 'approved')"
+                                        class="p-1 text-emerald-600 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
+                                        title="Approve Booking"
+                                    >
+                                        <CheckCircle class="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        v-if="b.status === 'pending'"
+                                        @click="quickUpdateStatus(b.id, 'rejected')"
+                                        class="p-1 text-rose-600 hover:text-rose-700 dark:hover:text-rose-400 transition-colors"
+                                        title="Reject Booking"
+                                    >
+                                        <XCircle class="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="openBookingDetails(b)"
+                                        class="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                                        title="View Full Booking Details"
+                                    >
+                                        <ArrowUpRight class="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
+
+        <!-- Booking Details Modal -->
+        <BookingDetailModal
+            :is-open="isDetailModalOpen"
+            :booking="selectedBookingForModal"
+            update-route-prefix="/staff/bookings"
+            @close="isDetailModalOpen = false"
+        />
+    </div>
 </template>

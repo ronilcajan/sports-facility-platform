@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Plus, Pencil, Trash2, X, Dumbbell, Users } from '@lucide/vue';
+import { Plus, Pencil, Trash2, X, Dumbbell, Users, Image as ImageIcon } from '@lucide/vue';
 import CourtController from '@/actions/App/Http/Controllers/Admin/CourtController';
+import CourtImageManagerModal from '@/components/admin/CourtImageManagerModal.vue';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+
+interface CourtImage {
+    id: number;
+    path: string;
+    url: string;
+    is_primary: boolean;
+}
 
 interface Court {
     id: number;
@@ -22,7 +30,8 @@ interface Court {
     buffer_minutes?: number;
     is_active?: boolean;
     staff_count: number;
-    primary_image?: { url: string } | null;
+    primary_image?: CourtImage | null;
+    images?: CourtImage[];
 }
 
 interface SelectOption {
@@ -57,6 +66,13 @@ const statusPill: Record<Court['status'], string> = {
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const editingCourt = ref<Court | null>(null);
+const showImageModal = ref(false);
+const selectedCourtForImages = ref<Court | null>(null);
+
+function openImageModal(court: Court) {
+    selectedCourtForImages.value = court;
+    showImageModal.value = true;
+}
 
 const createForm = useForm({
     name: '',
@@ -193,6 +209,13 @@ function destroy(court: Court): void {
                     </div>
 
                     <div class="mt-auto flex items-center gap-2 pt-3">
+                        <button
+                            @click="openImageModal(court)"
+                            class="inline-flex items-center justify-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                            title="Manage Court Images"
+                        >
+                            <ImageIcon class="h-3.5 w-3.5 text-emerald-600" /> Photos
+                        </button>
                         <button
                             @click="openEditModal(court)"
                             class="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400"
@@ -467,4 +490,15 @@ function destroy(court: Court): void {
             </div>
         </div>
     </Teleport>
+
+    <!-- Court Image Manager Modal -->
+    <CourtImageManagerModal
+        :is-open="showImageModal"
+        :court="selectedCourtForImages"
+        :upload-route="`/admin/courts/${selectedCourtForImages?.id}/images`"
+        :primary-route-prefix="`/admin/courts/${selectedCourtForImages?.id}/images`"
+        :delete-route-prefix="`/admin/courts/${selectedCourtForImages?.id}/images`"
+        :can-delete="true"
+        @close="showImageModal = false"
+    />
 </template>

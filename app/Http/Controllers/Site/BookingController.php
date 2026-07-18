@@ -14,9 +14,11 @@ use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Inertia\Inertia;
 
 class BookingController extends Controller
 {
@@ -154,18 +156,27 @@ class BookingController extends Controller
     /**
      * Update the client's own booking details.
      */
-    public function update(Request $request, Booking $booking): JsonResponse
+    public function update(Request $request, Booking $booking): JsonResponse|RedirectResponse
     {
         $this->authorize('update', $booking);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:50'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $booking->update($validated);
+
+        if ($request->header('X-Inertia')) {
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => __('Booking details updated successfully.'),
+            ]);
+
+            return back();
+        }
 
         return response()->json([
             'success' => true,
@@ -177,11 +188,20 @@ class BookingController extends Controller
     /**
      * Cancel/delete the client's own booking.
      */
-    public function destroy(Booking $booking): JsonResponse
+    public function destroy(Request $request, Booking $booking): JsonResponse|RedirectResponse
     {
         $this->authorize('delete', $booking);
 
         $booking->delete();
+
+        if ($request->header('X-Inertia')) {
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => __('Booking cancelled successfully.'),
+            ]);
+
+            return back();
+        }
 
         return response()->json([
             'success' => true,

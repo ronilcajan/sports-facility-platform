@@ -26,7 +26,7 @@ test('court staff can access staff dashboard for assigned court', function () {
         );
 });
 
-test('court staff cannot approve booking for assigned court', function () {
+test('court staff can approve booking for assigned court', function () {
     $staff = User::factory()->create();
     $staff->assignRole(RoleName::Staff->value);
 
@@ -39,9 +39,9 @@ test('court staff cannot approve booking for assigned court', function () {
         ->patch(route('staff.bookings.update-status', $booking->id), [
             'status' => 'approved',
         ])
-        ->assertForbidden();
+        ->assertRedirect();
 
-    expect($booking->fresh()->status)->toBe('pending');
+    expect($booking->fresh()->status)->toBe('approved');
 });
 
 test('admin can approve booking for assigned court via staff route', function () {
@@ -80,7 +80,7 @@ test('court staff cannot view or update booking for unassigned court', function 
         ->assertForbidden();
 });
 
-test('court staff cannot create blackout schedule entry for assigned court', function () {
+test('court staff can create blackout schedule entry for assigned court', function () {
     $staff = User::factory()->create();
     $staff->assignRole(RoleName::Staff->value);
 
@@ -94,7 +94,7 @@ test('court staff cannot create blackout schedule entry for assigned court', fun
             'all_day' => true,
             'reason' => 'Annual Maintenance',
         ])
-        ->assertForbidden();
+        ->assertRedirect();
 });
 
 test('admin can create blackout schedule entry for assigned court via staff route', function () {
