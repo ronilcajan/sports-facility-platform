@@ -1,17 +1,10 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import {
-    Clock,
-    DollarSign,
-    CheckCircle,
-    TrendingUp,
-    Plus,
-    CalendarRange,
-    ChevronRight,
-} from '@lucide/vue';
+import { Plus, ChevronRight } from '@lucide/vue';
 import { dashboard } from '@/routes';
 import BookingsTable, { type BookingItem } from '@/components/customer/BookingsTable.vue';
+import StatCardsSlideshow from '@/components/customer/StatCardsSlideshow.vue';
 
 const props = defineProps<{
     bookings: BookingItem[];
@@ -67,60 +60,8 @@ const recentBookings = computed(() => props.bookings.slice(0, 5));
             </Link>
         </div>
 
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Stat card: Total bookings -->
-            <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                <div class="absolute right-3 top-3 opacity-10 group-hover:scale-110 transition-transform">
-                    <CalendarRange class="w-12 h-12 text-neutral-600 dark:text-neutral-400" />
-                </div>
-                <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">Total Bookings</span>
-                <span class="text-2xl font-black text-neutral-900 dark:text-white mt-1 block">{{ stats.total }}</span>
-                <div class="flex items-center gap-1 mt-2 text-[10px] text-neutral-500 font-medium">
-                    <span>Active and completed reservations</span>
-                </div>
-            </div>
-
-            <!-- Stat card: Pending approval -->
-            <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                <div class="absolute right-3 top-3 opacity-10 group-hover:scale-110 transition-transform">
-                    <Clock class="w-12 h-12 text-amber-600" />
-                </div>
-                <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">Pending Approval</span>
-                <span class="text-2xl font-black text-amber-600 mt-1 block">{{ stats.pending }}</span>
-                <div class="flex items-center gap-1 mt-2 text-[10px] text-amber-600 font-medium">
-                    <span v-if="stats.pending > 0" class="flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span> Awaiting staff confirmation
-                    </span>
-                    <span v-else>All bookings processed</span>
-                </div>
-            </div>
-
-            <!-- Stat card: Confirmed -->
-            <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                <div class="absolute right-3 top-3 opacity-10 group-hover:scale-110 transition-transform">
-                    <CheckCircle class="w-12 h-12 text-emerald-600" />
-                </div>
-                <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">Confirmed Bookings</span>
-                <span class="text-2xl font-black text-emerald-600 mt-1 block">{{ stats.confirmed }}</span>
-                <div class="flex items-center gap-1 mt-2 text-[10px] text-emerald-600 font-medium">
-                    <span>Approved reservations ready for play</span>
-                </div>
-            </div>
-
-            <!-- Stat card: Total spent -->
-            <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                <div class="absolute right-3 top-3 opacity-10 group-hover:scale-110 transition-transform">
-                    <DollarSign class="w-12 h-12 text-emerald-600" />
-                </div>
-                <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">Total Investment</span>
-                <span class="text-2xl font-black text-neutral-900 dark:text-white mt-1 block">₱{{ stats.totalSpent }}</span>
-                <div class="flex items-center gap-1 mt-2 text-[10px] text-neutral-500 font-medium">
-                    <TrendingUp class="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Includes approved & pending payments</span>
-                </div>
-            </div>
-        </div>
+        <!-- Stat Cards Slideshow (Mobile Slideshow / Desktop Grid) -->
+        <StatCardsSlideshow :stats="stats" />
 
         <!-- Recent Bookings Section -->
         <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm space-y-4">

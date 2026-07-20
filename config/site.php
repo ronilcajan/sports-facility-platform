@@ -13,7 +13,7 @@
 */
 
 return [
-    'name' => 'PickleBall',
+    'name' => 'PickleHub',
     'tagline' => 'Fun pickleball for everyone.',
     'description' => 'A friendly pickleball spot with welcoming courts and open play — book a court in under a minute.',
 

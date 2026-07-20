@@ -5,7 +5,7 @@ import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import type { SiteData } from '@/types';
 
 const page = usePage();
-const siteName = computed(() => (page.props.site as SiteData | undefined)?.name ?? 'PickleBall');
+const siteName = computed(() => (page.props.site as SiteData | undefined)?.name ?? 'PickleHub');
 </script>
 
 <template>

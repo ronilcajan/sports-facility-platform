@@ -41,9 +41,15 @@ const site = computed(() => page.props.site as SiteData | undefined);
                             :alt="site?.name ?? 'Logo'"
                             class="size-14 rounded-full object-cover ring-1 ring-line"
                         />
-                        <span class="font-display text-lg font-extrabold tracking-tight text-content">
-                            {{ site?.name ?? 'PickleBall' }}
-                        </span>
+                        <div class="flex flex-col items-center text-center">
+                            <span class="font-display text-lg font-extrabold tracking-tight text-content">
+                                {{ site?.name ?? 'PickleHub' }}
+                            </span>
+                            <div class="mt-0.5 flex items-center justify-center gap-1 text-[10px] font-extrabold uppercase leading-none">
+                                <span class="font-serif tracking-widest text-amber-500">RAMBOY</span>
+                                <span class="font-sans tracking-[0.2em] opacity-75">ENTERPRISE</span>
+                            </div>
+                        </div>
                     </Link>
                     <div class="space-y-1.5 text-center">
                         <h1 class="font-display text-xl font-bold text-content">{{ title }}</h1>
