@@ -147,67 +147,73 @@ onUnmounted(() => {
             @touchstart="handleTouchStart"
             @touchend="handleTouchEnd"
         >
-            <div class="relative overflow-hidden rounded-3xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-lg p-6 min-h-[140px] flex flex-col justify-between">
-                <!-- Slide 0: Total Bookings -->
-                <div v-show="currentSlide === 0" class="space-y-2 transition-all duration-300">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-extrabold text-neutral-400 uppercase tracking-wider">Total Bookings</span>
-                        <div class="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
-                            <CalendarRange class="w-6 h-6" />
+            <div class="relative overflow-hidden rounded-3xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-lg min-h-[140px]">
+                <!-- Smooth horizontal sliding track -->
+                <div
+                    class="flex transition-transform duration-500 ease-in-out w-full"
+                    :style="{ transform: `translateX(-${currentSlide * 100}%)` }"
+                >
+                    <!-- Slide 0: Total Bookings -->
+                    <div class="w-full shrink-0 p-6 flex flex-col justify-between space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-neutral-400 uppercase tracking-wider">Total Bookings</span>
+                            <div class="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                                <CalendarRange class="w-6 h-6" />
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">{{ stats.total }}</span>
+                            <p class="text-xs text-neutral-500 mt-1 font-medium">Active and completed reservations</p>
                         </div>
                     </div>
-                    <div>
-                        <span class="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">{{ stats.total }}</span>
-                        <p class="text-xs text-neutral-500 mt-1 font-medium">Active and completed reservations</p>
-                    </div>
-                </div>
 
-                <!-- Slide 1: Pending Approval -->
-                <div v-show="currentSlide === 1" class="space-y-2 transition-all duration-300">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-extrabold text-amber-500 dark:text-amber-400 uppercase tracking-wider">Pending Approval</span>
-                        <div class="p-2 rounded-xl bg-amber-500/10 text-amber-600">
-                            <Clock class="w-6 h-6" />
+                    <!-- Slide 1: Pending Approval -->
+                    <div class="w-full shrink-0 p-6 flex flex-col justify-between space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-amber-500 dark:text-amber-400 uppercase tracking-wider">Pending Approval</span>
+                            <div class="p-2 rounded-xl bg-amber-500/10 text-amber-600">
+                                <Clock class="w-6 h-6" />
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">{{ stats.pending }}</span>
+                            <div class="flex items-center gap-1.5 mt-1 text-xs text-amber-600 font-medium">
+                                <span v-if="stats.pending > 0" class="flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> Awaiting staff confirmation
+                                </span>
+                                <span v-else>All bookings processed</span>
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <span class="text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">{{ stats.pending }}</span>
-                        <div class="flex items-center gap-1.5 mt-1 text-xs text-amber-600 font-medium">
-                            <span v-if="stats.pending > 0" class="flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> Awaiting staff confirmation
-                            </span>
-                            <span v-else>All bookings processed</span>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Slide 2: Confirmed Bookings -->
-                <div v-show="currentSlide === 2" class="space-y-2 transition-all duration-300">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Confirmed Bookings</span>
-                        <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
-                            <CheckCircle class="w-6 h-6" />
+                    <!-- Slide 2: Confirmed Bookings -->
+                    <div class="w-full shrink-0 p-6 flex flex-col justify-between space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Confirmed Bookings</span>
+                            <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
+                                <CheckCircle class="w-6 h-6" />
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">{{ stats.confirmed }}</span>
+                            <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium">Approved reservations ready for play</p>
                         </div>
                     </div>
-                    <div>
-                        <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">{{ stats.confirmed }}</span>
-                        <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium">Approved reservations ready for play</p>
-                    </div>
-                </div>
 
-                <!-- Slide 3: Total Investment -->
-                <div v-show="currentSlide === 3" class="space-y-2 transition-all duration-300">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-extrabold text-neutral-400 uppercase tracking-wider">Total Investment</span>
-                        <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
-                            <DollarSign class="w-6 h-6" />
+                    <!-- Slide 3: Total Investment -->
+                    <div class="w-full shrink-0 p-6 flex flex-col justify-between space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-neutral-400 uppercase tracking-wider">Total Investment</span>
+                            <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
+                                <DollarSign class="w-6 h-6" />
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <span class="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">₱{{ stats.totalSpent }}</span>
-                        <div class="flex items-center gap-1 mt-1 text-xs text-neutral-500 font-medium">
-                            <TrendingUp class="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Includes approved & pending payments</span>
+                        <div>
+                            <span class="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">₱{{ stats.totalSpent }}</span>
+                            <div class="flex items-center gap-1 mt-1 text-xs text-neutral-500 font-medium">
+                                <TrendingUp class="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Includes approved & pending payments</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -215,7 +221,7 @@ onUnmounted(() => {
                 <!-- Floating Navigation Controls -->
                 <button
                     @click="prevSlide"
-                    class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-neutral-900/10 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-900/20 dark:hover:bg-white/20 transition-colors"
+                    class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-neutral-900/10 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-900/20 dark:hover:bg-white/20 transition-colors z-10"
                     aria-label="Previous Slide"
                 >
                     <ChevronLeft class="w-4 h-4" />
@@ -223,7 +229,7 @@ onUnmounted(() => {
 
                 <button
                     @click="nextSlide"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-neutral-900/10 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-900/20 dark:hover:bg-white/20 transition-colors"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-neutral-900/10 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-900/20 dark:hover:bg-white/20 transition-colors z-10"
                     aria-label="Next Slide"
                 >
                     <ChevronRight class="w-4 h-4" />
