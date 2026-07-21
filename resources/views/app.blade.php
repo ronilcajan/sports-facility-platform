@@ -33,15 +33,15 @@
 
         {{-- Public marketing theme background. Guarded with :not(.dark) so it
                  never overrides a signed-in user's personal dark-mode dashboard. --}} html[data-theme='navy']:not(.dark) {
-            background-color: #0b1f38;
+            background-color: #090d16;
         }
 
         html[data-theme='fairway']:not(.dark) {
-            background-color: #f5f4ee;
+            background-color: #faf9f6;
         }
 
         html[data-theme='electric']:not(.dark) {
-            background-color: #1e1b4b;
+            background-color: #0d1117;
         }
     </style>
 

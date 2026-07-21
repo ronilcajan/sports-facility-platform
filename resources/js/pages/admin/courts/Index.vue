@@ -84,6 +84,7 @@ const createForm = useForm({
     slot_duration_minutes: 60,
     buffer_minutes: 0,
     is_active: true,
+    image: null as File | null,
 });
 
 const editForm = useForm({
@@ -96,11 +97,58 @@ const editForm = useForm({
     slot_duration_minutes: 60,
     buffer_minutes: 0,
     is_active: true,
+    image: null as File | null,
+    delete_image: false,
 });
+
+const createPreview = ref<string | null>(null);
+const editPreview = ref<string | null>(null);
+
+function onCreateImageChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+        const file = target.files[0];
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size exceeds 5MB limit.');
+            return;
+        }
+        createForm.image = file;
+        if (createPreview.value) URL.revokeObjectURL(createPreview.value);
+        createPreview.value = URL.createObjectURL(file);
+    }
+}
+
+function onEditImageChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+        const file = target.files[0];
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size exceeds 5MB limit.');
+            return;
+        }
+        editForm.image = file;
+        editForm.delete_image = false;
+        if (editPreview.value) URL.revokeObjectURL(editPreview.value);
+        editPreview.value = URL.createObjectURL(file);
+    }
+}
+
+function removeEditImage() {
+    editForm.image = null;
+    editForm.delete_image = true;
+    if (editPreview.value) {
+        URL.revokeObjectURL(editPreview.value);
+        editPreview.value = null;
+    }
+}
 
 function openCreateModal() {
     createForm.reset();
     createForm.clearErrors();
+    if (createPreview.value) {
+        URL.revokeObjectURL(createPreview.value);
+        createPreview.value = null;
+    }
     showCreateModal.value = true;
 }
 
@@ -109,6 +157,10 @@ function submitCreate() {
         onSuccess: () => {
             showCreateModal.value = false;
             createForm.reset();
+            if (createPreview.value) {
+                URL.revokeObjectURL(createPreview.value);
+                createPreview.value = null;
+            }
         },
         preserveScroll: true,
     });
@@ -125,16 +177,26 @@ function openEditModal(court: Court) {
     editForm.slot_duration_minutes = court.slot_duration_minutes || 60;
     editForm.buffer_minutes = court.buffer_minutes || 0;
     editForm.is_active = court.is_active ?? true;
+    editForm.image = null;
+    editForm.delete_image = false;
+    if (editPreview.value) {
+        URL.revokeObjectURL(editPreview.value);
+        editPreview.value = null;
+    }
     editForm.clearErrors();
     showEditModal.value = true;
 }
 
 function submitEdit() {
     if (!editingCourt.value) return;
-    editForm.put(CourtController.update(editingCourt.value.id).url, {
+    editForm.transform((data) => ({ ...data, _method: 'put' })).post(CourtController.update(editingCourt.value.id).url, {
         onSuccess: () => {
             showEditModal.value = false;
             editingCourt.value = null;
+            if (editPreview.value) {
+                URL.revokeObjectURL(editPreview.value);
+                editPreview.value = null;
+            }
         },
         preserveScroll: true,
     });
@@ -346,6 +408,21 @@ function destroy(court: Court): void {
                         <InputError :message="createForm.errors.description" />
                     </div>
 
+                    <!-- Court Photo Upload -->
+                    <div class="space-y-3 rounded-xl border border-input p-3">
+                        <Label class="text-xs font-semibold">Court Photo</Label>
+                        <div class="flex items-center gap-3">
+                            <div v-if="createPreview" class="relative">
+                                <img :src="createPreview" alt="Preview" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
+                            </div>
+                            <div v-else class="h-16 w-24 rounded-lg border border-dashed border-input flex items-center justify-center text-xs text-muted-foreground">
+                                No Photo
+                            </div>
+                            <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/avif" @change="onCreateImageChange" class="text-xs" />
+                        </div>
+                        <InputError :message="createForm.errors.image" />
+                    </div>
+
                     <div class="flex items-center gap-2 pt-1">
                         <input
                             id="create-court-active"
@@ -468,6 +545,33 @@ function destroy(court: Court): void {
                             class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                         <InputError :message="editForm.errors.description" />
+                    </div>
+
+                    <!-- Court Photo Upload -->
+                    <div class="space-y-3 rounded-xl border border-input p-3">
+                        <Label class="text-xs font-semibold">Court Photo</Label>
+                        <div class="flex items-center gap-3">
+                            <div v-if="editPreview" class="relative">
+                                <img :src="editPreview" alt="Preview" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
+                                <span class="absolute -top-1.5 -right-1.5 bg-emerald-600 text-white text-[8px] font-bold px-1 rounded-full">New</span>
+                            </div>
+                            <div v-else-if="editingCourt?.primary_image?.url && !editForm.delete_image" class="relative">
+                                <img :src="editingCourt.primary_image.url" alt="Current Photo" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
+                            </div>
+                            <div v-else class="h-16 w-24 rounded-lg border border-dashed border-input flex items-center justify-center text-xs text-muted-foreground">
+                                No Photo
+                            </div>
+
+                            <div class="space-y-1">
+                                <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/avif" @change="onEditImageChange" class="text-xs" />
+                                <div v-if="editingCourt?.primary_image?.url && !editForm.delete_image" class="pt-0.5">
+                                    <button type="button" @click="removeEditImage" class="text-[11px] font-semibold text-rose-600 hover:underline">
+                                        Remove photo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <InputError :message="editForm.errors.image" />
                     </div>
 
                     <div class="flex items-center gap-2 pt-1">

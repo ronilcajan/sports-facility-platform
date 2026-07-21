@@ -16,6 +16,8 @@ import {
 } from '@lucide/vue';
 
 import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
+import InteractiveAreaChart, { type DailyTrendItem } from '@/components/admin/InteractiveAreaChart.vue';
+import DistributionPieChart, { type SportBreakdownItem, type StatusBreakdownItem } from '@/components/admin/DistributionPieChart.vue';
 import { ref } from 'vue';
 
 interface Stats {
@@ -25,12 +27,6 @@ interface Stats {
     pendingBookings: number;
     totalRevenue: number;
     totalCustomers: number;
-}
-
-interface MonthTrend {
-    month: string;
-    bookings: number;
-    revenue: number;
 }
 
 interface CourtSummary {
@@ -64,7 +60,9 @@ interface RecentBooking {
 
 const props = defineProps<{
     stats: Stats;
-    monthsTrend: MonthTrend[];
+    dailyTrend: DailyTrendItem[];
+    sportTypesBreakdown: SportBreakdownItem[];
+    statusBreakdown: StatusBreakdownItem[];
     courtsSummary: CourtSummary[];
     recentBookings: RecentBooking[];
 }>();
@@ -184,6 +182,22 @@ function quickUpdateStatus(bookingId: number, status: string) {
                     <span class="text-[11px] text-neutral-500">
                         Active facility user accounts
                     </span>
+                </div>
+            </div>
+
+            <!-- Super Admin Interactive Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Interactive Area Chart (2 Cols) -->
+                <div class="lg:col-span-2">
+                    <InteractiveAreaChart :daily-trend="props.dailyTrend" />
+                </div>
+
+                <!-- Distribution Pie / Donut Chart (1 Col) -->
+                <div class="lg:col-span-1">
+                    <DistributionPieChart
+                        :sport-types-breakdown="props.sportTypesBreakdown"
+                        :status-breakdown="props.statusBreakdown"
+                    />
                 </div>
             </div>
 

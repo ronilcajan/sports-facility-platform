@@ -38,6 +38,8 @@ class UpdateCourtRequest extends FormRequest
             'slot_duration_minutes' => ['required', 'integer', 'min:1', 'max:1440'],
             'buffer_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
             'is_active' => ['required', 'boolean'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,avif', 'max:5120'],
+            'delete_image' => ['nullable', 'boolean'],
         ];
     }
 }

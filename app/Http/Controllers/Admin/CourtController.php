@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\UpdateCourtRequest;
 use App\Models\Court;
 use App\Models\Venue;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -70,7 +71,17 @@ class CourtController extends Controller
             $data['venue_id'] = $request->user()->venue_id;
         }
 
-        Court::create($data);
+        unset($data['image'], $data['delete_image']);
+        $court = Court::create($data);
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('courts', 'public');
+            $court->images()->create([
+                'path' => $path,
+                'is_primary' => true,
+                'sort_order' => 1,
+            ]);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Court created.')]);
 
@@ -121,7 +132,31 @@ class CourtController extends Controller
             $data['venue_id'] = $court->venue_id;
         }
 
+        unset($data['image'], $data['delete_image']);
         $court->update($data);
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('courts', 'public');
+            $court->images()->update(['is_primary' => false]);
+            $maxSortOrder = $court->images()->max('sort_order') ?? 0;
+            $court->images()->create([
+                'path' => $path,
+                'is_primary' => true,
+                'sort_order' => $maxSortOrder + 1,
+            ]);
+        } elseif ($request->boolean('delete_image')) {
+            $primaryImage = $court->primaryImage;
+            if ($primaryImage) {
+                if (Storage::disk('public')->exists($primaryImage->path)) {
+                    Storage::disk('public')->delete($primaryImage->path);
+                }
+                $primaryImage->delete();
+                $next = $court->images()->first();
+                if ($next) {
+                    $next->update(['is_primary' => true]);
+                }
+            }
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Court updated.')]);
 

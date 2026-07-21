@@ -52,6 +52,7 @@ const createForm = useForm({
     address: '',
     phone: '',
     email: '',
+    image: null as File | null,
     is_active: true,
 });
 
@@ -61,8 +62,51 @@ const editForm = useForm({
     address: '',
     phone: '',
     email: '',
+    image: null as File | null,
+    delete_image: false,
     is_active: true,
 });
+
+const createImagePreview = ref<string | null>(null);
+const editImagePreview = ref<string | null>(null);
+
+function onCreateImageChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+        const file = target.files[0];
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size exceeds 5MB limit.');
+            return;
+        }
+        createForm.image = file;
+        if (createImagePreview.value) URL.revokeObjectURL(createImagePreview.value);
+        createImagePreview.value = URL.createObjectURL(file);
+    }
+}
+
+function onEditImageChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+        const file = target.files[0];
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size exceeds 5MB limit.');
+            return;
+        }
+        editForm.image = file;
+        editForm.delete_image = false;
+        if (editImagePreview.value) URL.revokeObjectURL(editImagePreview.value);
+        editImagePreview.value = URL.createObjectURL(file);
+    }
+}
+
+function removeEditImage() {
+    editForm.image = null;
+    editForm.delete_image = true;
+    if (editImagePreview.value) {
+        URL.revokeObjectURL(editImagePreview.value);
+        editImagePreview.value = null;
+    }
+}
 
 function applyFilters() {
     router.get('/admin/venues', { search: search.value }, { preserveState: true, replace: true });
@@ -71,6 +115,10 @@ function applyFilters() {
 function openCreateModal() {
     createForm.reset();
     createForm.clearErrors();
+    if (createImagePreview.value) {
+        URL.revokeObjectURL(createImagePreview.value);
+        createImagePreview.value = null;
+    }
     showCreateModal.value = true;
 }
 
@@ -79,6 +127,10 @@ function submitCreate() {
         onSuccess: () => {
             showCreateModal.value = false;
             createForm.reset();
+            if (createImagePreview.value) {
+                URL.revokeObjectURL(createImagePreview.value);
+                createImagePreview.value = null;
+            }
         },
         preserveScroll: true,
     });
@@ -92,16 +144,26 @@ function openEditModal(venue: Venue) {
     editForm.phone = venue.phone || '';
     editForm.email = venue.email || '';
     editForm.is_active = venue.is_active;
+    editForm.image = null;
+    editForm.delete_image = false;
+    if (editImagePreview.value) {
+        URL.revokeObjectURL(editImagePreview.value);
+        editImagePreview.value = null;
+    }
     editForm.clearErrors();
     showEditModal.value = true;
 }
 
 function submitEdit() {
     if (!editingVenue.value) return;
-    editForm.put(`/admin/venues/${editingVenue.value.id}`, {
+    editForm.transform((data) => ({ ...data, _method: 'put' })).post(`/admin/venues/${editingVenue.value.id}`, {
         onSuccess: () => {
             showEditModal.value = false;
             editingVenue.value = null;
+            if (editImagePreview.value) {
+                URL.revokeObjectURL(editImagePreview.value);
+                editImagePreview.value = null;
+            }
         },
         preserveScroll: true,
     });
@@ -276,6 +338,21 @@ function destroy(venue: Venue): void {
                         </div>
                     </div>
 
+                    <!-- Venue Cover Photo Upload -->
+                    <div class="space-y-3 rounded-xl border border-input p-3">
+                        <Label class="text-xs font-semibold">Venue Cover Photo</Label>
+                        <div class="flex items-center gap-3">
+                            <div v-if="createImagePreview" class="relative">
+                                <img :src="createImagePreview" alt="Preview" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
+                            </div>
+                            <div v-else class="h-16 w-24 rounded-lg border border-dashed border-input flex items-center justify-center text-xs text-muted-foreground">
+                                No Cover
+                            </div>
+                            <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/avif" @change="onCreateImageChange" class="text-xs" />
+                        </div>
+                        <InputError :message="createForm.errors.image" />
+                    </div>
+
                     <div class="flex items-center gap-2 pt-1">
                         <input
                             id="create-venue-active"
@@ -350,6 +427,33 @@ function destroy(venue: Venue): void {
                             <Input id="edit-venue-email" v-model="editForm.email" type="email" />
                             <InputError :message="editForm.errors.email" />
                         </div>
+                    </div>
+
+                    <!-- Venue Cover Photo Upload -->
+                    <div class="space-y-3 rounded-xl border border-input p-3">
+                        <Label class="text-xs font-semibold">Venue Cover Photo</Label>
+                        <div class="flex items-center gap-3">
+                            <div v-if="editImagePreview" class="relative">
+                                <img :src="editImagePreview" alt="Preview" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
+                                <span class="absolute -top-1.5 -right-1.5 bg-emerald-600 text-white text-[8px] font-bold px-1 rounded-full">New</span>
+                            </div>
+                            <div v-else-if="editingVenue?.cover_image_url && !editForm.delete_image" class="relative">
+                                <img :src="editingVenue.cover_image_url" alt="Current Cover" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
+                            </div>
+                            <div v-else class="h-16 w-24 rounded-lg border border-dashed border-input flex items-center justify-center text-xs text-muted-foreground">
+                                No Cover
+                            </div>
+
+                            <div class="space-y-1">
+                                <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/avif" @change="onEditImageChange" class="text-xs" />
+                                <div v-if="editingVenue?.cover_image_url && !editForm.delete_image" class="pt-0.5">
+                                    <button type="button" @click="removeEditImage" class="text-[11px] font-semibold text-rose-600 hover:underline">
+                                        Remove cover photo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <InputError :message="editForm.errors.image" />
                     </div>
 
                     <div class="flex items-center gap-2 pt-1">

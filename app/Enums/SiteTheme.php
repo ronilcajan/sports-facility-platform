@@ -32,9 +32,9 @@ enum SiteTheme: string
     public function label(): string
     {
         return match ($this) {
-            self::Navy => 'Court Navy',
-            self::Fairway => 'Fairway',
-            self::Electric => 'Electric',
+            self::Navy => 'Gold & Onyx',
+            self::Fairway => 'Warm Amber',
+            self::Electric => 'Obsidian Platinum',
         };
     }
 
@@ -44,9 +44,9 @@ enum SiteTheme: string
     public function description(): string
     {
         return match ($this) {
-            self::Navy => 'Deep navy with electric azure — bold and sporty.',
-            self::Fairway => 'Light, airy cream and forest green — premium and calm.',
-            self::Electric => 'Vibrant indigo and emerald — energetic and modern.',
+            self::Navy => 'Deep onyx black with rich gold — official brand palette.',
+            self::Fairway => 'Light cream with deep amber accents — warm and inviting.',
+            self::Electric => 'Obsidian dark with metallic gold and platinum silver.',
         };
     }
 }

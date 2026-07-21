@@ -9,6 +9,7 @@ use App\Models\Court;
 use App\Models\Venue;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Enum;
 use Inertia\Inertia;
@@ -61,11 +62,22 @@ class StaffCourtController extends Controller
             'slot_duration_minutes' => ['required', 'integer', 'min:1', 'max:1440'],
             'buffer_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
             'is_active' => ['required', 'boolean'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,avif', 'max:5120'],
         ]);
 
         $validated['slug'] = $this->uniqueSlug($validated['name']);
+        unset($validated['image'], $validated['delete_image']);
 
         $court = Court::create($validated);
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('courts', 'public');
+            $court->images()->create([
+                'path' => $path,
+                'is_primary' => true,
+                'sort_order' => 1,
+            ]);
+        }
 
         $user = $request->user();
         if ($user->isStaff() && ! $user->canManageAllCourts()) {
@@ -97,9 +109,35 @@ class StaffCourtController extends Controller
             'slot_duration_minutes' => ['required', 'integer', 'min:1', 'max:1440'],
             'buffer_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
             'is_active' => ['required', 'boolean'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,avif', 'max:5120'],
+            'delete_image' => ['nullable', 'boolean'],
         ]);
 
+        unset($validated['image'], $validated['delete_image']);
         $court->update($validated);
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('courts', 'public');
+            $court->images()->update(['is_primary' => false]);
+            $maxSortOrder = $court->images()->max('sort_order') ?? 0;
+            $court->images()->create([
+                'path' => $path,
+                'is_primary' => true,
+                'sort_order' => $maxSortOrder + 1,
+            ]);
+        } elseif ($request->boolean('delete_image')) {
+            $primaryImage = $court->primaryImage;
+            if ($primaryImage) {
+                if (Storage::disk('public')->exists($primaryImage->path)) {
+                    Storage::disk('public')->delete($primaryImage->path);
+                }
+                $primaryImage->delete();
+                $next = $court->images()->first();
+                if ($next) {
+                    $next->update(['is_primary' => true]);
+                }
+            }
+        }
 
         Inertia::flash('toast', [
             'type' => 'success',

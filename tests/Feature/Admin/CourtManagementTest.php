@@ -4,6 +4,8 @@ use App\Enums\CourtStatus;
 use App\Enums\RoleName;
 use App\Enums\SportType;
 use App\Models\Court;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * A valid court payload for store/update requests.
@@ -108,4 +110,33 @@ test('super admins can manage courts', function () {
 
     $this->post(route('admin.courts.store'), courtPayload())
         ->assertRedirect(route('admin.courts.index'));
+});
+
+test('admins can create a court with an uploaded primary image', function () {
+    Storage::fake('public');
+    $this->actingAs(userWithRole(RoleName::Admin));
+
+    $file = UploadedFile::fake()->create('court.png', 10, 'image/png');
+    $response = $this->post(route('admin.courts.store'), courtPayload([
+        'image' => $file,
+    ]));
+
+    $response->assertRedirect(route('admin.courts.index'));
+    $court = Court::where('name', 'Center Court')->firstOrFail();
+    expect($court->primaryImage)->not->toBeNull();
+    Storage::disk('public')->assertExists($court->primaryImage->path);
+});
+
+test('admins can update a court image', function () {
+    Storage::fake('public');
+    $this->actingAs(userWithRole(RoleName::Admin));
+    $court = Court::factory()->create();
+
+    $file = UploadedFile::fake()->create('new-court.jpg', 10, 'image/jpeg');
+    $this->put(route('admin.courts.update', $court), courtPayload([
+        'image' => $file,
+    ]))->assertRedirect(route('admin.courts.index'));
+
+    expect($court->fresh()->primaryImage)->not->toBeNull();
+    Storage::disk('public')->assertExists($court->fresh()->primaryImage->path);
 });

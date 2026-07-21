@@ -173,16 +173,15 @@
 
 /*
   Marketing site design tokens — scoped as their own named colors so the
-  public site's "court" palette never collides with the neutral dashboard
-  theme above. Derived from a pickleball court: deep navy + teal surface,
-  chalk boundary lines, and the electric-lime ball as the single accent.
+  public site's palette never collides with the neutral dashboard theme above.
+  Derived from the RAMBOY ENTERPRISE logo: rich gold, metallic silver, and onyx.
 */
 @theme {
-    --color-ink: #0a2540;
-    --color-court: #0e7c6b;
-    --color-volt: #c6f24e;
-    --color-chalk: #f4f6f1;
-    --color-fog: #5b6b7a;
+    --color-ink: #090d16;
+    --color-court: #d97706;
+    --color-volt: #f59e0b;
+    --color-chalk: #f8fafc;
+    --color-fog: #64748b;
 }
 
 /*
@@ -205,56 +204,56 @@
     --font-display: var(--site-font-display);
 }
 
-/* Court Navy — Spotipb-inspired dark. Default theme. */
+/* Gold & Onyx — RAMBOY Enterprise dark branding. Default theme. */
 [data-theme='navy'] {
-    --site-surface: #0b1f38;
-    --site-surface-elevated: #12294a;
-    --site-surface-inverse: #071528;
-    --site-content: #eef3fb;
-    --site-content-muted: #9fb2cc;
-    --site-content-inverse: #eef3fb;
-    --site-brand: #3b82f6;
-    --site-brand-foreground: #ffffff;
-    --site-highlight: #7c6cf0;
-    --site-line: rgba(255, 255, 255, 0.1);
+    --site-surface: #090d16;
+    --site-surface-elevated: #131b2e;
+    --site-surface-inverse: #030712;
+    --site-content: #f8fafc;
+    --site-content-muted: #94a3b8;
+    --site-content-inverse: #f8fafc;
+    --site-brand: #f59e0b;
+    --site-brand-foreground: #090d16;
+    --site-highlight: #cbd5e1;
+    --site-line: rgba(245, 158, 11, 0.15);
     --site-radius: 0.9rem;
-    --site-shadow-card: 0 20px 45px -20px rgba(0, 0, 0, 0.55);
+    --site-shadow-card: 0 20px 45px -20px rgba(0, 0, 0, 0.65);
     --site-font-display:
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Fairway — Golfngy-inspired light. */
+/* Fairway — Warm Amber & Light Cream. */
 [data-theme='fairway'] {
-    --site-surface: #f5f4ee;
+    --site-surface: #faf9f6;
     --site-surface-elevated: #ffffff;
-    --site-surface-inverse: #1f2a1c;
-    --site-content: #1a1a17;
-    --site-content-muted: #5c6157;
-    --site-content-inverse: #f3f5ee;
-    --site-brand: #2f5233;
+    --site-surface-inverse: #090d16;
+    --site-content: #0f172a;
+    --site-content-muted: #64748b;
+    --site-content-inverse: #f8fafc;
+    --site-brand: #d97706;
     --site-brand-foreground: #ffffff;
-    --site-highlight: #c8a86b;
-    --site-line: rgba(26, 26, 23, 0.1);
+    --site-highlight: #b45309;
+    --site-line: rgba(15, 23, 42, 0.1);
     --site-radius: 1.25rem;
-    --site-shadow-card: 0 24px 50px -28px rgba(31, 42, 28, 0.35);
+    --site-shadow-card: 0 24px 50px -28px rgba(15, 23, 42, 0.25);
     --site-font-display:
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Electric — FootballCoin-inspired dark-vibrant. */
+/* Electric — Gold & Obsidian Platinum. */
 [data-theme='electric'] {
-    --site-surface: #1e1b4b;
-    --site-surface-elevated: #241a52;
-    --site-surface-inverse: #14102e;
-    --site-content: #f0eefb;
-    --site-content-muted: #b0a9d6;
-    --site-content-inverse: #f0eefb;
-    --site-brand: #10b981;
-    --site-brand-foreground: #06231a;
-    --site-highlight: #8b5cf6;
-    --site-line: rgba(255, 255, 255, 0.1);
+    --site-surface: #0d1117;
+    --site-surface-elevated: #161b22;
+    --site-surface-inverse: #010409;
+    --site-content: #f0f6fc;
+    --site-content-muted: #8b949e;
+    --site-content-inverse: #f0f6fc;
+    --site-brand: #eab308;
+    --site-brand-foreground: #0d1117;
+    --site-highlight: #e2e8f0;
+    --site-line: rgba(234, 179, 8, 0.18);
     --site-radius: 0.8rem;
-    --site-shadow-card: 0 22px 48px -22px rgba(0, 0, 0, 0.6);
+    --site-shadow-card: 0 22px 48px -22px rgba(0, 0, 0, 0.7);
     --site-font-display:
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 }

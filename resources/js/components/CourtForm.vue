@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, onUnmounted } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import CourtController from '@/actions/App/Http/Controllers/Admin/CourtController';
 import InputError from '@/components/InputError.vue';
@@ -19,6 +20,13 @@ interface Option {
     label: string;
 }
 
+interface CourtImage {
+    id: number;
+    path: string;
+    url: string;
+    is_primary: boolean;
+}
+
 interface Court {
     id: number;
     name: string;
@@ -29,6 +37,7 @@ interface Court {
     slot_duration_minutes: number;
     buffer_minutes: number;
     is_active: boolean;
+    primary_image?: CourtImage | null;
 }
 
 const props = defineProps<{
@@ -48,11 +57,41 @@ const form = useForm({
     slot_duration_minutes: props.court?.slot_duration_minutes ?? 60,
     buffer_minutes: props.court?.buffer_minutes ?? 0,
     is_active: props.court?.is_active ?? true,
+    image: null as File | null,
+    delete_image: false,
 });
+
+const imagePreview = ref<string | null>(null);
+
+function onImageChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+        const file = target.files[0];
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size exceeds 5MB limit.');
+            return;
+        }
+        form.image = file;
+        form.delete_image = false;
+        if (imagePreview.value) {
+            URL.revokeObjectURL(imagePreview.value);
+        }
+        imagePreview.value = URL.createObjectURL(file);
+    }
+}
+
+function removeImage() {
+    form.image = null;
+    form.delete_image = true;
+    if (imagePreview.value) {
+        URL.revokeObjectURL(imagePreview.value);
+        imagePreview.value = null;
+    }
+}
 
 function submit(): void {
     if (isEditing && props.court) {
-        form.put(CourtController.update(props.court.id).url, {
+        form.transform((data) => ({ ...data, _method: 'put' })).post(CourtController.update(props.court.id).url, {
             preserveScroll: true,
         });
         return;
@@ -60,6 +99,12 @@ function submit(): void {
 
     form.post(CourtController.store().url);
 }
+
+onUnmounted(() => {
+    if (imagePreview.value) {
+        URL.revokeObjectURL(imagePreview.value);
+    }
+});
 </script>
 
 <template>
@@ -113,6 +158,40 @@ function submit(): void {
                 </Select>
                 <InputError :message="form.errors.status" />
             </div>
+        </div>
+
+        <!-- Court Photo Upload -->
+        <div class="space-y-3 rounded-xl border border-input p-4">
+            <div>
+                <h3 class="text-sm font-semibold">Court Photo</h3>
+                <p class="text-xs text-muted-foreground">Upload or replace a primary photo for this court (JPG, PNG, WEBP, AVIF max 5MB).</p>
+            </div>
+
+            <div class="flex items-center gap-4 flex-wrap">
+                <div v-if="imagePreview" class="relative">
+                    <img :src="imagePreview" alt="Preview" class="h-20 w-32 rounded-lg object-cover border border-input shadow-sm" />
+                    <span class="absolute -top-2 -right-2 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">New</span>
+                </div>
+                <div v-else-if="court?.primary_image?.url && !form.delete_image" class="relative">
+                    <img :src="court.primary_image.url" alt="Current Photo" class="h-20 w-32 rounded-lg object-cover border border-input shadow-sm" />
+                </div>
+                <div v-else class="h-20 w-32 rounded-lg border border-dashed border-input flex items-center justify-center text-xs text-muted-foreground">
+                    No Photo
+                </div>
+
+                <div class="space-y-2">
+                    <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/avif" @change="onImageChange" class="text-xs" />
+                    <div v-if="court?.primary_image?.url && !form.delete_image" class="pt-1">
+                        <button type="button" @click="removeImage" class="text-xs font-semibold text-rose-600 hover:underline">
+                            Remove current photo
+                        </button>
+                    </div>
+                    <div v-if="form.delete_image" class="text-xs text-rose-500 font-medium">
+                        Photo marked for deletion on save.
+                    </div>
+                </div>
+            </div>
+            <InputError :message="form.errors.image" />
         </div>
 
         <div class="grid gap-2">
