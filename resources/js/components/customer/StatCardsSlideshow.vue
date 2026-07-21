@@ -6,8 +6,6 @@ import {
     CheckCircle,
     DollarSign,
     TrendingUp,
-    ChevronLeft,
-    ChevronRight,
 } from '@lucide/vue';
 
 export interface DashboardStats {
@@ -217,23 +215,6 @@ onUnmounted(() => {
                         </div>
                     </div>
                 </div>
-
-                <!-- Floating Navigation Controls -->
-                <button
-                    @click="prevSlide"
-                    class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-neutral-900/10 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-900/20 dark:hover:bg-white/20 transition-colors z-10"
-                    aria-label="Previous Slide"
-                >
-                    <ChevronLeft class="w-4 h-4" />
-                </button>
-
-                <button
-                    @click="nextSlide"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-neutral-900/10 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-900/20 dark:hover:bg-white/20 transition-colors z-10"
-                    aria-label="Next Slide"
-                >
-                    <ChevronRight class="w-4 h-4" />
-                </button>
             </div>
 
             <!-- Slideshow Pagination Dots -->
