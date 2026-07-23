@@ -3,6 +3,7 @@
 use App\Http\Controllers\CustomerBookingController;
 use App\Http\Controllers\Site\BookingController;
 use App\Http\Controllers\Site\PageController;
+use App\Models\Court;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -31,6 +32,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         return Inertia::render('Dashboard', [
             'bookings' => CustomerBookingController::bookingsFor($user),
+            'courts' => Court::where('is_active', true)->get(['id', 'name', 'sport_type', 'base_price'])->map(function ($court) {
+                return [
+                    'id' => $court->id,
+                    'name' => $court->name,
+                    'sport_type' => $court->sport_type?->label() ?? $court->sport_type,
+                    'base_price' => (string) $court->base_price,
+                ];
+            }),
         ]);
     })->name('dashboard');
 

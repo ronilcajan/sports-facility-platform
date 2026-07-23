@@ -3,11 +3,12 @@ import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { Plus, ChevronRight } from '@lucide/vue';
 import { dashboard } from '@/routes';
-import BookingsTable, { type BookingItem } from '@/components/customer/BookingsTable.vue';
+import BookingsTable, { type BookingItem, type CourtItem } from '@/components/customer/BookingsTable.vue';
 import StatCardsSlideshow from '@/components/customer/StatCardsSlideshow.vue';
 
 const props = defineProps<{
     bookings: BookingItem[];
+    courts?: CourtItem[];
 }>();
 
 defineOptions({
@@ -78,7 +79,7 @@ const recentBookings = computed(() => props.bookings.slice(0, 5));
                 </Link>
             </div>
 
-            <BookingsTable :bookings="recentBookings" />
+            <BookingsTable :bookings="recentBookings" :courts="courts" />
         </div>
     </div>
 </template>

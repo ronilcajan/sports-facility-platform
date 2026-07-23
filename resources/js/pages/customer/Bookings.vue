@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
-import BookingsTable, { type BookingItem } from '@/components/customer/BookingsTable.vue';
+import BookingsTable, { type BookingItem, type CourtItem } from '@/components/customer/BookingsTable.vue';
 
 defineProps<{
     bookings: BookingItem[];
+    courts?: CourtItem[];
 }>();
 
 defineOptions({
@@ -39,7 +40,7 @@ defineOptions({
                 <p class="text-xs text-neutral-500">All your reservations in one place.</p>
             </div>
 
-            <BookingsTable :bookings="bookings" />
+            <BookingsTable :bookings="bookings" :courts="courts" />
         </div>
     </div>
 </template>

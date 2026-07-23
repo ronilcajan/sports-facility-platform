@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
-import { FileText, Dumbbell, Edit2, AlertCircle } from '@lucide/vue';
+import { ref, computed } from 'vue';
+import { FileText, Dumbbell, Edit2, AlertCircle, Calendar } from '@lucide/vue';
 
 export interface CourtItem {
     id: number;
     name: string;
     sport_type: string;
+    base_price?: string | number;
 }
 
 export interface BookingItem {
@@ -24,32 +25,111 @@ export interface BookingItem {
     notes?: string | null;
 }
 
-defineProps<{
+const props = defineProps<{
     bookings: BookingItem[];
+    courts?: CourtItem[];
 }>();
 
 // Edit Booking State
 const selectedBooking = ref<BookingItem | null>(null);
 const isEditModalOpen = ref(false);
+const realtimeBookedSlots = ref<string[]>([]);
+const isLoadingSlots = ref(false);
+
+const availableTimeSlots = [
+    '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM',
+    '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
+    '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM',
+    '10:00 PM', '11:00 PM', '12:00 AM', '01:00 AM', '02:00 AM',
+];
+
+const todayDateString = computed(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+});
 
 const editForm = useForm({
+    court_id: null as number | null,
     name: '',
     email: '',
     phone: '',
+    date: '',
+    time: [] as string[],
     notes: '',
 });
 
+const selectedCourt = computed(() => {
+    if (!editForm.court_id) return selectedBooking.value?.court || null;
+    if (props.courts) {
+        const found = props.courts.find(c => c.id === editForm.court_id);
+        if (found) return found;
+    }
+    return selectedBooking.value?.court || null;
+});
+
+const calculatedTotalPrice = computed(() => {
+    if (!selectedCourt.value || editForm.time.length === 0) {
+        return '0.00';
+    }
+    const base = parseFloat(String(selectedCourt.value.base_price || 0));
+    return (base * editForm.time.length).toFixed(2);
+});
+
+async function fetchAvailability() {
+    if (!editForm.date || !editForm.court_id || !selectedBooking.value) return;
+    isLoadingSlots.value = true;
+    try {
+        const res = await fetch(`/bookings/availability?date=${encodeURIComponent(editForm.date)}&court_id=${editForm.court_id}&exclude_booking_id=${selectedBooking.value.id}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            const bookedForCourt = data.booked_slots?.[String(editForm.court_id)] || [];
+            realtimeBookedSlots.value = bookedForCourt;
+        }
+    } catch (e) {
+        // Fallback
+    } finally {
+        isLoadingSlots.value = false;
+    }
+}
+
 function openEditModal(booking: BookingItem) {
     selectedBooking.value = booking;
+    editForm.court_id = booking.court?.id || (props.courts?.[0]?.id ?? null);
     editForm.name = booking.name;
     editForm.email = booking.email;
     editForm.phone = booking.phone;
+    editForm.date = booking.date;
+    editForm.time = booking.time_slots ? [...booking.time_slots] : [];
     editForm.notes = booking.notes || '';
+    editForm.clearErrors();
     isEditModalOpen.value = true;
+    fetchAvailability();
+}
+
+function toggleTimeSlot(slot: string) {
+    const idx = editForm.time.indexOf(slot);
+    if (idx > -1) {
+        editForm.time.splice(idx, 1);
+    } else {
+        editForm.time.push(slot);
+    }
+}
+
+function isSlotBooked(slot: string): boolean {
+    return realtimeBookedSlots.value.includes(slot);
 }
 
 function submitEdit() {
     if (!selectedBooking.value) return;
+    if (editForm.time.length === 0) {
+        editForm.setError('time', 'Please select at least one time slot.');
+        return;
+    }
     editForm.patch(`/bookings/${selectedBooking.value.id}`, {
         onSuccess: () => {
             isEditModalOpen.value = false;
@@ -128,7 +208,7 @@ function cancelBooking(bookingId: number) {
                         </td>
                         <td class="py-4 px-3 text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <template v-if="booking.status === 'pending'">
+                                <template v-if="booking.status !== 'completed' && booking.status !== 'cancelled' && booking.status !== 'rejected'">
                                     <button
                                         @click="openEditModal(booking)"
                                         class="p-1.5 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:shadow-sm transition-all"
@@ -144,7 +224,7 @@ function cancelBooking(bookingId: number) {
                                         Cancel
                                     </button>
                                 </template>
-                                <span v-else class="text-[10px] text-neutral-400 italic">Locked</span>
+                                <span v-else class="text-[10px] text-neutral-400 italic font-medium">Locked</span>
                             </div>
                         </td>
                     </tr>
@@ -222,7 +302,7 @@ function cancelBooking(bookingId: number) {
                     </div>
                 </div>
 
-                <div v-if="booking.status === 'pending'" class="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200/40 dark:border-neutral-700/40">
+                <div v-if="booking.status !== 'completed' && booking.status !== 'cancelled' && booking.status !== 'rejected'" class="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200/40 dark:border-neutral-700/40">
                     <button
                         @click="openEditModal(booking)"
                         class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-200/60 dark:bg-neutral-700/50 rounded-lg transition-colors"
@@ -249,32 +329,116 @@ function cancelBooking(bookingId: number) {
 
         <!-- Edit Booking Details Modal -->
         <div v-if="isEditModalOpen" class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-850 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-                <div>
-                    <h3 class="font-black text-neutral-900 dark:text-white text-base tracking-tight">Edit Booking Information</h3>
-                    <p class="text-[11px] text-neutral-500">Update details for pending booking: <strong class="font-mono">{{ selectedBooking?.reference_code }}</strong>.</p>
+            <div class="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+                    <div>
+                        <h3 class="font-black text-neutral-900 dark:text-white text-base tracking-tight">Edit Booking Details</h3>
+                        <p class="text-[11px] text-neutral-500">Modify court, date, time slots, or contact info for pending booking: <strong class="font-mono text-emerald-600">{{ selectedBooking?.reference_code }}</strong>.</p>
+                    </div>
                 </div>
 
                 <form @submit.prevent="submitEdit" class="space-y-4 text-xs">
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">Customer Name</label>
-                            <input
-                                v-model="editForm.name"
-                                type="text"
-                                required
-                                class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 p-2.5 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-                            />
+                    <!-- Court & Schedule Section -->
+                    <div class="bg-neutral-50 dark:bg-neutral-800/50 p-4 rounded-xl space-y-3 border border-neutral-200/80 dark:border-neutral-750">
+                        <h4 class="font-bold text-neutral-900 dark:text-white flex items-center gap-1.5 text-xs">
+                            <Calendar class="w-4 h-4 text-emerald-600" /> Court & Schedule
+                        </h4>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- Court Selector -->
+                            <div>
+                                <label class="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">Select Court</label>
+                                <select
+                                    v-model="editForm.court_id"
+                                    @change="fetchAvailability"
+                                    required
+                                    class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 p-2.5 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500 font-medium"
+                                >
+                                    <option v-if="!courts || courts.length === 0" :value="selectedBooking?.court?.id">
+                                        {{ selectedBooking?.court?.name || 'Current Court' }}
+                                    </option>
+                                    <option v-for="c in courts" :key="c.id" :value="c.id">
+                                        {{ c.name }} ({{ c.sport_type }}) — ₱{{ c.base_price }}/hr
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Date Picker -->
+                            <div>
+                                <label class="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">Reservation Date</label>
+                                <input
+                                    v-model="editForm.date"
+                                    type="date"
+                                    :min="todayDateString"
+                                    @change="fetchAvailability"
+                                    required
+                                    class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 p-2.5 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500 font-medium"
+                                />
+                            </div>
                         </div>
 
+                        <!-- Time Slots Grid -->
                         <div>
-                            <label class="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">Email Address</label>
-                            <input
-                                v-model="editForm.email"
-                                type="email"
-                                required
-                                class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 p-2.5 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-                            />
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block text-neutral-700 dark:text-neutral-300 font-bold">
+                                    Time Slots
+                                </label>
+                                <span v-if="isLoadingSlots" class="text-[10px] text-amber-600 font-semibold animate-pulse">Checking availability...</span>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 max-h-44 overflow-y-auto p-1.5 border border-neutral-200 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-900">
+                                <button
+                                    v-for="slot in availableTimeSlots"
+                                    :key="slot"
+                                    type="button"
+                                    :disabled="isSlotBooked(slot)"
+                                    @click="toggleTimeSlot(slot)"
+                                    class="py-1.5 px-2 text-[11px] rounded-lg font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 border"
+                                    :class="{
+                                        'bg-neutral-100 text-neutral-400 border-neutral-200 line-through opacity-50 dark:bg-neutral-800 dark:text-neutral-600 dark:border-neutral-800 cursor-not-allowed': isSlotBooked(slot),
+                                        'bg-emerald-600 text-white border-emerald-600 shadow-sm': !isSlotBooked(slot) && editForm.time.includes(slot),
+                                        'bg-white text-neutral-700 border-neutral-200 hover:border-emerald-500 dark:bg-neutral-800 dark:text-neutral-200 dark:border-neutral-700': !isSlotBooked(slot) && !editForm.time.includes(slot)
+                                    }"
+                                >
+                                    <span>{{ slot }}</span>
+                                    <span v-if="isSlotBooked(slot)" class="text-[8px] no-underline uppercase tracking-tight text-rose-500">Booked</span>
+                                    <span v-else-if="editForm.time.includes(slot)" class="text-[8px] uppercase tracking-tight text-emerald-200">Selected</span>
+                                </button>
+                            </div>
+                            <span v-if="editForm.errors.time" class="text-rose-500 text-[11px] mt-1 block font-semibold">{{ editForm.errors.time }}</span>
+                        </div>
+
+                        <!-- Price calculation info -->
+                        <div class="flex items-center justify-between text-xs pt-1 border-t border-neutral-200/60 dark:border-neutral-700/60 font-semibold text-neutral-600 dark:text-neutral-400">
+                            <span>Selected: {{ editForm.time.length }} slot(s)</span>
+                            <span class="text-emerald-600 dark:text-emerald-400 font-bold">Estimated Total: ₱{{ calculatedTotalPrice }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Customer Contact Details -->
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">Customer Name</label>
+                                <input
+                                    v-model="editForm.name"
+                                    type="text"
+                                    required
+                                    class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 p-2.5 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                                />
+                                <span v-if="editForm.errors.name" class="text-rose-500 text-[10px] mt-1 block">{{ editForm.errors.name }}</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">Email Address</label>
+                                <input
+                                    v-model="editForm.email"
+                                    type="email"
+                                    required
+                                    class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 p-2.5 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                                />
+                                <span v-if="editForm.errors.email" class="text-rose-500 text-[10px] mt-1 block">{{ editForm.errors.email }}</span>
+                            </div>
                         </div>
 
                         <div>
@@ -285,20 +449,21 @@ function cancelBooking(bookingId: number) {
                                 required
                                 class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 p-2.5 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
                             />
+                            <span v-if="editForm.errors.phone" class="text-rose-500 text-[10px] mt-1 block">{{ editForm.errors.phone }}</span>
                         </div>
 
                         <div>
                             <label class="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">Reservation Notes</label>
                             <textarea
                                 v-model="editForm.notes"
-                                rows="3"
+                                rows="2"
                                 class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 p-2.5 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
                                 placeholder="Any special requests or instructions..."
                             ></textarea>
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-end gap-2 pt-2">
+                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
                         <button
                             type="button"
                             @click="isEditModalOpen = false"

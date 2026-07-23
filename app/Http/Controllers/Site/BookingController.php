@@ -107,6 +107,7 @@ class BookingController extends Controller
     {
         $date = $request->query('date', date('Y-m-d'));
         $courtId = $request->query('court_id');
+        $excludeBookingId = $request->query('exclude_booking_id');
 
         $query = Booking::query()
             ->where('date', $date)
@@ -114,6 +115,10 @@ class BookingController extends Controller
 
         if ($courtId) {
             $query->where('court_id', $courtId);
+        }
+
+        if ($excludeBookingId) {
+            $query->where('id', '!=', $excludeBookingId);
         }
 
         $bookings = $query->get(['court_id', 'time_slots']);
@@ -161,13 +166,63 @@ class BookingController extends Controller
         $this->authorize('update', $booking);
 
         $validated = $request->validate([
+            'court_id' => ['sometimes', 'required', 'exists:courts,id'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
+            'date' => ['sometimes', 'required', 'date'],
+            'time' => ['sometimes', 'required', 'array', 'min:1'],
+            'time.*' => ['required', 'string'],
+            'time_slots' => ['sometimes', 'required', 'array', 'min:1'],
+            'time_slots.*' => ['required', 'string'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $booking->update($validated);
+        $courtId = $validated['court_id'] ?? $booking->court_id;
+        $date = $validated['date'] ?? $booking->date;
+        $requestedSlots = $validated['time'] ?? $validated['time_slots'] ?? $booking->time_slots;
+
+        // Double-booking check if court, date, or time slots are being modified
+        if (isset($validated['court_id']) || isset($validated['date']) || isset($validated['time']) || isset($validated['time_slots'])) {
+            $conflictingBookings = Booking::query()
+                ->where('court_id', $courtId)
+                ->where('date', $date)
+                ->where('status', '!=', 'cancelled')
+                ->where('id', '!=', $booking->id)
+                ->get();
+
+            foreach ($conflictingBookings as $existing) {
+                $bookedSlots = $existing->time_slots ?? [];
+                foreach ($requestedSlots as $slot) {
+                    if (in_array($slot, $bookedSlots)) {
+                        if ($request->header('X-Inertia')) {
+                            return back()->withErrors(['time' => "The time slot '{$slot}' is already booked on this court for the selected date."]);
+                        }
+
+                        return response()->json([
+                            'message' => "The time slot '{$slot}' is already booked on this court for the selected date.",
+                            'errors' => ['time' => ["The time slot '{$slot}' is already booked."]],
+                        ], 422);
+                    }
+                }
+            }
+        }
+
+        $court = Court::findOrFail($courtId);
+        $totalPrice = $court->base_price * count($requestedSlots);
+
+        $updateData = [
+            'court_id' => $courtId,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'date' => $date,
+            'time_slots' => $requestedSlots,
+            'notes' => $validated['notes'] ?? null,
+            'total_price' => $totalPrice,
+        ];
+
+        $booking->update($updateData);
 
         if ($request->header('X-Inertia')) {
             Inertia::flash('toast', [
@@ -181,7 +236,7 @@ class BookingController extends Controller
         return response()->json([
             'success' => true,
             'message' => __('Booking details updated successfully.'),
-            'booking' => $booking,
+            'booking' => $booking->fresh(['court']),
         ]);
     }
 

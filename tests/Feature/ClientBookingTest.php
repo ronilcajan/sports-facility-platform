@@ -2,6 +2,7 @@
 
 use App\Enums\RoleName;
 use App\Models\Booking;
+use App\Models\Court;
 use App\Models\User;
 
 test('customer can update their own booking details', function () {
@@ -27,6 +28,39 @@ test('customer can update their own booking details', function () {
     expect($booking->fresh())
         ->name->toBe('Updated Name')
         ->email->toBe('updated@example.com');
+});
+
+test('customer can update their booking court date and time slots', function () {
+    $customer = User::factory()->create();
+    $customer->assignRole(RoleName::Customer->value);
+
+    $court1 = Court::factory()->create(['base_price' => 100]);
+    $court2 = Court::factory()->create(['base_price' => 150]);
+
+    $booking = Booking::factory()->create([
+        'user_id' => $customer->id,
+        'court_id' => $court1->id,
+        'date' => '2026-08-01',
+        'time_slots' => ['08:00 AM'],
+        'total_price' => 100,
+    ]);
+
+    $this->actingAs($customer)
+        ->patch(route('site.bookings.update', $booking->id), [
+            'court_id' => $court2->id,
+            'name' => $customer->name,
+            'email' => $customer->email,
+            'phone' => '1234567890',
+            'date' => '2026-08-02',
+            'time' => ['09:00 AM', '10:00 AM'],
+        ])
+        ->assertOk();
+
+    $updated = $booking->fresh();
+    expect($updated->court_id)->toBe($court2->id);
+    expect($updated->date)->toBe('2026-08-02');
+    expect($updated->time_slots)->toBe(['09:00 AM', '10:00 AM']);
+    expect((float) $updated->total_price)->toBe(300.0);
 });
 
 test('customer cannot update another customers booking details', function () {
