@@ -34,6 +34,7 @@ interface Court {
     description: string | null;
     status: string;
     base_price: string;
+    slot_prices?: Record<string, number | string> | null;
     slot_duration_minutes: number;
     buffer_minutes: number;
     is_active: boolean;
@@ -48,12 +49,19 @@ const props = defineProps<{
 
 const isEditing = Boolean(props.court);
 
+const allTimeSlots = [
+    '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+    '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM', '06:00 PM',
+    '07:00 PM', '08:00 PM', '09:00 PM', '10:00 PM', '11:00 PM', '12:00 AM',
+];
+
 const form = useForm({
     name: props.court?.name ?? '',
     sport_type: props.court?.sport_type ?? props.sportTypes[0]?.value ?? '',
     description: props.court?.description ?? '',
     status: props.court?.status ?? props.statuses[0]?.value ?? '',
     base_price: props.court?.base_price ?? '0',
+    slot_prices: (props.court?.slot_prices ? { ...props.court.slot_prices } : {}) as Record<string, string | number>,
     slot_duration_minutes: props.court?.slot_duration_minutes ?? 60,
     buffer_minutes: props.court?.buffer_minutes ?? 0,
     is_active: props.court?.is_active ?? true,
@@ -237,6 +245,38 @@ onUnmounted(() => {
                     min="0"
                 />
                 <InputError :message="form.errors.buffer_minutes" />
+            </div>
+        </div>
+
+        <!-- Dynamic Time Slot Specific Pricing Section -->
+        <div class="space-y-4 rounded-xl border border-input p-4 bg-muted/20">
+            <div>
+                <h3 class="text-sm font-semibold">Time Slot Specific Pricing (Optional)</h3>
+                <p class="text-xs text-muted-foreground">
+                    Set custom hourly prices for specific time slots. Slots left blank or 0 will default to the court's <strong>Base Price</strong> (₱{{ form.base_price || '0.00' }}).
+                </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                <div v-for="slot in allTimeSlots" :key="slot" class="space-y-1 rounded-lg border border-input bg-background p-2.5 shadow-2xs">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-foreground">
+                        <span>{{ slot }}</span>
+                        <span class="text-[10px] font-normal text-muted-foreground">
+                            {{ form.slot_prices[slot] && parseFloat(String(form.slot_prices[slot])) > 0 ? 'Custom' : 'Default' }}
+                        </span>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute left-2.5 top-1.5 text-xs text-muted-foreground">₱</span>
+                        <Input
+                            v-model="form.slot_prices[slot]"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            :placeholder="form.base_price ? String(form.base_price) : '0.00'"
+                            class="h-8 pl-6 text-xs font-semibold"
+                        />
+                    </div>
+                </div>
             </div>
         </div>
 

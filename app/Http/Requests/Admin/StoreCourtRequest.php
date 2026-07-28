@@ -33,6 +33,8 @@ class StoreCourtRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:2000'],
             'status' => ['required', new Enum(CourtStatus::class)],
             'base_price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'slot_prices' => ['nullable', 'array'],
+            'slot_prices.*' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'slot_duration_minutes' => ['required', 'integer', 'min:1', 'max:1440'],
             'buffer_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
             'is_active' => ['required', 'boolean'],

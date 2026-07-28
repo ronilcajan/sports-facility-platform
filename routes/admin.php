@@ -57,6 +57,9 @@ Route::middleware([
         // Reports (venue-scoped for admins, global for super-admins)
         Route::get('reports', [AdminReportController::class, 'index'])->name('reports.index');
 
+        // Venue Profile (accessible to authorized admins & superadmins)
+        Route::get('venues/{venue}', [AdminVenueController::class, 'show'])->name('venues.show');
+
         // Venue Settings — an admin edits their own assigned venue
         Route::get('settings', [SingleVenueController::class, 'edit'])->name('settings.edit');
         Route::put('settings', [SingleVenueController::class, 'update'])->name('settings.update');

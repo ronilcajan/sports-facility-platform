@@ -140,7 +140,7 @@ class AdminBookingController extends Controller
             'date' => $validated['date'],
             'time_slots' => $validated['time_slots'],
             'notes' => $validated['notes'] ?? null,
-            'total_price' => (float) $court->base_price * count($validated['time_slots']),
+            'total_price' => collect($validated['time_slots'])->sum(fn (string $slot) => $court->getSlotPrice($slot)),
             'status' => 'approved',
         ]);
 

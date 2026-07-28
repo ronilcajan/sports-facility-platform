@@ -204,8 +204,28 @@
     --font-display: var(--site-font-display);
 }
 
-/* Gold & Onyx — RAMBOY Enterprise dark branding. Default theme. */
+/* ============================================================
+   Site theme: NAVY
+   Default (light variant) — clean white + brand gold
+   .site-dark — deep onyx, original dark palette
+   ============================================================ */
 [data-theme='navy'] {
+    --site-surface: #f8fafc;
+    --site-surface-elevated: #ffffff;
+    --site-surface-inverse: #090d16;
+    --site-content: #0f172a;
+    --site-content-muted: #475569;
+    --site-content-inverse: #f8fafc;
+    --site-brand: #d97706;
+    --site-brand-foreground: #ffffff;
+    --site-highlight: #92400e;
+    --site-line: rgba(15, 23, 42, 0.1);
+    --site-radius: 0.9rem;
+    --site-shadow-card: 0 20px 45px -20px rgba(15, 23, 42, 0.18);
+    --site-font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+[data-theme='navy'].site-dark {
     --site-surface: #090d16;
     --site-surface-elevated: #131b2e;
     --site-surface-inverse: #030712;
@@ -216,13 +236,14 @@
     --site-brand-foreground: #090d16;
     --site-highlight: #cbd5e1;
     --site-line: rgba(245, 158, 11, 0.15);
-    --site-radius: 0.9rem;
     --site-shadow-card: 0 20px 45px -20px rgba(0, 0, 0, 0.65);
-    --site-font-display:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Fairway — Warm Amber & Light Cream. */
+/* ============================================================
+   Site theme: FAIRWAY
+   Default (light) — warm cream & amber (original look)
+   .site-dark — deep forest green dark variant
+   ============================================================ */
 [data-theme='fairway'] {
     --site-surface: #faf9f6;
     --site-surface-elevated: #ffffff;
@@ -236,12 +257,45 @@
     --site-line: rgba(15, 23, 42, 0.1);
     --site-radius: 1.25rem;
     --site-shadow-card: 0 24px 50px -28px rgba(15, 23, 42, 0.25);
-    --site-font-display:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --site-font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Electric — Gold & Obsidian Platinum. */
+[data-theme='fairway'].site-dark {
+    --site-surface: #1a1f14;
+    --site-surface-elevated: #242b1c;
+    --site-surface-inverse: #0a0e07;
+    --site-content: #ecfdf5;
+    --site-content-muted: #86efac;
+    --site-content-inverse: #ecfdf5;
+    --site-brand: #d97706;
+    --site-brand-foreground: #ffffff;
+    --site-highlight: #fbbf24;
+    --site-line: rgba(217, 119, 6, 0.18);
+    --site-shadow-card: 0 24px 50px -28px rgba(0, 0, 0, 0.55);
+}
+
+/* ============================================================
+   Site theme: ELECTRIC
+   Default (light) — clean silver-white + gold accents
+   .site-dark — obsidian dark with electric gold (original look)
+   ============================================================ */
 [data-theme='electric'] {
+    --site-surface: #f8f9fa;
+    --site-surface-elevated: #ffffff;
+    --site-surface-inverse: #0d1117;
+    --site-content: #1c2128;
+    --site-content-muted: #57606a;
+    --site-content-inverse: #f0f6fc;
+    --site-brand: #b45309;
+    --site-brand-foreground: #ffffff;
+    --site-highlight: #92400e;
+    --site-line: rgba(28, 33, 40, 0.1);
+    --site-radius: 0.8rem;
+    --site-shadow-card: 0 22px 48px -22px rgba(0, 0, 0, 0.15);
+    --site-font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+[data-theme='electric'].site-dark {
     --site-surface: #0d1117;
     --site-surface-elevated: #161b22;
     --site-surface-inverse: #010409;
@@ -252,10 +306,7 @@
     --site-brand-foreground: #0d1117;
     --site-highlight: #e2e8f0;
     --site-line: rgba(234, 179, 8, 0.18);
-    --site-radius: 0.8rem;
     --site-shadow-card: 0 22px 48px -22px rgba(0, 0, 0, 0.7);
-    --site-font-display:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer components {

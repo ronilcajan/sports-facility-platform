@@ -62,6 +62,7 @@ export type PublicCourt = {
     sport_type: string;
     description: string | null;
     base_price: string;
+    slot_prices?: Record<string, string | number> | null;
     slot_duration_minutes: number;
     primary_image_url?: string | null;
 };

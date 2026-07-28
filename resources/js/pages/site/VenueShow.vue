@@ -16,6 +16,7 @@ import {
 } from '@lucide/vue';
 import BookingModal from '@/components/site/BookingModal.vue';
 import VenueImageViewer from '@/components/site/VenueImageViewer.vue';
+import VenueAvailabilitySchedule from '@/components/site/VenueAvailabilitySchedule.vue';
 import type { CatalogVenue } from '@/components/site/SiteVenueCard.vue';
 import type { PublicCourt } from '@/types';
 
@@ -204,6 +205,12 @@ function openImageViewer(index = 0) {
                 </div>
             </div>
         </section>
+
+        <!-- Availability Schedule Section -->
+        <VenueAvailabilitySchedule
+            :venue="venue"
+            @book-court="openBookingForCourt"
+        />
 
         <!-- Courts Listing Section under this Venue -->
         <section class="py-16 sm:py-24">

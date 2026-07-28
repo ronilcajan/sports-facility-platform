@@ -51,8 +51,8 @@ class BookingController extends Controller
             ? $request->file('receipt')->store('receipts', 'public')
             : null;
 
-        // Calculate total price based on duration slots
-        $totalPrice = $court->base_price * count($request->validated('time'));
+        // Calculate total price based on duration slots & dynamic slot pricing
+        $totalPrice = collect($request->validated('time'))->sum(fn (string $slot) => $court->getSlotPrice($slot));
 
         // Persist booking record
         $booking = Booking::create([
@@ -209,7 +209,7 @@ class BookingController extends Controller
         }
 
         $court = Court::findOrFail($courtId);
-        $totalPrice = $court->base_price * count($requestedSlots);
+        $totalPrice = collect($requestedSlots)->sum(fn (string $slot) => $court->getSlotPrice($slot));
 
         $updateData = [
             'court_id' => $courtId,

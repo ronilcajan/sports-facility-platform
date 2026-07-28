@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { Search, Plus, Pencil, Trash2, X, Building } from '@lucide/vue';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Search, Plus, Pencil, Trash2, X, Building, Eye } from '@lucide/vue';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -216,9 +216,10 @@ function destroy(venue: Venue): void {
             v-if="venues.data.length"
             class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
-            <div
+            <Link
                 v-for="venue in venues.data"
                 :key="venue.id"
+                :href="`/admin/venues/${venue.id}`"
                 class="group flex flex-col overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm transition-shadow hover:shadow-md"
             >
                 <div class="relative aspect-video overflow-hidden bg-neutral-100 dark:bg-neutral-800">
@@ -255,15 +256,19 @@ function destroy(venue: Venue): void {
                     </div>
 
                     <div class="mt-auto flex items-center gap-2 pt-3">
+                        <span class="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-400 group-hover:text-emerald-600 group-hover:border-emerald-500 transition-colors">
+                            <Eye class="h-3.5 w-3.5" /> View Profile
+                        </span>
                         <button
-                            @click="openEditModal(venue)"
-                            class="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                            @click.prevent.stop="openEditModal(venue)"
+                            class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-emerald-600 dark:hover:bg-neutral-800 dark:hover:text-emerald-400"
+                            title="Edit venue"
                         >
-                            <Pencil class="h-3.5 w-3.5" /> Edit
+                            <Pencil class="h-3.5 w-3.5" />
                         </button>
                         <button
                             v-if="canDelete"
-                            @click="destroy(venue)"
+                            @click.prevent.stop="destroy(venue)"
                             class="rounded-lg p-2 text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
                             title="Delete venue"
                         >
@@ -271,7 +276,7 @@ function destroy(venue: Venue): void {
                         </button>
                     </div>
                 </div>
-            </div>
+            </Link>
         </div>
 
         <div

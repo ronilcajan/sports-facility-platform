@@ -83,6 +83,7 @@ class PageController extends Controller
                 'sport_type' => $court->sport_type->label(),
                 'description' => $court->description,
                 'base_price' => $court->base_price,
+                'slot_prices' => $court->slot_prices,
                 'slot_duration_minutes' => $court->slot_duration_minutes,
                 'primary_image_url' => $court->primaryImage ? (str_starts_with($court->primaryImage->path, 'http') ? $court->primaryImage->path : asset('storage/'.$court->primaryImage->path)) : null,
                 'images' => $court->images->map(fn ($img) => str_starts_with($img->path, 'http') ? $img->path : asset('storage/'.$img->path)),
@@ -120,6 +121,7 @@ class PageController extends Controller
             'sport_type' => $court->sport_type->label(),
             'description' => $court->description,
             'base_price' => $court->base_price,
+            'slot_prices' => $court->slot_prices,
             'slot_duration_minutes' => $court->slot_duration_minutes,
             'primary_image_url' => $court->primaryImage ? (str_starts_with($court->primaryImage->path, 'http') ? $court->primaryImage->path : asset('storage/'.$court->primaryImage->path)) : null,
             'images' => $court->images->map(fn ($img) => str_starts_with($img->path, 'http') ? $img->path : asset('storage/'.$img->path)),
@@ -222,6 +224,7 @@ class PageController extends Controller
                     'sport_type' => $court->sport_type->label(),
                     'description' => $court->description,
                     'base_price' => $court->base_price,
+                    'slot_prices' => $court->slot_prices,
                     'slot_duration_minutes' => $court->slot_duration_minutes,
                     'primary_image_url' => $court->primaryImage ? (str_starts_with($court->primaryImage->path, 'http') ? $court->primaryImage->path : asset('storage/'.$court->primaryImage->path)) : null,
                     'venue' => [
@@ -272,6 +275,7 @@ class PageController extends Controller
                 'sport_type' => $court->sport_type->label(),
                 'description' => $court->description,
                 'base_price' => $court->base_price,
+                'slot_prices' => $court->slot_prices,
                 'slot_duration_minutes' => $court->slot_duration_minutes,
                 'primary_image_url' => $court->primaryImage ? (str_starts_with($court->primaryImage->path, 'http') ? $court->primaryImage->path : asset('storage/'.$court->primaryImage->path)) : null,
                 'venue' => $court->venue ? [

@@ -113,7 +113,7 @@ class StaffBookingController extends Controller
         $court = Court::visibleTo($user)->findOrFail($validated['court_id']);
 
         if (! isset($validated['total_price']) || empty($validated['total_price'])) {
-            $validated['total_price'] = (float) $court->base_price * count($validated['time_slots']);
+            $validated['total_price'] = collect($validated['time_slots'])->sum(fn (string $slot) => $court->getSlotPrice($slot));
         }
 
         Booking::create([

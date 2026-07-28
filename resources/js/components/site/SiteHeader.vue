@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import SiteWordmark from '@/components/site/SiteWordmark.vue';
 import { useSite } from '@/composables/useSite';
 import { login, register } from '@/routes';
@@ -11,6 +11,21 @@ const page = usePage();
 const isAuthed = computed(() => Boolean(page.props.auth?.user));
 
 const open = ref(false);
+
+// ── Site visitor dark-mode toggle ──────────────────────────────────────────
+// Separate from the dashboard's "appearance" preference. Stored in localStorage
+// as 'site-dark-mode' and reflected as the .site-dark class on <html>.
+const siteDark = ref(false);
+
+onMounted(() => {
+    siteDark.value = document.documentElement.classList.contains('site-dark');
+});
+
+function toggleSiteDark() {
+    siteDark.value = !siteDark.value;
+    document.documentElement.classList.toggle('site-dark', siteDark.value);
+    localStorage.setItem('site-dark-mode', String(siteDark.value));
+}
 </script>
 
 <template>
@@ -72,6 +87,25 @@ const open = ref(false);
                         Register
                     </Link>
                 </template>
+
+                <!-- Dark Mode Toggle -->
+                <button
+                    type="button"
+                    :title="siteDark ? 'Switch to light mode' : 'Switch to dark mode'"
+                    :aria-label="siteDark ? 'Switch to light mode' : 'Switch to dark mode'"
+                    class="inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface-elevated/60 text-content-muted transition-all duration-200 hover:bg-surface-elevated hover:text-content hover:scale-110"
+                    @click="toggleSiteDark"
+                >
+                    <!-- Sun icon (shown in dark mode — click to go light) -->
+                    <svg v-if="siteDark" xmlns="http://www.w3.org/2000/svg" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                    <!-- Moon icon (shown in light mode — click to go dark) -->
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </button>
 
                 <Link
                     :href="courts()"
@@ -136,6 +170,22 @@ const open = ref(false);
                     </Link>
 
                     <div class="my-3 h-px bg-line"></div>
+
+                    <!-- Mobile Dark Mode Toggle -->
+                    <button
+                        type="button"
+                        class="flex items-center gap-3 rounded-xl px-4 py-3 text-base font-semibold text-content-muted transition-colors hover:bg-brand/10 hover:text-brand"
+                        @click="toggleSiteDark"
+                    >
+                        <svg v-if="siteDark" xmlns="http://www.w3.org/2000/svg" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"/>
+                            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                        </svg>
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                        {{ siteDark ? 'Light Mode' : 'Dark Mode' }}
+                    </button>
 
                     <div class="flex flex-col gap-3">
                         <template v-if="isAuthed">

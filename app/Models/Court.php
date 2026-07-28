@@ -39,6 +39,7 @@ use Illuminate\Support\Carbon;
     'description',
     'status',
     'base_price',
+    'slot_prices',
     'slot_duration_minutes',
     'buffer_minutes',
     'is_active',
@@ -59,10 +60,23 @@ class Court extends Model
             'sport_type' => SportType::class,
             'status' => CourtStatus::class,
             'base_price' => 'decimal:2',
+            'slot_prices' => 'array',
             'slot_duration_minutes' => 'integer',
             'buffer_minutes' => 'integer',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Get the price for a specific time slot, falling back to base_price.
+     */
+    public function getSlotPrice(string $slot): float
+    {
+        if (is_array($this->slot_prices) && isset($this->slot_prices[$slot]) && (float) $this->slot_prices[$slot] > 0) {
+            return (float) $this->slot_prices[$slot];
+        }
+
+        return (float) $this->base_price;
     }
 
     /**

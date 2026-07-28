@@ -6,6 +6,7 @@ interface CourtOption {
     id: number;
     name: string;
     base_price?: string | number | null;
+    slot_prices?: Record<string, string | number> | null;
 }
 
 const props = defineProps<{
@@ -128,9 +129,23 @@ const groupedTimeSlots = computed<{ period: string; slots: string[] }[]>(() => {
     return order.filter((p) => groups[p]?.length).map((p) => ({ period: p, slots: groups[p] }));
 });
 
+function getSlotPriceForCourt(slot: string): number {
+    if (!selectedCourt.value) return 0;
+    const customPrices = selectedCourt.value.slot_prices;
+    if (customPrices && customPrices[slot] !== undefined && customPrices[slot] !== null) {
+        const val = parseFloat(String(customPrices[slot]));
+        if (!isNaN(val) && val > 0) {
+            return val;
+        }
+    }
+    const base = parseFloat(String(selectedCourt.value.base_price ?? '0'));
+    return isNaN(base) ? 0 : base;
+}
+
 const calculatedPrice = computed(() => {
-    const base = parseFloat(String(selectedCourt.value?.base_price ?? '0')) || 0;
-    return (base * form.time_slots.length).toFixed(2);
+    if (!selectedCourt.value || form.time_slots.length === 0) return '0.00';
+    const total = form.time_slots.reduce((sum, slot) => sum + getSlotPriceForCourt(slot), 0);
+    return total.toFixed(2);
 });
 
 // --- Reset when the modal opens ---

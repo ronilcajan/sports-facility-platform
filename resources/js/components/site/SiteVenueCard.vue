@@ -45,12 +45,15 @@ const imageList = computed(() => {
     <article
         class="group flex flex-col overflow-hidden rounded-[var(--site-radius,1.25rem)] border border-line bg-surface-elevated shadow-md transition-all duration-300 hover:-translate-y-2 hover:border-brand/50 hover:shadow-2xl"
     >
-        <!-- Venue Cover Header Image -->
-        <div class="relative aspect-[16/9] overflow-hidden bg-surface-inverse block">
+        <!-- Venue Cover Header Image (Clickable to Venue Details) -->
+        <Link
+            :href="`/venues/${venue.slug}`"
+            class="relative aspect-[16/9] overflow-hidden bg-surface-inverse block group/cover cursor-pointer"
+        >
             <img
                 :src="venue.cover_image_url || '/images/hero_pickleball.png'"
                 :alt="venue.name"
-                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                class="h-full w-full object-cover transition-transform duration-500 group-hover/cover:scale-105"
                 loading="lazy"
             />
             <div
@@ -68,8 +71,8 @@ const imageList = computed(() => {
             <!-- Zoom Preview Button -->
             <button
                 type="button"
-                @click.stop="isViewerOpen = true"
-                class="absolute top-4 right-4 flex size-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md border border-white/20 transition-all hover:scale-110 hover:bg-black/80 cursor-pointer shadow-lg"
+                @click.prevent.stop="isViewerOpen = true"
+                class="absolute top-4 right-4 flex size-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md border border-white/20 transition-all hover:scale-110 hover:bg-black/80 cursor-pointer shadow-lg z-10"
                 title="Preview Venue Photo"
                 aria-label="Preview Venue Photo"
             >
@@ -81,13 +84,11 @@ const imageList = computed(() => {
                 <p class="text-xs font-bold tracking-wider text-brand uppercase truncate" v-if="venue.address">
                     {{ venue.address }}
                 </p>
-                <Link :href="`/venues/${venue.slug}`" class="block">
-                    <h3 class="mt-0.5 font-display text-2xl font-black tracking-tight text-white group-hover:text-brand transition-colors">
-                        {{ venue.name }}
-                    </h3>
-                </Link>
+                <h3 class="mt-0.5 font-display text-2xl font-black tracking-tight text-white group-hover/cover:text-brand transition-colors">
+                    {{ venue.name }}
+                </h3>
             </div>
-        </div>
+        </Link>
 
         <!-- Venue Card Content -->
         <div class="flex flex-1 flex-col justify-between p-6">

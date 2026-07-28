@@ -250,13 +250,27 @@ const calculatedDurationLabel = computed<string>(() => {
     return `${rounded} ${rounded === 1 ? 'hour' : 'hours'}`;
 });
 
-// Calculated Price based on duration
+// Get price for a specific time slot (custom override or fallback to base_price)
+function getSlotPriceForCourt(slot: string): number {
+    if (!selectedCourt.value) return 0;
+    const customPrices = selectedCourt.value.slot_prices;
+    if (customPrices && customPrices[slot] !== undefined && customPrices[slot] !== null) {
+        const val = parseFloat(String(customPrices[slot]));
+        if (!isNaN(val) && val > 0) {
+            return val;
+        }
+    }
+    const base = parseFloat(selectedCourt.value.base_price || '0');
+    return isNaN(base) ? 0 : base;
+}
+
+// Calculated Price based on selected slots & dynamic slot pricing
 const calculatedPrice = computed(() => {
     if (!selectedCourt.value || form.value.time.length === 0) {
         return '0.00';
     }
-    const base = parseFloat(selectedCourt.value.base_price);
-    return (base * form.value.time.length).toFixed(2);
+    const total = form.value.time.reduce((sum, slot) => sum + getSlotPriceForCourt(slot), 0);
+    return total.toFixed(2);
 });
 
 // Collapsible reservation summary on the final step (collapsed by default; total stays visible)
@@ -305,6 +319,23 @@ function toDateKey(d: Date): string {
     const dd = String(d.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
 }
+
+// Safely parse a YYYY-MM-DD date string into a local Date object without UTC drift
+function parseLocalDate(dateStr: string): Date {
+    if (!dateStr) return new Date();
+    const parts = dateStr.split('-').map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+    return new Date(dateStr);
+}
+
+// Formatted selected date label with day of week (e.g. Mon, Jul 27, 2026)
+const formattedSelectedDateLabel = computed(() => {
+    if (!form.value.date) return '';
+    const d = parseLocalDate(form.value.date);
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+});
 
 // Local YYYY-MM-DD date string for min validation
 const todayDateString = computed(() => toDateKey(new Date()));
@@ -584,7 +615,7 @@ function validateStep1(): boolean {
         errors.value.date = 'Booking date is required.';
         isValid = false;
     } else {
-        const selected = new Date(form.value.date + 'T00:00:00');
+        const selected = parseLocalDate(form.value.date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         if (selected < today) {
@@ -1353,6 +1384,7 @@ async function downloadVoucher() {
                                                     class="sr-only"
                                                 />
                                                 <span class="text-xs font-bold">{{ slot }}</span>
+                                                <span v-if="selectedCourt" class="text-[9px] font-extrabold text-brand">₱{{ getSlotPriceForCourt(slot) }}</span>
                                                 <span
                                                     v-if="isSlotBooked(slot)"
                                                     class="mt-0.5 text-[8px] font-bold tracking-tight text-destructive uppercase"
