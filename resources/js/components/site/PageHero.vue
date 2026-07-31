@@ -18,7 +18,7 @@ defineProps<{
             class="pointer-events-none absolute -bottom-32 -left-24 size-72 rounded-full bg-highlight/25 blur-3xl"
             aria-hidden="true"
         />
-        <div class="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+        <div class="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20 lg:py-28">
             <p
                 v-if="eyebrow"
                 class="text-xs font-semibold tracking-[0.2em] text-highlight uppercase"
@@ -26,13 +26,13 @@ defineProps<{
                 {{ eyebrow }}
             </p>
             <h1
-                class="mt-4 max-w-3xl font-display text-4xl font-extrabold tracking-tight text-balance sm:text-5xl"
+                class="mt-4 max-w-3xl font-display text-3xl font-extrabold tracking-tight text-balance sm:text-4xl lg:text-5xl"
             >
                 {{ title }}
             </h1>
             <p
                 v-if="lede"
-                class="mt-6 max-w-2xl text-lg text-pretty text-content-inverse/70"
+                class="mt-4 max-w-2xl text-base text-pretty text-content-inverse/70 sm:mt-6 sm:text-lg"
             >
                 {{ lede }}
             </p>

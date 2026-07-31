@@ -15,8 +15,10 @@ import {
     FileText,
     Search,
     Eye,
+    CalendarPlus,
 } from '@lucide/vue';
 import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
+import CreateBookingModal from '@/components/admin/CreateBookingModal.vue';
 
 interface VenueProfile {
     id: number;
@@ -97,6 +99,14 @@ const status = ref(props.filters.status || '');
 
 const showDetailModal = ref(false);
 const selectedBooking = ref<BookingDetail | null>(null);
+const isBookingModalOpen = ref(false);
+
+// Only pass courts from this venue to the booking modal
+const venueCourts = computed(() =>
+    props.courts
+        .filter(c => c.is_active)
+        .map(c => ({ id: c.id, name: c.name, base_price: c.base_price, slot_prices: null }))
+);
 
 function applyFilters() {
     router.get(`/admin/venues/${props.venue.id}`, {
@@ -198,6 +208,7 @@ const totalBookings = computed(() => props.bookings.data.length);
                         </div>
                     </div>
 
+                    <!-- Venue actions -->
                     <div class="flex items-center gap-3">
                         <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 px-4 py-3 text-center">
                             <p class="text-xl font-black text-emerald-600">{{ venue.courts_count }}</p>
@@ -207,6 +218,17 @@ const totalBookings = computed(() => props.bookings.data.length);
                             <p class="text-xl font-black text-blue-600">{{ activeCourtCount }}</p>
                             <p class="text-[10px] uppercase font-semibold text-neutral-400 tracking-wider">Active</p>
                         </div>
+                        <!-- New Booking Button -->
+                        <button
+                            type="button"
+                            @click="isBookingModalOpen = true"
+                            :disabled="venueCourts.length === 0"
+                            class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-700 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                            :title="venueCourts.length === 0 ? 'No active courts available' : 'Create a new booking for this venue'"
+                        >
+                            <CalendarPlus class="w-4 h-4" />
+                            <span class="hidden sm:inline">New Booking</span>
+                        </button>
                     </div>
                 </div>
 
@@ -444,6 +466,14 @@ const totalBookings = computed(() => props.bookings.data.length);
             :booking="selectedBooking"
             update-route-prefix="/admin/bookings"
             @close="showDetailModal = false"
+        />
+
+        <!-- New Booking Modal — scoped to this venue's courts -->
+        <CreateBookingModal
+            :open="isBookingModalOpen"
+            :courts="venueCourts"
+            action="/admin/bookings"
+            @close="isBookingModalOpen = false"
         />
     </div>
 </template>

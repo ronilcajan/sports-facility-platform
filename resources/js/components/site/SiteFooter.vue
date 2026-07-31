@@ -10,8 +10,10 @@ const year = 2026;
 
 <template>
     <footer class="bg-surface-inverse text-content-inverse">
-        <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-            <div class="grid gap-12 md:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
+        <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+            <!-- Responsive grid: 1-col → 2-col (sm) → 4-col (md) -->
+            <div class="grid gap-10 sm:grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1.2fr] md:gap-12">
+                <!-- Brand + CTA -->
                 <div>
                     <SiteWordmark tone="chalk" />
                     <p class="mt-4 max-w-xs text-sm text-content-inverse/60">
@@ -25,6 +27,7 @@ const year = 2026;
                     </Link>
                 </div>
 
+                <!-- Explore nav -->
                 <div>
                     <h3
                         class="text-xs font-semibold tracking-widest text-content-inverse/40 uppercase"
@@ -43,6 +46,7 @@ const year = 2026;
                     </ul>
                 </div>
 
+                <!-- Hours -->
                 <div>
                     <h3
                         class="text-xs font-semibold tracking-widest text-content-inverse/40 uppercase"
@@ -65,6 +69,7 @@ const year = 2026;
                     </ul>
                 </div>
 
+                <!-- Contact -->
                 <div>
                     <h3
                         class="text-xs font-semibold tracking-widest text-content-inverse/40 uppercase"
@@ -110,11 +115,12 @@ const year = 2026;
                 </div>
             </div>
 
+            <!-- Bottom legal bar -->
             <div
-                class="mt-14 flex flex-col gap-4 border-t border-content-inverse/10 pt-6 text-xs text-content-inverse/50 sm:flex-row sm:items-center sm:justify-between"
+                class="mt-12 flex flex-col gap-4 border-t border-content-inverse/10 pt-6 text-xs text-content-inverse/50 sm:flex-row sm:items-center sm:justify-between"
             >
                 <p>&copy; {{ year }} {{ site.name }}. All rights reserved.</p>
-                <div class="flex gap-6">
+                <div class="flex flex-wrap gap-4 sm:gap-6">
                     <Link
                         v-for="item in site.legal"
                         :key="item.href"
@@ -128,3 +134,4 @@ const year = 2026;
         </div>
     </footer>
 </template>
+

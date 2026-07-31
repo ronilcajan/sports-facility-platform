@@ -123,7 +123,7 @@ onUnmounted(() => {
             class="border-b border-line bg-surface-elevated/45 py-4 backdrop-blur-sm"
         >
             <div
-                class="mx-auto flex max-w-6xl items-center gap-2 px-4 text-xs font-semibold tracking-wider text-content-muted uppercase sm:px-6"
+                class="mx-auto flex max-w-6xl items-center gap-1.5 overflow-x-auto px-4 text-xs font-semibold tracking-wider text-content-muted uppercase sm:gap-2 sm:px-6"
             >
                 <Link :href="'/'" class="transition-colors hover:text-brand"
                     >Home</Link
@@ -163,11 +163,11 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div class="mx-auto max-w-6xl px-4 pt-10 sm:px-6">
-            <!-- 2. Main Page Grid Layout -->
-            <div class="grid items-start gap-12 lg:grid-cols-[1.3fr_0.7fr]">
+        <div class="mx-auto max-w-6xl px-4 pt-8 sm:pt-10 sm:px-6">
+            <!-- 2. Main Page Grid Layout: stacks on mobile, side-by-side on lg -->
+            <div class="grid items-start gap-8 lg:grid-cols-[1.3fr_0.7fr] lg:gap-12">
                 <!-- Left Column: Image and Details -->
-                <div class="space-y-10">
+                <div class="space-y-8 lg:space-y-10">
                     <!-- Court Image Showcase -->
                     <div class="space-y-4">
                         <div
@@ -253,7 +253,7 @@ onUnmounted(() => {
                                 >Pickleball Court</span
                             >
                             <h1
-                                class="mt-2 font-display text-4xl leading-none font-black tracking-tight text-content"
+                                class="mt-3 font-display text-3xl leading-none font-black tracking-tight text-content sm:text-4xl"
                             >
                                 {{ court.name }}
                             </h1>
@@ -415,10 +415,10 @@ onUnmounted(() => {
                     </div>
                 </div>
 
-                <!-- Right Column: Permanent Sticky Booking Card -->
+                <!-- Right Column: Booking Card (sticky on desktop, natural on mobile) -->
                 <div class="lg:sticky lg:top-24">
                     <div
-                        class="space-y-6 rounded-2xl border border-line bg-surface-elevated p-6 shadow-md"
+                        class="space-y-6 rounded-2xl border border-line bg-surface-elevated p-5 shadow-md sm:p-6"
                     >
                         <div>
                             <span

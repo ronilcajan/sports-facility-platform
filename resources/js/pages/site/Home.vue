@@ -62,7 +62,7 @@ function handleViewVenueCourts(venue: CatalogVenue) {
 
     <!-- 1. Hero Section: Sleek dark-mode sports booking header -->
     <section
-        class="relative overflow-hidden bg-surface-inverse pt-16 pb-24 text-content-inverse lg:pt-24 lg:pb-32"
+        class="relative overflow-hidden bg-surface-inverse pt-12 pb-16 text-content-inverse sm:pt-16 sm:pb-24 lg:pt-24 lg:pb-32"
     >
         <!-- Ambience and court line graphics -->
         <div
@@ -89,7 +89,7 @@ function handleViewVenueCourts(venue: CatalogVenue) {
         ></div>
 
         <div class="relative mx-auto max-w-6xl px-4 sm:px-6">
-            <div class="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div class="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-16">
                 <!-- Hero Left: Headlines & CTA -->
                 <div class="reveal flex flex-col justify-center">
                     <div
@@ -101,13 +101,13 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                         {{ content.hero.eyebrow }}
                     </div>
                     <h1
-                        class="xl:text-7.5xl mt-6 font-display text-5xl leading-[1.05] font-black tracking-tight text-balance text-content-inverse sm:text-6xl"
+                        class="mt-5 font-display text-4xl leading-[1.05] font-black tracking-tight text-balance text-content-inverse sm:mt-6 sm:text-5xl lg:text-6xl xl:text-7xl"
                     >
                         Play Better.<br />
                         <span class="text-brand">Live Stronger.</span>
                     </h1>
                     <p
-                        class="mt-6 max-w-xl text-lg leading-relaxed text-pretty text-content-muted"
+                        class="mt-4 max-w-xl text-base leading-relaxed text-pretty text-content-muted sm:mt-6 sm:text-lg"
                     >
                         {{ content.hero.subtitle }}
                     </p>
@@ -127,8 +127,8 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                     </div>
                 </div>
 
-                <!-- Hero Right: Dynamic Player Action Visual with Overlay Stats -->
-                <div class="relative flex justify-center lg:ml-4">
+                <!-- Hero Right: Dynamic Player Action Visual with Overlay Stats (hidden on mobile to prevent overflow) -->
+                <div class="relative hidden justify-center lg:flex lg:ml-4">
                     <div
                         class="relative aspect-[4/5] w-full max-w-[420px] overflow-hidden rounded-[var(--site-radius,1.5rem)] border border-line shadow-2xl"
                     >
@@ -166,7 +166,7 @@ function handleViewVenueCourts(venue: CatalogVenue) {
 
             <!-- Accent Features Row directly under the Hero content -->
             <div
-                class="mt-20 grid gap-4 rounded-2xl border border-line bg-surface-elevated/40 p-2 backdrop-blur-sm sm:grid-cols-3"
+                class="mt-10 grid gap-2 rounded-2xl border border-line bg-surface-elevated/40 p-2 backdrop-blur-sm sm:mt-16 sm:grid-cols-3 sm:gap-4 lg:mt-20"
             >
                 <div
                     class="flex items-center gap-4 rounded-xl p-5 transition-colors hover:bg-surface-elevated/60"
@@ -269,7 +269,7 @@ function handleViewVenueCourts(venue: CatalogVenue) {
         <div class="mx-auto max-w-6xl px-4 sm:px-6">
             <!-- Headline block -->
             <div
-                class="grid items-start gap-6 border-b border-line pb-12 md:grid-cols-[0.9fr_1.1fr]"
+                class="grid items-start gap-4 border-b border-line pb-10 md:grid-cols-[0.9fr_1.1fr] md:gap-6 md:pb-12"
             >
                 <div>
                     <span
@@ -277,7 +277,7 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                         >WHY WE PLAY</span
                     >
                     <h2
-                        class="mt-3 font-display text-4xl leading-tight font-black tracking-tight text-content sm:text-5xl"
+                        class="mt-3 font-display text-3xl leading-tight font-black tracking-tight text-content sm:text-4xl lg:text-5xl"
                     >
                         More than a game — it's a community
                     </h2>
@@ -295,7 +295,7 @@ function handleViewVenueCourts(venue: CatalogVenue) {
             </div>
 
             <!-- Features Card Grid -->
-            <div class="mt-16 grid gap-8 sm:grid-cols-3">
+            <div class="mt-10 grid gap-6 sm:mt-16 sm:grid-cols-3 sm:gap-8">
                 <!-- Card 1: Booking -->
                 <div
                     class="group flex flex-col rounded-2xl border border-line bg-surface-elevated p-8 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg"
@@ -425,14 +425,14 @@ function handleViewVenueCourts(venue: CatalogVenue) {
         class="border-b border-line bg-surface-inverse py-20 text-content-inverse sm:py-24"
     >
         <div class="mx-auto max-w-6xl px-4 sm:px-6">
-            <div class="flex items-end justify-between pb-12">
+            <div class="flex flex-col gap-4 pb-8 sm:flex-row sm:items-end sm:justify-between sm:pb-12">
                 <div>
                     <span
                         class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
                         >WAYS TO PLAY</span
                     >
                     <h2
-                        class="mt-3 font-display text-3xl font-black tracking-tight text-content-inverse sm:text-4xl"
+                        class="mt-2 font-display text-2xl font-black tracking-tight text-content-inverse sm:mt-3 sm:text-3xl lg:text-4xl"
                     >
                         However you like to play
                     </h2>
@@ -479,7 +479,7 @@ function handleViewVenueCourts(venue: CatalogVenue) {
             </div>
 
             <!-- Programs Card Row -->
-            <div class="grid gap-6 sm:grid-cols-3">
+            <div class="grid gap-6 grid-cols-1 sm:grid-cols-3">
                 <!-- Program 1 -->
                 <div
                     class="group flex flex-col overflow-hidden rounded-[var(--site-radius,1.25rem)] border border-line bg-surface-elevated/40 shadow-md backdrop-blur-sm transition-all duration-300 hover:border-brand/40 hover:shadow-lg"
@@ -728,7 +728,7 @@ function handleViewVenueCourts(venue: CatalogVenue) {
                     >GET ON THE COURT</span
                 >
                 <h2
-                    class="mt-4 font-display text-4xl leading-tight font-black tracking-tight text-content-inverse sm:text-5xl"
+                    class="mt-4 font-display text-3xl leading-tight font-black tracking-tight text-content-inverse sm:text-4xl lg:text-5xl"
                 >
                     {{ content.cta.title }}
                 </h2>

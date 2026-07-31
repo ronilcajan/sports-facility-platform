@@ -72,8 +72,8 @@ function openImageViewer(index = 0) {
                 <div class="absolute inset-0 bg-gradient-to-t from-surface-inverse via-surface-inverse/80 to-transparent" />
             </div>
 
-            <div class="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-                <div class="flex items-center justify-between gap-4 mb-8">
+            <div class="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-24">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-6 sm:mb-8">
                     <Link
                         href="/courts"
                         class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white backdrop-blur-md transition-colors hover:bg-white/20"
@@ -106,7 +106,7 @@ function openImageViewer(index = 0) {
                             </span>
                         </div>
 
-                        <h1 class="font-display text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
+                        <h1 class="font-display text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
                             {{ venue.name }}
                         </h1>
 
@@ -115,7 +115,7 @@ function openImageViewer(index = 0) {
                         </p>
 
                         <!-- Contact & Location Pill Bar -->
-                        <div class="flex flex-wrap items-center gap-6 text-sm text-slate-300 border-t border-white/10 pt-6">
+                        <div class="flex flex-wrap items-center gap-4 text-sm text-slate-300 border-t border-white/10 pt-5 sm:gap-6 sm:pt-6">
                             <div v-if="venue.address" class="flex items-center gap-2">
                                 <MapPin class="size-4 text-brand shrink-0" />
                                 <span>{{ venue.address }}</span>
@@ -293,11 +293,11 @@ function openImageViewer(index = 0) {
         <!-- Court Images & Facility Gallery Section -->
         <section v-if="venueImages && venueImages.length > 0" class="border-t border-line bg-surface-elevated/20 py-16 sm:py-24">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <span class="text-xs font-extrabold tracking-widest text-brand uppercase">Facility Gallery</span>
-                        <h2 class="mt-1 font-display text-3xl font-black tracking-tight text-content sm:text-4xl">
-                            Court Areas & Photos
+                        <h2 class="mt-1 font-display text-2xl font-black tracking-tight text-content sm:text-3xl lg:text-4xl">
+                            Court Areas &amp; Photos
                         </h2>
                     </div>
                     <p class="text-xs font-bold text-content-muted">Click any photo to open full-screen preview</p>

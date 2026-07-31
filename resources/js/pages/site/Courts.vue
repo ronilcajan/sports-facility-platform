@@ -92,7 +92,7 @@ function handleBookCourt(court: PublicCourt) {
         <!-- MODE 2: Venue Courts Showcase (When a Venue is Selected) -->
         <template v-else>
             <!-- Navigation Breadcrumb & Back Button -->
-            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-6">
+            <div class="flex flex-col gap-3 border-b border-line pb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:pb-6">
                 <button
                     type="button"
                     @click="clearVenueSelection"
@@ -134,7 +134,7 @@ function handleBookCourt(court: PublicCourt) {
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 shrink-0">
+                <div class="flex flex-wrap items-center gap-3 shrink-0">
                     <button
                         type="button"
                         @click="handleBookVenue(selectedVenue)"
