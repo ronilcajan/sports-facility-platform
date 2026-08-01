@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import {
     X,
@@ -16,7 +16,8 @@ import {
     Building2,
     FileText,
     MessageSquare,
-    ShieldCheck,
+    Pencil,
+    Save,
 } from '@lucide/vue';
 
 export interface BookingDetail {
@@ -60,6 +61,69 @@ const emit = defineEmits<{
 
 const actionForm = useForm({
     status: '',
+});
+
+const isEditing = ref(false);
+
+const availableTimeSlots = [
+    '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM',
+    '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
+    '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM',
+    '10:00 PM', '11:00 PM', '12:00 AM', '01:00 AM', '02:00 AM',
+];
+
+const editForm = useForm({
+    name: '',
+    email: '',
+    phone: '',
+    date: '',
+    time_slots: [] as string[],
+    notes: '',
+    status: '',
+});
+
+function startEditing() {
+    if (!props.booking) return;
+    editForm.name = props.booking.name || props.booking.customer_name || '';
+    editForm.email = props.booking.email || '';
+    editForm.phone = props.booking.phone || '';
+    editForm.date = props.booking.date || '';
+    editForm.time_slots = [...(props.booking.time_slots || [])];
+    editForm.notes = props.booking.notes || '';
+    editForm.status = props.booking.status || 'pending';
+    editForm.clearErrors();
+    isEditing.value = true;
+}
+
+function cancelEditing() {
+    isEditing.value = false;
+    editForm.clearErrors();
+}
+
+function toggleTimeSlot(slot: string) {
+    const idx = editForm.time_slots.indexOf(slot);
+    if (idx >= 0) {
+        editForm.time_slots.splice(idx, 1);
+    } else {
+        editForm.time_slots.push(slot);
+    }
+}
+
+function submitEdit() {
+    if (!props.booking) return;
+    editForm.patch(`${props.updateRoutePrefix}/${props.booking.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            isEditing.value = false;
+        },
+    });
+}
+
+watch(() => props.isOpen, (newVal) => {
+    if (!newVal) {
+        isEditing.value = false;
+        editForm.clearErrors();
+    }
 });
 
 const displayName = computed(() => {
@@ -160,21 +224,137 @@ function statusClasses(s: string): string {
                                 </span>
                             </div>
                             <h3 class="text-lg font-black tracking-tight text-neutral-900 dark:text-white">
-                                Customer Reservation Details
+                                {{ isEditing ? 'Edit Booking Reservation' : 'Customer Reservation Details' }}
                             </h3>
                         </div>
 
-                        <button
-                            type="button"
-                            @click="emit('close')"
-                            class="rounded-full p-1.5 text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
-                        >
-                            <X class="size-5" />
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button
+                                v-if="canUpdate !== false && !isEditing"
+                                type="button"
+                                @click="startEditing"
+                                class="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors"
+                            >
+                                <Pencil class="size-3.5" /> Edit Time &amp; Info
+                            </button>
+                            <button
+                                type="button"
+                                @click="emit('close')"
+                                class="rounded-full p-1.5 text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
+                            >
+                                <X class="size-5" />
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Modal Body -->
-                    <div class="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+                    <!-- EDIT FORM MODE -->
+                    <form v-if="isEditing" @submit.prevent="submitEdit" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                        <div v-if="Object.keys(editForm.errors).length > 0" class="rounded-xl bg-rose-500/10 border border-rose-500/30 p-3 text-xs text-rose-600 dark:text-rose-400">
+                            <ul class="list-disc list-inside space-y-0.5 font-medium">
+                                <li v-for="(err, k) in editForm.errors" :key="k">{{ err }}</li>
+                            </ul>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-neutral-700 dark:text-neutral-300">Customer Full Name</label>
+                            <input
+                                v-model="editForm.name"
+                                type="text"
+                                required
+                                class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-3 py-2 text-xs font-bold text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                            />
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold text-neutral-700 dark:text-neutral-300">Email Address</label>
+                                <input
+                                    v-model="editForm.email"
+                                    type="email"
+                                    required
+                                    class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-3 py-2 text-xs font-semibold text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                                />
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold text-neutral-700 dark:text-neutral-300">Phone Number</label>
+                                <input
+                                    v-model="editForm.phone"
+                                    type="text"
+                                    required
+                                    class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-3 py-2 text-xs font-semibold text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Date & Time Slot Editors -->
+                        <div class="space-y-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40 p-4">
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+                                    <Calendar class="size-3.5 text-emerald-600" /> Reserved Date
+                                </label>
+                                <input
+                                    v-model="editForm.date"
+                                    type="date"
+                                    required
+                                    class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-xs font-bold text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                                />
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="block text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+                                    <Clock class="size-3.5 text-emerald-600" /> Reserved Time Slots
+                                </label>
+                                <p class="text-[11px] text-neutral-400">Click time slot pills to add or remove them from this reservation.</p>
+
+                                <div class="grid grid-cols-3 gap-1.5 max-h-36 overflow-y-auto p-1 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
+                                    <button
+                                        v-for="slot in availableTimeSlots"
+                                        :key="slot"
+                                        type="button"
+                                        @click="toggleTimeSlot(slot)"
+                                        :class="[
+                                            'px-2 py-1.5 rounded-lg text-xs font-mono font-bold transition-all text-center border',
+                                            editForm.time_slots.includes(slot)
+                                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                                : 'bg-neutral-50 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700 hover:border-emerald-400',
+                                        ]"
+                                    >
+                                        {{ slot }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-neutral-700 dark:text-neutral-300">Customer Notes</label>
+                            <textarea
+                                v-model="editForm.notes"
+                                rows="2"
+                                placeholder="Special requests or admin notes..."
+                                class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-3 py-2 text-xs font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                            />
+                        </div>
+
+                        <div class="flex justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                            <button
+                                type="button"
+                                @click="cancelEditing"
+                                class="px-4 py-2 text-xs font-bold rounded-xl border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="editForm.processing || editForm.time_slots.length === 0"
+                                class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold rounded-xl bg-emerald-600 text-white shadow-md hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                                <Save class="size-3.5" /> Save Changes
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- READ-ONLY VIEW MODE -->
+                    <div v-else class="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
                         <!-- Error Banner -->
                         <div
                             v-if="Object.keys(actionForm.errors).length > 0"
@@ -191,11 +371,21 @@ function statusClasses(s: string): string {
 
                         <!-- Customer Information Card -->
                         <div class="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 space-y-3 shadow-sm">
-                            <div class="flex items-center gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                                <User class="size-4 text-emerald-600" />
-                                <h4 class="text-xs font-bold text-neutral-500 uppercase tracking-wider">
-                                    Customer Information
-                                </h4>
+                            <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                <div class="flex items-center gap-2">
+                                    <User class="size-4 text-emerald-600" />
+                                    <h4 class="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+                                        Customer Information
+                                    </h4>
+                                </div>
+                                <button
+                                    v-if="canUpdate !== false"
+                                    type="button"
+                                    @click="startEditing"
+                                    class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                                >
+                                    <Pencil class="size-3" /> Edit
+                                </button>
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -222,11 +412,21 @@ function statusClasses(s: string): string {
 
                         <!-- Reservation Details Card -->
                         <div class="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 space-y-3 shadow-sm">
-                            <div class="flex items-center gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                                <Calendar class="size-4 text-emerald-600" />
-                                <h4 class="text-xs font-bold text-neutral-500 uppercase tracking-wider">
-                                    Facility & Schedule Reservation
-                                </h4>
+                            <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                <div class="flex items-center gap-2">
+                                    <Calendar class="size-4 text-emerald-600" />
+                                    <h4 class="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+                                        Facility &amp; Schedule Reservation
+                                    </h4>
+                                </div>
+                                <button
+                                    v-if="canUpdate !== false"
+                                    type="button"
+                                    @click="startEditing"
+                                    class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                                >
+                                    <Pencil class="size-3" /> Edit Date &amp; Time
+                                </button>
                             </div>
 
                             <div class="grid grid-cols-2 gap-3 text-xs">
@@ -327,6 +527,7 @@ function statusClasses(s: string): string {
 
                     <!-- Footer Action Buttons (Confirm / Reject) -->
                     <div
+                        v-if="!isEditing"
                         class="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-neutral-100 dark:border-neutral-800 px-6 py-4 bg-neutral-50/50 dark:bg-neutral-800/40"
                     >
                         <button

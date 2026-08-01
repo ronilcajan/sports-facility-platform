@@ -7,9 +7,11 @@ use App\Enums\SportType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreCourtRequest;
 use App\Http\Requests\Admin\UpdateCourtRequest;
+use App\Models\Booking;
 use App\Models\Court;
 use App\Models\Venue;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -89,16 +91,91 @@ class CourtController extends Controller
     }
 
     /**
-     * Display the specified court.
+     * Display the specified court profile page with details, venue, bookings, and schedule.
      */
-    public function show(Court $court): Response
+    public function show(Request $request, Court $court): Response
     {
         $this->authorize('view', $court);
 
-        $court->load(['images', 'staff']);
+        $court->load(['venue', 'primaryImage', 'images', 'staff']);
+
+        $query = Booking::query()
+            ->where('court_id', $court->id)
+            ->with(['user'])
+            ->latest();
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('id', $search);
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        $bookings = $query->paginate(15)->through(fn (Booking $booking) => [
+            'id' => $booking->id,
+            'reference_code' => 'DY-RESRV-'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
+            'court_name' => $court->name,
+            'sport_type' => $court->sport_type?->label() ?? $court->sport_type,
+            'name' => $booking->name,
+            'email' => $booking->email,
+            'phone' => $booking->phone,
+            'date' => $booking->date,
+            'time_slots' => $booking->time_slots,
+            'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
+            'receipt_url' => $booking->receipt_url,
+            'status' => $booking->status,
+            'notes' => $booking->notes,
+            'created_at' => $booking->created_at?->toFormattedDateString(),
+        ])->withQueryString();
 
         return Inertia::render('admin/courts/Show', [
-            'court' => $court,
+            'court' => [
+                'id' => $court->id,
+                'venue_id' => $court->venue_id,
+                'name' => $court->name,
+                'slug' => $court->slug,
+                'sport_type' => $court->sport_type?->label() ?? $court->sport_type,
+                'description' => $court->description,
+                'base_price' => (string) $court->base_price,
+                'slot_prices' => $court->slot_prices,
+                'slot_duration_minutes' => $court->slot_duration_minutes,
+                'buffer_minutes' => $court->buffer_minutes,
+                'is_active' => $court->is_active,
+                'status' => $court->status?->value ?? $court->status,
+                'primary_image_url' => $court->primaryImage ? (str_starts_with($court->primaryImage->path, 'http') ? $court->primaryImage->path : asset('storage/'.$court->primaryImage->path)) : null,
+                'venue' => $court->venue ? [
+                    'id' => $court->venue->id,
+                    'name' => $court->venue->name,
+                    'slug' => $court->venue->slug,
+                    'address' => $court->venue->address,
+                    'phone' => $court->venue->phone,
+                    'email' => $court->venue->email,
+                ] : null,
+                'images' => $court->images->map(fn ($img) => [
+                    'id' => $img->id,
+                    'path' => $img->path,
+                    'url' => $img->url,
+                    'is_primary' => $img->is_primary,
+                    'sort_order' => $img->sort_order,
+                ]),
+                'staff' => $court->staff->map(fn ($user) => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ]),
+                'created_at' => $court->created_at?->toFormattedDateString(),
+            ],
+            'bookings' => $bookings,
+            'filters' => $request->only(['search', 'status']),
+            'canDelete' => $request->user()?->isSuperAdmin() ?? false,
+            'canManageCourt' => $request->user()?->isSuperAdmin() || $request->user()?->canManageAllCourts() || ($request->user()?->venue_id === $court->venue_id),
         ]);
     }
 

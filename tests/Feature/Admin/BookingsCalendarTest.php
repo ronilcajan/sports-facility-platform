@@ -6,7 +6,7 @@ use App\Models\Court;
 use App\Models\Venue;
 use Illuminate\Support\Carbon;
 
-test('admin bookings calendar returns a five-day window from today by default', function () {
+test('admin bookings page defaults to table view', function () {
     $superAdmin = userWithRole(RoleName::SuperAdmin);
     $today = Carbon::now()->toDateString();
 
@@ -16,6 +16,23 @@ test('admin bookings calendar returns a five-day window from today by default', 
 
     $this->actingAs($superAdmin)
         ->get(route('admin.bookings.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('view', 'table')
+            ->has('tableDates', 7)
+            ->has('tableBookings', 1));
+});
+
+test('admin bookings calendar view returns a five-day window when view is calendar', function () {
+    $superAdmin = userWithRole(RoleName::SuperAdmin);
+    $today = Carbon::now()->toDateString();
+
+    Booking::factory()
+        ->for(Court::factory()->for(Venue::factory()->create()))
+        ->create(['date' => $today, 'status' => 'confirmed']);
+
+    $this->actingAs($superAdmin)
+        ->get(route('admin.bookings.index', ['view' => 'calendar']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('view', 'calendar')
@@ -30,7 +47,7 @@ test('the start param shifts the calendar window and anchors', function () {
     $start = Carbon::now()->addDays(10)->toDateString();
 
     $this->actingAs($superAdmin)
-        ->get(route('admin.bookings.index', ['start' => $start]))
+        ->get(route('admin.bookings.index', ['view' => 'calendar', 'start' => $start]))
         ->assertInertia(fn ($page) => $page
             ->where('days.0.date', $start)
             ->where('window.start', $start)
@@ -48,7 +65,7 @@ test('venue admin calendar only includes their own venue bookings', function () 
     Booking::factory()->for(Court::factory()->for(Venue::factory()->create()))->create(['date' => $today, 'status' => 'confirmed']);
 
     $this->actingAs($admin)
-        ->get(route('admin.bookings.index'))
+        ->get(route('admin.bookings.index', ['view' => 'calendar']))
         ->assertInertia(fn ($page) => $page->has('days.0.bookings', 1));
 });
 
@@ -61,11 +78,11 @@ test('the calendar hides rejected and cancelled bookings by default', function (
     Booking::factory()->for($court)->create(['date' => $today, 'status' => 'cancelled']);
 
     $this->actingAs($superAdmin)
-        ->get(route('admin.bookings.index'))
+        ->get(route('admin.bookings.index', ['view' => 'calendar']))
         ->assertInertia(fn ($page) => $page->has('days.0.bookings', 1));
 
     $this->actingAs($superAdmin)
-        ->get(route('admin.bookings.index', ['status' => 'cancelled']))
+        ->get(route('admin.bookings.index', ['view' => 'calendar', 'status' => 'cancelled']))
         ->assertInertia(fn ($page) => $page
             ->has('days.0.bookings', 1)
             ->where('days.0.bookings.0.status', 'cancelled'));
@@ -81,7 +98,7 @@ test('super admin can filter the calendar by venue', function () {
     Booking::factory()->for(Court::factory()->for($venueB))->create(['date' => $today, 'status' => 'confirmed']);
 
     $this->actingAs($superAdmin)
-        ->get(route('admin.bookings.index', ['venue_id' => $venueA->id]))
+        ->get(route('admin.bookings.index', ['view' => 'calendar', 'venue_id' => $venueA->id]))
         ->assertInertia(fn ($page) => $page->has('days.0.bookings', 1));
 });
 

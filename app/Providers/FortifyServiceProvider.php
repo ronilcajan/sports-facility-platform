@@ -5,14 +5,17 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\LogoutResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Symfony\Component\HttpFoundation\Response;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -21,7 +24,18 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // After logout, always redirect to the public website home page.
+        $this->app->singleton(LogoutResponse::class, function () {
+            return new class implements LogoutResponse
+            {
+                public function toResponse($request): Response
+                {
+                    return $request->wantsJson()
+                        ? new JsonResponse('', 204)
+                        : redirect('/');
+                }
+            };
+        });
     }
 
     /**

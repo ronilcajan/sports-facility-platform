@@ -10,6 +10,9 @@ const props = defineProps<{
     venue?: CatalogVenue | null;
     venues?: CatalogVenue[];
     isOpen: boolean;
+    initialDate?: string | null;
+    initialCourtId?: number | null;
+    initialSlots?: string[];
 }>();
 
 const emit = defineEmits<{
@@ -515,11 +518,27 @@ watch(
                 }
             }
 
-            // Default date to today (first cell of the slider) and reset the window
-            weekOffset.value = 0;
+            if (props.initialCourtId) {
+                selectedCourtId.value = props.initialCourtId;
+            }
+
+            // Sync date from props or default to today
             slideDir.value = 'next';
-            form.value.date = todayDateString.value;
-            form.value.time = [];
+            const targetDateStr = props.initialDate || todayDateString.value;
+            form.value.date = targetDateStr;
+
+            // Calculate weekOffset so initialDate is highlighted in visible slider
+            if (targetDateStr) {
+                const targetDate = parseLocalDate(targetDateStr);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const diffDays = Math.floor((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                weekOffset.value = diffDays > 0 ? Math.floor(diffDays / 7) : 0;
+            } else {
+                weekOffset.value = 0;
+            }
+
+            form.value.time = props.initialSlots ? [...props.initialSlots] : [];
             form.value.notes = '';
             form.value.transaction_code = '';
             summaryExpanded.value = false;

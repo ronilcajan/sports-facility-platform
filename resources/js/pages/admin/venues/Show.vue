@@ -16,9 +16,11 @@ import {
     Search,
     Eye,
     CalendarPlus,
+    Calendar,
 } from '@lucide/vue';
 import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
 import CreateBookingModal from '@/components/admin/CreateBookingModal.vue';
+import VenueScheduleTab from '@/components/admin/VenueScheduleTab.vue';
 
 interface VenueProfile {
     id: number;
@@ -100,6 +102,17 @@ const status = ref(props.filters.status || '');
 const showDetailModal = ref(false);
 const selectedBooking = ref<BookingDetail | null>(null);
 const isBookingModalOpen = ref(false);
+const activeTab = ref<'bookings' | 'schedule'>('bookings');
+const modalInitialDate = ref<string | undefined>(undefined);
+const modalInitialCourtId = ref<number | undefined>(undefined);
+const modalInitialSlot = ref<string | undefined>(undefined);
+
+function handleBookSlot(payload: { court: any; date: string; slot?: string }) {
+    modalInitialCourtId.value = payload.court?.id;
+    modalInitialDate.value = payload.date;
+    modalInitialSlot.value = payload.slot;
+    isBookingModalOpen.value = true;
+}
 
 // Only pass courts from this venue to the booking modal
 const venueCourts = computed(() =>
@@ -218,17 +231,6 @@ const totalBookings = computed(() => props.bookings.data.length);
                             <p class="text-xl font-black text-blue-600">{{ activeCourtCount }}</p>
                             <p class="text-[10px] uppercase font-semibold text-neutral-400 tracking-wider">Active</p>
                         </div>
-                        <!-- New Booking Button -->
-                        <button
-                            type="button"
-                            @click="isBookingModalOpen = true"
-                            :disabled="venueCourts.length === 0"
-                            class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-700 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                            :title="venueCourts.length === 0 ? 'No active courts available' : 'Create a new booking for this venue'"
-                        >
-                            <CalendarPlus class="w-4 h-4" />
-                            <span class="hidden sm:inline">New Booking</span>
-                        </button>
                     </div>
                 </div>
 
@@ -307,13 +309,58 @@ const totalBookings = computed(() => props.bookings.data.length);
             </div>
         </section>
 
-        <!-- Bookings Section -->
+        <!-- Tabs: Bookings / Availability Schedule -->
         <section class="space-y-4">
-            <div>
-                <h2 class="text-lg font-bold text-neutral-900 dark:text-white">Bookings</h2>
-                <p class="text-xs text-neutral-500">All reservations for courts at {{ venue.name }}.</p>
+            <!-- Tab Switcher -->
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-1 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 p-1">
+                    <button
+                        type="button"
+                        @click="activeTab = 'bookings'"
+                        :class="[
+                            'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all duration-200',
+                            activeTab === 'bookings'
+                                ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm'
+                                : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300',
+                        ]"
+                    >
+                        <FileText class="w-3.5 h-3.5" />
+                        Bookings
+                        <span class="ml-0.5 rounded-full bg-neutral-200 dark:bg-neutral-700 px-1.5 py-0.5 text-[10px] font-bold text-neutral-600 dark:text-neutral-300">
+                            {{ bookings.data.length }}
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        @click="activeTab = 'schedule'"
+                        :class="[
+                            'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all duration-200',
+                            activeTab === 'schedule'
+                                ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm'
+                                : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300',
+                        ]"
+                    >
+                        <Calendar class="w-3.5 h-3.5" />
+                        Availability Schedule
+                    </button>
+                </div>
+
+                <!-- New Booking button (only show on bookings tab) -->
+                <button
+                    v-if="activeTab === 'bookings'"
+                    type="button"
+                    @click="isBookingModalOpen = true"
+                    :disabled="venueCourts.length === 0"
+                    class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-700 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    :title="venueCourts.length === 0 ? 'No active courts available' : 'Create a new booking for this venue'"
+                >
+                    <CalendarPlus class="w-4 h-4" />
+                    New Booking
+                </button>
             </div>
 
+            <!-- BOOKINGS TAB -->
+            <div v-if="activeTab === 'bookings'" class="space-y-4">
             <!-- Filters -->
             <div class="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -459,6 +506,18 @@ const totalBookings = computed(() => props.bookings.data.length);
                     />
                 </template>
             </div>
+            <!-- end pagination -->
+            </div>
+            <!-- end bookings tab -->
+
+            <!-- AVAILABILITY SCHEDULE TAB -->
+            <div v-if="activeTab === 'schedule'">
+                <VenueScheduleTab
+                    :courts="courts"
+                    :venue-name="venue.name"
+                    @book-slot="handleBookSlot"
+                />
+            </div>
         </section>
 
         <BookingDetailModal
@@ -472,6 +531,9 @@ const totalBookings = computed(() => props.bookings.data.length);
         <CreateBookingModal
             :open="isBookingModalOpen"
             :courts="venueCourts"
+            :initial-date="modalInitialDate"
+            :initial-court-id="modalInitialCourtId"
+            :initial-slot="modalInitialSlot"
             action="/admin/bookings"
             @close="isBookingModalOpen = false"
         />

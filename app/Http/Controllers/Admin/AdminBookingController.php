@@ -9,6 +9,7 @@ use App\Models\Venue;
 use App\Support\BookingCalendar;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,7 +24,8 @@ class AdminBookingController extends Controller
         $this->authorize('viewAny', Booking::class);
 
         $user = $request->user();
-        $view = $request->input('view') === 'list' ? 'list' : 'calendar';
+        $rawView = $request->input('view');
+        $view = in_array($rawView, ['calendar', 'list', 'table']) ? $rawView : 'table';
 
         $query = Booking::query()->with(['court', 'user']);
 
@@ -76,6 +78,63 @@ class AdminBookingController extends Controller
                 'days' => BookingCalendar::build($query, $start),
                 'window' => BookingCalendar::window($start),
                 'filters' => $request->only(['court_id', 'status', 'venue_id']),
+            ]);
+        }
+
+        if ($view === 'table') {
+            $startDate = $request->filled('date')
+                ? Carbon::parse($request->input('date'))
+                : Carbon::today();
+
+            $endDate = $startDate->copy()->addDays(6);
+
+            $tableDates = [];
+            $curr = $startDate->copy();
+            for ($i = 0; $i < 7; $i++) {
+                $tableDates[] = [
+                    'dateStr' => $curr->toDateString(),
+                    'dayName' => $curr->format('D'),
+                    'dayNum' => $curr->format('j'),
+                    'monthName' => $curr->format('M'),
+                    'formatted' => $curr->format('D, M j'),
+                    'isToday' => $curr->isToday(),
+                ];
+                $curr->addDay();
+            }
+
+            if ($request->filled('status')) {
+                $query->where('status', $request->input('status'));
+            } else {
+                $query->whereNotIn('status', ['cancelled']);
+            }
+
+            $query->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()]);
+
+            $tableBookings = $query->get()->map(fn (Booking $booking) => [
+                'id' => $booking->id,
+                'reference_code' => 'DY-RESRV-'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
+                'name' => $booking->name,
+                'email' => $booking->email,
+                'phone' => $booking->phone,
+                'date' => $booking->date,
+                'time_slots' => $booking->time_slots,
+                'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
+                'receipt_url' => $booking->receipt_url,
+                'status' => $booking->status,
+                'notes' => $booking->notes,
+                'court' => $booking->court ? [
+                    'id' => $booking->court->id,
+                    'name' => $booking->court->name,
+                    'sport_type' => $booking->court->sport_type?->label() ?? $booking->court->sport_type,
+                ] : null,
+            ]);
+
+            return Inertia::render('admin/bookings/Index', [
+                ...$shared,
+                'view' => 'table',
+                'tableDates' => $tableDates,
+                'tableBookings' => $tableBookings,
+                'filters' => $request->only(['search', 'court_id', 'status', 'date', 'venue_id']),
             ]);
         }
 
@@ -147,6 +206,77 @@ class AdminBookingController extends Controller
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => __('Booking created successfully.'),
+        ]);
+
+        return back();
+    }
+
+    /**
+     * Update an existing booking's date, time slots, court, customer info, or status.
+     */
+    public function update(Request $request, Booking $booking): RedirectResponse
+    {
+        $this->authorize('update', $booking);
+
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'court_id' => ['sometimes', 'required', 'exists:courts,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'max:50'],
+            'date' => ['sometimes', 'required', 'date'],
+            'time_slots' => ['sometimes', 'required', 'array', 'min:1'],
+            'time_slots.*' => ['required', 'string'],
+            'status' => ['sometimes', 'required', 'string', Rule::in(['pending', 'approved', 'confirmed', 'rejected', 'cancelled', 'completed'])],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $courtId = $validated['court_id'] ?? $booking->court_id;
+        $date = $validated['date'] ?? $booking->date;
+        $requestedSlots = $validated['time_slots'] ?? $booking->time_slots;
+
+        // Scope check for venue admins
+        $court = Court::visibleTo($user)->findOrFail($courtId);
+
+        // Check for slot conflicts if court, date, or time_slots are being modified
+        if (isset($validated['court_id']) || isset($validated['date']) || isset($validated['time_slots'])) {
+            $conflictingBookings = Booking::query()
+                ->where('court_id', $courtId)
+                ->where('date', $date)
+                ->whereNotIn('status', ['cancelled', 'rejected'])
+                ->where('id', '!=', $booking->id)
+                ->get();
+
+            foreach ($conflictingBookings as $existing) {
+                $bookedSlots = $existing->time_slots ?? [];
+                foreach ($requestedSlots as $slot) {
+                    if (in_array($slot, $bookedSlots)) {
+                        return back()->withErrors([
+                            'time_slots' => "The time slot '{$slot}' is already booked on this court for the selected date.",
+                        ]);
+                    }
+                }
+            }
+        }
+
+        $totalPrice = collect($requestedSlots)->sum(fn (string $slot) => $court->getSlotPrice($slot));
+
+        $booking->update([
+            'court_id' => $courtId,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'date' => $date,
+            'time_slots' => $requestedSlots,
+            'status' => $validated['status'] ?? $booking->status,
+            'notes' => $validated['notes'] ?? null,
+            'total_price' => $totalPrice,
+        ]);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Booking details updated successfully.'),
         ]);
 
         return back();

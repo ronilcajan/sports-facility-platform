@@ -16,7 +16,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-    (e: 'book-court', court: PublicCourt): void;
+    (e: 'book-court', court: PublicCourt, date?: string, slot?: string): void;
+    (e: 'date-selected', date: string): void;
 }>();
 
 // Date selection state
@@ -174,8 +175,9 @@ const courtsToDisplay = computed<PublicCourt[]>(() => {
     return props.venue.courts;
 });
 
-watch(selectedDate, () => {
+watch(selectedDate, (newDate) => {
     fetchAvailability();
+    emit('date-selected', newDate);
 });
 
 onMounted(() => {
@@ -348,7 +350,7 @@ onMounted(() => {
                             </div>
                             <button
                                 type="button"
-                                @click="emit('book-court', court)"
+                                @click="emit('book-court', court, selectedDate)"
                                 class="ml-2 inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-xs font-bold text-brand-foreground shadow-md transition-all hover:scale-105 hover:bg-brand/95 cursor-pointer"
                             >
                                 <CalendarCheck class="size-3.5" />
@@ -375,7 +377,7 @@ onMounted(() => {
                                             ? 'bg-surface-inverse/80 text-content-muted border-line/40 opacity-75'
                                             : 'bg-surface-elevated text-content border-emerald-500/40 hover:border-emerald-500 hover:shadow-md hover:scale-102 cursor-pointer group/slot',
                                     ]"
-                                    @click="!isSlotBooked(court.id, slot) && emit('book-court', court)"
+                                    @click="!isSlotBooked(court.id, slot) && emit('book-court', court, selectedDate, slot)"
                                 >
                                     <span class="text-xs font-black tracking-tight" :class="{ 'line-through text-slate-400': isSlotBooked(court.id, slot) }">
                                         {{ slot }}

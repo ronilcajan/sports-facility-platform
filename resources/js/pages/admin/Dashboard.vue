@@ -13,12 +13,16 @@ import {
     ArrowUpRight,
     TrendingUp,
     FileText,
+    Activity,
 } from '@lucide/vue';
 
 import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
 import InteractiveAreaChart, { type DailyTrendItem } from '@/components/admin/InteractiveAreaChart.vue';
 import DistributionPieChart, { type SportBreakdownItem, type StatusBreakdownItem } from '@/components/admin/DistributionPieChart.vue';
+import WebsiteTrafficAnalytics, { type TrafficAnalyticsData } from '@/components/admin/WebsiteTrafficAnalytics.vue';
 import { ref } from 'vue';
+
+const activeMainTab = ref<'overview' | 'traffic' | 'courts'>('overview');
 
 interface Stats {
     totalCourts: number;
@@ -65,6 +69,7 @@ const props = defineProps<{
     statusBreakdown: StatusBreakdownItem[];
     courtsSummary: CourtSummary[];
     recentBookings: RecentBooking[];
+    trafficAnalytics?: TrafficAnalyticsData;
 }>();
 
 defineOptions({
@@ -122,6 +127,31 @@ function quickUpdateStatus(bookingId: number, status: string) {
                 </div>
             </div>
 
+            <!-- Top Level Section Tabs Navigation -->
+            <div class="flex flex-wrap items-center gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-3">
+                <button
+                    type="button"
+                    @click="activeMainTab = 'overview'"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    :class="activeMainTab === 'overview' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25' : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-emerald-400'"
+                >
+                    <TrendingUp class="w-4 h-4" />
+                    Overview &amp; Revenue
+                </button>
+                <button
+                    type="button"
+                    @click="activeMainTab = 'traffic'"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    :class="activeMainTab === 'traffic' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25' : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-emerald-400'"
+                >
+                    <Activity class="w-4 h-4" />
+                    Website Traffic Analytics
+                    <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-extrabold text-emerald-300">Live</span>
+                </button>
+            </div>
+
+            <!-- TAB 1: OVERVIEW & REVENUE -->
+            <div v-if="activeMainTab === 'overview'" class="space-y-8">
             <!-- Metrics Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm space-y-2">
@@ -432,6 +462,13 @@ function quickUpdateStatus(bookingId: number, status: string) {
                         </tbody>
                     </table>
                 </div>
+            </div>
+            </div>
+            <!-- END TAB 1 OVERVIEW -->
+
+            <!-- TAB 2: WEBSITE TRAFFIC ANALYTICS -->
+            <div v-if="activeMainTab === 'traffic'">
+                <WebsiteTrafficAnalytics v-if="trafficAnalytics" :analytics="trafficAnalytics" />
             </div>
 
             <!-- Booking Details Modal -->

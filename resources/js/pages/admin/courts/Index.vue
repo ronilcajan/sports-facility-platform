@@ -1,9 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { Plus, Pencil, Trash2, X, Dumbbell, Users, Image as ImageIcon } from '@lucide/vue';
+import { ref, computed } from 'vue';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import {
+    Plus,
+    Pencil,
+    Trash2,
+    X,
+    Dumbbell,
+    Users,
+    Image as ImageIcon,
+    Search,
+    Eye,
+    Building,
+    Clock,
+} from '@lucide/vue';
 import CourtController from '@/actions/App/Http/Controllers/Admin/CourtController';
 import CourtImageManagerModal from '@/components/admin/CourtImageManagerModal.vue';
+import EditCourtModal from '@/components/admin/EditCourtModal.vue';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -62,6 +75,24 @@ const statusPill: Record<Court['status'], string> = {
     maintenance: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
     closed: 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
 };
+
+const searchQuery = ref('');
+const sportFilter = ref('');
+const statusFilter = ref('');
+
+const filteredCourts = computed(() => {
+    return props.courts.filter((c) => {
+        const matchesSearch =
+            !searchQuery.value ||
+            c.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+            (c.venue?.name && c.venue.name.toLowerCase().includes(searchQuery.value.toLowerCase()));
+
+        const matchesSport = !sportFilter.value || c.sport_type === sportFilter.value;
+        const matchesStatus = !statusFilter.value || c.status === statusFilter.value;
+
+        return matchesSearch && matchesSport && matchesStatus;
+    });
+});
 
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
@@ -219,27 +250,71 @@ function destroy(court: Court): void {
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Courts</h1>
-                <p class="text-xs text-neutral-500">Manage courts, pricing, and staff assignments.</p>
+                <p class="text-xs text-neutral-500">Manage courts, view profiles, rates, and staff assignments.</p>
             </div>
             <button
                 @click="openCreateModal"
-                class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow transition-colors hover:bg-emerald-700"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow transition-all hover:bg-emerald-700 hover:-translate-y-0.5"
             >
                 <Plus class="w-4 h-4" /> Add Court
             </button>
         </div>
 
-        <!-- Card grid -->
+        <!-- Filter & Search Toolbar -->
+        <div class="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="relative flex-1">
+                    <Search class="w-4 h-4 absolute left-3 top-2.5 text-neutral-400" />
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Search by court name or assigned venue..."
+                        class="w-full pl-9 pr-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    />
+                </div>
+
+                <select
+                    v-model="sportFilter"
+                    class="px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none capitalize"
+                >
+                    <option value="">All Sport Types</option>
+                    <option v-for="st in (sportTypes || [{ value: 'pickleball', label: 'Pickleball' }])" :key="st.value" :value="st.value">
+                        {{ st.label }}
+                    </option>
+                </select>
+
+                <select
+                    v-model="statusFilter"
+                    class="px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none capitalize"
+                >
+                    <option value="">All Statuses</option>
+                    <option value="available">Available</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="closed">Closed</option>
+                </select>
+
+                <button
+                    v-if="searchQuery || sportFilter || statusFilter"
+                    @click="searchQuery = ''; sportFilter = ''; statusFilter = '';"
+                    class="px-3 py-2 bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-xl text-xs font-semibold hover:bg-neutral-300 dark:hover:bg-neutral-700"
+                >
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Card Grid -->
         <div
-            v-if="courts.length"
-            class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            v-if="filteredCourts.length"
+            class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
             <div
-                v-for="court in courts"
+                v-for="court in filteredCourts"
                 :key="court.id"
-                class="group flex flex-col overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm transition-shadow hover:shadow-md"
+                class="group flex flex-col overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm transition-all duration-200 hover:shadow-lg hover:border-emerald-400/50"
             >
-                <div class="relative aspect-video overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                <!-- Court Image Aspect Box -->
+                <div class="relative aspect-[16/10] overflow-hidden bg-neutral-100 dark:bg-neutral-800">
                     <img
                         v-if="court.primary_image?.url"
                         :src="court.primary_image.url"
@@ -249,44 +324,86 @@ function destroy(court: Court): void {
                     <div v-else class="flex h-full w-full items-center justify-center text-neutral-300 dark:text-neutral-600">
                         <Dumbbell class="h-10 w-10" />
                     </div>
-                    <span
-                        :class="['absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold capitalize shadow-sm', statusPill[court.status]]"
-                    >
-                        {{ court.status }}
+
+                    <!-- Overlay Status Badges -->
+                    <div class="absolute right-2 top-2 flex flex-col gap-1 items-end">
+                        <span :class="['rounded-full px-2.5 py-0.5 text-[10px] font-bold capitalize shadow-sm', statusPill[court.status]]">
+                            {{ court.status }}
+                        </span>
+                        <span :class="['rounded-full px-2 py-0.5 text-[9px] font-bold shadow-sm', court.is_active !== false ? 'bg-emerald-600 text-white' : 'bg-neutral-600 text-white']">
+                            {{ court.is_active !== false ? 'Online' : 'Offline' }}
+                        </span>
+                    </div>
+
+                    <!-- Sport Type Pill -->
+                    <span class="absolute left-2 bottom-2 rounded-full bg-black/60 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-white capitalize">
+                        {{ court.sport_type.replace('-', ' ') }}
                     </span>
                 </div>
 
-                <div class="flex flex-1 flex-col gap-2 p-4">
-                    <div class="flex items-start justify-between gap-2">
-                        <div class="min-w-0">
-                            <h3 class="truncate font-semibold leading-tight text-neutral-900 dark:text-white">{{ court.name }}</h3>
-                            <p class="truncate text-xs text-neutral-500">{{ court.venue?.name || 'Unassigned' }}</p>
+                <!-- Card Content -->
+                <div class="flex flex-1 flex-col justify-between p-4 space-y-3">
+                    <div class="space-y-1.5">
+                        <div class="flex items-start justify-between gap-2">
+                            <Link
+                                :href="`/admin/courts/${court.id}`"
+                                class="font-bold text-base leading-tight text-neutral-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors line-clamp-1"
+                            >
+                                {{ court.name }}
+                            </Link>
+                            <span class="shrink-0 text-sm font-black text-emerald-600 dark:text-emerald-400">₱{{ court.base_price }}<span class="text-[10px] font-normal text-neutral-400">/hr</span></span>
                         </div>
-                        <span class="shrink-0 text-sm font-bold text-emerald-600 dark:text-emerald-400">₱{{ court.base_price }}</span>
+
+                        <!-- Assigned Venue Info -->
+                        <div class="flex items-center gap-1.5 text-xs text-neutral-500">
+                            <Building class="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                            <span class="truncate">{{ court.venue?.name || 'Unassigned Venue' }}</span>
+                        </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
-                        <span class="rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 capitalize">{{ court.sport_type.replace('-', ' ') }}</span>
-                        <span class="inline-flex items-center gap-1"><Users class="h-3 w-3" /> {{ court.staff_count }} staff</span>
+                    <!-- Details Row -->
+                    <div class="flex items-center justify-between text-[11px] text-neutral-500 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                        <span class="inline-flex items-center gap-1">
+                            <Clock class="h-3 w-3 text-neutral-400" /> {{ court.slot_duration_minutes }} min
+                        </span>
+                        <span class="inline-flex items-center gap-1">
+                            <Users class="h-3 w-3 text-neutral-400" /> {{ court.staff_count }} staff
+                        </span>
                     </div>
 
-                    <div class="mt-auto flex items-center gap-2 pt-3">
+                    <!-- Action Button Row -->
+                    <div class="pt-2 flex items-center gap-1.5">
+                        <!-- View Profile Button -->
+                        <Link
+                            :href="`/admin/courts/${court.id}`"
+                            class="flex-1 inline-flex items-center justify-center gap-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white transition-colors shadow-sm"
+                            title="View Court Profile"
+                        >
+                            <Eye class="h-3.5 w-3.5" /> View Profile
+                        </Link>
+
+                        <!-- Photos Button -->
                         <button
                             @click="openImageModal(court)"
-                            class="inline-flex items-center justify-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400"
-                            title="Manage Court Images"
+                            class="inline-flex items-center justify-center gap-1 rounded-xl border border-neutral-200 dark:border-neutral-700 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                            title="Manage Court Photos"
                         >
-                            <ImageIcon class="h-3.5 w-3.5 text-emerald-600" /> Photos
+                            <ImageIcon class="h-3.5 w-3.5 text-emerald-600" />
                         </button>
+
+                        <!-- Edit Button -->
                         <button
                             @click="openEditModal(court)"
-                            class="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                            class="inline-flex items-center justify-center gap-1 rounded-xl border border-neutral-200 dark:border-neutral-700 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                            title="Edit Court Details"
                         >
-                            <Pencil class="h-3.5 w-3.5" /> Edit
+                            <Pencil class="h-3.5 w-3.5" />
                         </button>
+
+                        <!-- Delete Button -->
                         <button
                             @click="destroy(court)"
-                            class="rounded-lg p-2 text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
+                            class="rounded-xl p-1.5 text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
                             title="Delete court"
                         >
                             <Trash2 class="h-3.5 w-3.5" />
@@ -300,7 +417,7 @@ function destroy(court: Court): void {
             v-else
             class="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 py-16 text-center text-sm text-neutral-500"
         >
-            No courts yet. Add your first court to get started.
+            No courts found matching your search.
         </div>
     </div>
 
@@ -378,7 +495,7 @@ function destroy(court: Court): void {
 
                     <div class="grid grid-cols-3 gap-3">
                         <div class="space-y-2">
-                            <Label for="create-court-price">Hourly Rate ($) *</Label>
+                            <Label for="create-court-price">Hourly Rate (₱) *</Label>
                             <Input id="create-court-price" v-model="createForm.base_price" type="number" step="0.01" min="0" required />
                             <InputError :message="createForm.errors.base_price" />
                         </div>
@@ -444,156 +561,15 @@ function destroy(court: Court): void {
         </div>
     </Teleport>
 
-    <!-- Centered Edit Court Modal -->
-    <Teleport to="body">
-        <div
-            v-if="showEditModal"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
-            @click.self="showEditModal = false"
-        >
-            <div class="w-full max-w-lg rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-5 my-8">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Edit Court</h2>
-                        <p class="text-xs text-neutral-500">Update court details, pricing, and status.</p>
-                    </div>
-                    <button @click="showEditModal = false" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
-                        <X class="h-5 w-5" />
-                    </button>
-                </div>
-
-                <form @submit.prevent="submitEdit" class="space-y-4">
-                    <div class="space-y-2">
-                        <Label for="edit-court-name">Court Name *</Label>
-                        <Input id="edit-court-name" v-model="editForm.name" type="text" required />
-                        <InputError :message="editForm.errors.name" />
-                    </div>
-
-                    <div v-if="venues && venues.length > 0" class="space-y-2">
-                        <Label for="edit-court-venue">Assigned Venue</Label>
-                        <select
-                            id="edit-court-venue"
-                            v-model="editForm.venue_id"
-                            class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                        >
-                            <option value="">No Venue Assigned</option>
-                            <option v-for="v in venues" :key="v.id" :value="v.id">
-                                {{ v.name }}
-                            </option>
-                        </select>
-                        <InputError :message="editForm.errors.venue_id" />
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="space-y-2">
-                            <Label for="edit-court-sport">Sport Type *</Label>
-                            <select
-                                id="edit-court-sport"
-                                v-model="editForm.sport_type"
-                                required
-                                class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring capitalize"
-                            >
-                                <option v-for="st in (sportTypes || [{ value: 'pickleball', label: 'Pickleball' }])" :key="st.value" :value="st.value">
-                                    {{ st.label }}
-                                </option>
-                            </select>
-                            <InputError :message="editForm.errors.sport_type" />
-                        </div>
-
-                        <div class="space-y-2">
-                            <Label for="edit-court-status">Status *</Label>
-                            <select
-                                id="edit-court-status"
-                                v-model="editForm.status"
-                                required
-                                class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring capitalize"
-                            >
-                                <option v-for="st in (statuses || [{ value: 'available', label: 'Available' }, { value: 'maintenance', label: 'Maintenance' }, { value: 'closed', label: 'Closed' }])" :key="st.value" :value="st.value">
-                                    {{ st.label }}
-                                </option>
-                            </select>
-                            <InputError :message="editForm.errors.status" />
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-3">
-                        <div class="space-y-2">
-                            <Label for="edit-court-price">Hourly Rate ($) *</Label>
-                            <Input id="edit-court-price" v-model="editForm.base_price" type="number" step="0.01" min="0" required />
-                            <InputError :message="editForm.errors.base_price" />
-                        </div>
-
-                        <div class="space-y-2">
-                            <Label for="edit-court-duration">Slot Mins *</Label>
-                            <Input id="edit-court-duration" v-model.number="editForm.slot_duration_minutes" type="number" min="15" step="15" required />
-                            <InputError :message="editForm.errors.slot_duration_minutes" />
-                        </div>
-
-                        <div class="space-y-2">
-                            <Label for="edit-court-buffer">Buffer Mins *</Label>
-                            <Input id="edit-court-buffer" v-model.number="editForm.buffer_minutes" type="number" min="0" step="5" required />
-                            <InputError :message="editForm.errors.buffer_minutes" />
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <Label for="edit-court-description">Description</Label>
-                        <textarea
-                            id="edit-court-description"
-                            v-model="editForm.description"
-                            rows="2"
-                            class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                        />
-                        <InputError :message="editForm.errors.description" />
-                    </div>
-
-                    <!-- Court Photo Upload -->
-                    <div class="space-y-3 rounded-xl border border-input p-3">
-                        <Label class="text-xs font-semibold">Court Photo</Label>
-                        <div class="flex items-center gap-3">
-                            <div v-if="editPreview" class="relative">
-                                <img :src="editPreview" alt="Preview" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
-                                <span class="absolute -top-1.5 -right-1.5 bg-emerald-600 text-white text-[8px] font-bold px-1 rounded-full">New</span>
-                            </div>
-                            <div v-else-if="editingCourt?.primary_image?.url && !editForm.delete_image" class="relative">
-                                <img :src="editingCourt.primary_image.url" alt="Current Photo" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
-                            </div>
-                            <div v-else class="h-16 w-24 rounded-lg border border-dashed border-input flex items-center justify-center text-xs text-muted-foreground">
-                                No Photo
-                            </div>
-
-                            <div class="space-y-1">
-                                <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/avif" @change="onEditImageChange" class="text-xs" />
-                                <div v-if="editingCourt?.primary_image?.url && !editForm.delete_image" class="pt-0.5">
-                                    <button type="button" @click="removeEditImage" class="text-[11px] font-semibold text-rose-600 hover:underline">
-                                        Remove photo
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <InputError :message="editForm.errors.image" />
-                    </div>
-
-                    <div class="flex items-center gap-2 pt-1">
-                        <input
-                            id="edit-court-active"
-                            v-model="editForm.is_active"
-                            type="checkbox"
-                            class="rounded border-input text-primary focus:ring-primary"
-                        />
-                        <Label for="edit-court-active" class="cursor-pointer">Active for online booking</Label>
-                    </div>
-
-                    <div class="flex justify-end gap-3 pt-3">
-                        <Button variant="outline" type="button" @click="showEditModal = false">Cancel</Button>
-                        <Button type="submit" :disabled="editForm.processing">
-                            {{ editForm.processing ? 'Saving...' : 'Save Changes' }}
-                        </Button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </Teleport>
+    <!-- Edit Court & Rates Modal -->
+    <EditCourtModal
+        :is-open="showEditModal"
+        :court="editingCourt"
+        :venues="venues"
+        :sport-types="sportTypes"
+        :statuses="statuses"
+        @close="showEditModal = false"
+    />
 
     <!-- Court Image Manager Modal -->
     <CourtImageManagerModal

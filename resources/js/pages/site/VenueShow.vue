@@ -27,6 +27,8 @@ const props = defineProps<{
 
 const isBookingModalOpen = ref(false);
 const selectedCourtForBooking = ref<PublicCourt | null>(null);
+const selectedBookingDate = ref<string | null>(null);
+const selectedBookingSlot = ref<string | null>(null);
 
 const isImageViewerOpen = ref(false);
 const previewImageIndex = ref(0);
@@ -40,9 +42,17 @@ const venueImages = computed(() => {
     return list;
 });
 
-function openBookingForCourt(court?: PublicCourt) {
+function openBookingForCourt(court?: PublicCourt, date?: string, slot?: string) {
     selectedCourtForBooking.value = court || null;
+    if (date) {
+        selectedBookingDate.value = date;
+    }
+    selectedBookingSlot.value = slot || null;
     isBookingModalOpen.value = true;
+}
+
+function handleScheduleDateChange(date: string) {
+    selectedBookingDate.value = date;
 }
 
 function openImageViewer(index = 0) {
@@ -210,6 +220,7 @@ function openImageViewer(index = 0) {
         <VenueAvailabilitySchedule
             :venue="venue"
             @book-court="openBookingForCourt"
+            @date-selected="handleScheduleDateChange"
         />
 
         <!-- Courts Listing Section under this Venue -->
@@ -340,6 +351,8 @@ function openImageViewer(index = 0) {
             :venue="venue"
             :court="selectedCourtForBooking"
             :venues="venues"
+            :initial-date="selectedBookingDate"
+            :initial-slots="selectedBookingSlot ? [selectedBookingSlot] : []"
             @close="isBookingModalOpen = false"
         />
     </div>

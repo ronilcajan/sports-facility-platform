@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
-import { CalendarDays, LayoutList, Search, CheckCircle, XCircle, Trash2, ArrowUpRight, FileText, Plus } from '@lucide/vue';
+import { CalendarDays, LayoutList, Table, Search, CheckCircle, XCircle, Trash2, ArrowUpRight, FileText, Plus } from '@lucide/vue';
 import BookingsCalendar from '@/components/admin/BookingsCalendar.vue';
+import BookingsTableView, { type TableDateHeader, type TableBookingItem } from '@/components/admin/BookingsTableView.vue';
 import CreateBookingModal from '@/components/admin/CreateBookingModal.vue';
-
 import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
 
 interface Booking {
@@ -31,9 +31,11 @@ interface PaginatedBookings {
 }
 
 const props = defineProps<{
-    view: 'calendar' | 'list';
+    view: 'calendar' | 'list' | 'table';
     days?: any[];
     window?: any;
+    tableDates?: TableDateHeader[];
+    tableBookings?: TableBookingItem[];
     bookings?: PaginatedBookings;
     courts: { id: number; name: string }[];
     venues?: { id: number; name: string }[] | null;
@@ -52,18 +54,26 @@ defineOptions({
     },
 });
 
-function switchView(view: 'calendar' | 'list') {
+function switchView(view: 'calendar' | 'list' | 'table') {
     router.get(props.basePath, { view }, { preserveState: false });
 }
 
 const showCreateModal = ref(false);
 const showDetailModal = ref(false);
 const selectedBookingForModal = ref<BookingDetail | null>(null);
+const selectedBookingDate = ref<string | undefined>(undefined);
+const selectedBookingSlot = ref<string | undefined>(undefined);
 
-function openBookingDetails(booking: Booking) {
+function handleCreateBooking(payload?: { date?: string; slot?: string }) {
+    selectedBookingDate.value = payload?.date;
+    selectedBookingSlot.value = payload?.slot;
+    showCreateModal.value = true;
+}
+
+function openBookingDetails(booking: any) {
     const detail: BookingDetail = {
         id: booking.id,
-        reference_code: `DY-RESRV-${String(booking.id).padStart(6, '0')}`,
+        reference_code: booking.reference_code || `DY-RESRV-${String(booking.id).padStart(6, '0')}`,
         customer_name: booking.name,
         email: booking.email,
         phone: booking.phone,
@@ -127,7 +137,7 @@ function deleteBooking(bookingId: number) {
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Facility Bookings</h1>
-                <p class="text-xs text-neutral-500">Monitor, approve, and manage reservations by day or in a list.</p>
+                <p class="text-xs text-neutral-500">Monitor, approve, and manage reservations via calendar, table grid, or list.</p>
             </div>
 
             <div class="flex items-center gap-2">
@@ -138,6 +148,12 @@ function deleteBooking(bookingId: number) {
                         :class="['inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors', view === 'calendar' ? 'bg-emerald-600 text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800']"
                     >
                         <CalendarDays class="w-4 h-4" /> Calendar
+                    </button>
+                    <button
+                        @click="switchView('table')"
+                        :class="['inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors', view === 'table' ? 'bg-emerald-600 text-white' : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800']"
+                    >
+                        <Table class="w-4 h-4" /> Table View
                     </button>
                     <button
                         @click="switchView('list')"
@@ -160,6 +176,8 @@ function deleteBooking(bookingId: number) {
             :open="showCreateModal"
             :courts="courts"
             :action="basePath"
+            :initial-date="selectedBookingDate"
+            :initial-slot="selectedBookingSlot"
             @close="showCreateModal = false"
         />
 
@@ -175,6 +193,20 @@ function deleteBooking(bookingId: number) {
             :can-delete="canDelete"
             :show-venue-filter="showVenueFilter"
             :can-update="true"
+        />
+
+        <!-- Table View Matrix -->
+        <BookingsTableView
+            v-else-if="view === 'table'"
+            :table-dates="tableDates || []"
+            :table-bookings="tableBookings || []"
+            :courts="courts"
+            :venues="venues"
+            :filters="filters"
+            :base-path="basePath"
+            :show-venue-filter="showVenueFilter"
+            @select-booking="openBookingDetails"
+            @create-booking="handleCreateBooking"
         />
 
         <!-- List view -->

@@ -44,6 +44,7 @@ Route::middleware([
         Route::get('bookings', [AdminBookingController::class, 'index'])->name('bookings.index');
         Route::post('bookings', [AdminBookingController::class, 'store'])->name('bookings.store');
         Route::get('bookings/{booking}', [AdminBookingController::class, 'show'])->name('bookings.show');
+        Route::patch('bookings/{booking}', [AdminBookingController::class, 'update'])->name('bookings.update');
         Route::patch('bookings/{booking}/status', [AdminBookingController::class, 'updateStatus'])->name('bookings.update-status');
         Route::delete('bookings/{booking}', [AdminBookingController::class, 'destroy'])->name('bookings.destroy');
 
