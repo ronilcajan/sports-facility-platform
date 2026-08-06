@@ -11,6 +11,7 @@ import {
     TrendingUp,
     Zap,
 } from '@lucide/vue';
+import { getMergedTimeSlots } from '@/utils/timeSlots';
 
 interface CourtItem {
     id: number;
@@ -79,13 +80,17 @@ const upcomingDays = computed(() => {
     });
 });
 
-// ── Time slots ───────────────────────────────────────────────────
-const TIME_SLOTS = [
-    '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM',
-    '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
-    '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM',
-    '10:00 PM', '11:00 PM', '12:00 AM', '01:00 AM', '02:00 AM',
-];
+// ── Dynamic Time slots ───────────────────────────────────────────
+const activeTimeSlots = computed(() => {
+    let customPricesList: Record<string, any>[] = [];
+    if (props.courts) {
+        props.courts.forEach(c => {
+            if (c.slot_prices) customPricesList.push(c.slot_prices);
+        });
+    }
+    const combined = customPricesList.reduce((acc, prices) => ({ ...acc, ...prices }), {});
+    return getMergedTimeSlots(combined);
+});
 
 function slotHour(slot: string): number {
     const [time, period] = slot.split(' ');
@@ -106,7 +111,7 @@ function slotPeriod(slot: string) {
 const groupedSlots = computed(() => {
     const order = ['Morning', 'Afternoon', 'Evening', 'Night'];
     const map: Record<string, { slot: string; meta: ReturnType<typeof slotPeriod> }[]> = {};
-    for (const slot of TIME_SLOTS) {
+    for (const slot of activeTimeSlots.value) {
         const meta = slotPeriod(slot);
         (map[meta.label] ??= []).push({ slot, meta });
     }
@@ -170,7 +175,7 @@ const courtsToShow = computed(() =>
 // ── Summary stats ────────────────────────────────────────────────
 const totalAvailable = computed(() =>
     activeCourts.value.reduce(
-        (sum, c) => sum + (TIME_SLOTS.length - bookedSlots(c.id).length),
+        (sum, c) => sum + (activeTimeSlots.value.length - bookedSlots(c.id).length),
         0
     )
 );
@@ -180,7 +185,7 @@ const totalBooked = computed(() =>
 );
 
 const occupancyPct = computed(() => {
-    const total = activeCourts.value.length * TIME_SLOTS.length;
+    const total = activeCourts.value.length * activeTimeSlots.value.length;
     return total > 0 ? Math.round((totalBooked.value / total) * 100) : 0;
 });
 
@@ -395,7 +400,7 @@ onMounted(fetchAvailability);
                     <div class="flex items-center gap-4 shrink-0">
                         <div class="text-center">
                             <p class="text-xl font-black tabular-nums text-emerald-500">
-                                {{ TIME_SLOTS.length - bookedSlots(court.id).length }}
+                                {{ activeTimeSlots.length - bookedSlots(court.id).length }}
                             </p>
                             <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Open</p>
                         </div>
@@ -408,12 +413,12 @@ onMounted(fetchAvailability);
                         <!-- Mini occupancy bar pill -->
                         <div class="flex flex-col items-center gap-1">
                             <p class="text-xs font-black text-neutral-700 dark:text-neutral-200 tabular-nums">
-                                {{ Math.round((bookedSlots(court.id).length / TIME_SLOTS.length) * 100) }}%
+                                {{ Math.round((bookedSlots(court.id).length / activeTimeSlots.length) * 100) }}%
                             </p>
                             <div class="h-1.5 w-16 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
                                 <div
                                     class="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                                    :style="{ width: `${Math.round((bookedSlots(court.id).length / TIME_SLOTS.length) * 100)}%` }"
+                                    :style="{ width: `${Math.round((bookedSlots(court.id).length / activeTimeSlots.length) * 100)}%` }"
                                 />
                             </div>
                             <p class="text-[9px] font-semibold uppercase tracking-wider text-neutral-400">Full</p>

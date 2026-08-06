@@ -44,11 +44,7 @@ class AdminVenueController extends Controller
             'is_active' => $venue->is_active,
             'courts_count' => $venue->courts_count,
             'image_url' => $venue->image_url,
-            'cover_image_url' => $venue->image_url
-                ?? $venue->courts
-                    ->map(fn ($court) => $court->primaryImage?->url)
-                    ->filter()
-                    ->first(),
+            'cover_image_url' => $venue->image_url,
             'created_at' => $venue->created_at?->toFormattedDateString(),
         ])->withQueryString();
 
@@ -56,7 +52,7 @@ class AdminVenueController extends Controller
             'venues' => $venues,
             'filters' => $request->only(['search']),
             'canDelete' => $request->user()?->isSuperAdmin() ?? false,
-            'canManageVenueImages' => $request->user()?->isSuperAdmin() ?? false,
+            'canManageVenueImages' => true,
         ]);
     }
 
@@ -132,11 +128,7 @@ class AdminVenueController extends Controller
                 'phone' => $venue->phone,
                 'email' => $venue->email,
                 'image_url' => $venue->image_url,
-                'cover_image_url' => $venue->image_url
-                    ?? $venue->courts
-                        ->map(fn ($court) => $court->primaryImage?->url)
-                        ->filter()
-                        ->first(),
+                'cover_image_url' => $venue->image_url,
                 'gcash_number' => $venue->gcash_number,
                 'gcash_qr_url' => $venue->paymentMethods()['gcash']['qr_url'] ?? null,
                 'maya_number' => $venue->maya_number,
@@ -175,9 +167,6 @@ class AdminVenueController extends Controller
         $validated['slug'] = Str::slug($validated['name']);
 
         if ($request->hasFile('image')) {
-            if (! $request->user()?->isSuperAdmin()) {
-                abort(403, 'Only Super Admin can upload venue images.');
-            }
             $validated['image_path'] = $request->file('image')->store('venues', 'public');
         }
 
@@ -220,7 +209,7 @@ class AdminVenueController extends Controller
                 'maya_qr_url' => $venue->paymentMethods()['maya']['qr_url'] ?? null,
                 'is_active' => $venue->is_active,
             ],
-            'canManageVenueImages' => request()->user()?->isSuperAdmin() ?? false,
+            'canManageVenueImages' => true,
         ]);
     }
 
@@ -234,23 +223,19 @@ class AdminVenueController extends Controller
         $validated = $request->validate($this->rules());
 
         $validated['slug'] = Str::slug($validated['name']);
+        $isDeleteImage = $request->boolean('delete_image') || in_array($request->input('delete_image'), [true, 'true', 1, '1', 'on'], true);
 
         if ($request->hasFile('image')) {
-            if (! $request->user()?->isSuperAdmin()) {
-                abort(403, 'Only Super Admin can upload venue images.');
-            }
             if ($venue->image_path && Storage::disk('public')->exists($venue->image_path)) {
                 Storage::disk('public')->delete($venue->image_path);
             }
             $validated['image_path'] = $request->file('image')->store('venues', 'public');
-        } elseif ($request->boolean('delete_image')) {
-            if (! $request->user()?->isSuperAdmin()) {
-                abort(403, 'Only Super Admin can delete venue images.');
-            }
+        } elseif ($isDeleteImage) {
             if ($venue->image_path && Storage::disk('public')->exists($venue->image_path)) {
                 Storage::disk('public')->delete($venue->image_path);
             }
             $validated['image_path'] = null;
+            $venue->forceFill(['image_path' => null])->save();
         }
 
         if ($request->hasFile('gcash_qr')) {
@@ -267,6 +252,22 @@ class AdminVenueController extends Controller
 
         return redirect()->route('admin.venues.index')
             ->with('success', 'Venue updated successfully.');
+    }
+
+    /**
+     * Remove cover photo for the specified venue.
+     */
+    public function destroyImage(Venue $venue): RedirectResponse
+    {
+        $this->authorize('update', $venue);
+
+        if ($venue->image_path && Storage::disk('public')->exists($venue->image_path)) {
+            Storage::disk('public')->delete($venue->image_path);
+        }
+
+        $venue->forceFill(['image_path' => null])->save();
+
+        return back()->with('success', 'Venue cover photo removed successfully.');
     }
 
     /**

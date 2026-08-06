@@ -33,13 +33,8 @@ const selectedBookingSlot = ref<string | null>(null);
 const isImageViewerOpen = ref(false);
 const previewImageIndex = ref(0);
 
-const venueImages = computed(() => {
-    const list = [...(props.venue.images || [])];
-    const cover = props.venue.cover_image_url || '/images/hero_pickleball.png';
-    if (!list.includes(cover)) {
-        list.unshift(cover);
-    }
-    return list;
+const courtImages = computed(() => {
+    return props.venue.images || [];
 });
 
 function openBookingForCourt(court?: PublicCourt, date?: string, slot?: string) {
@@ -73,9 +68,9 @@ function openImageViewer(index = 0) {
         <!-- Hero Header -->
         <section class="relative overflow-hidden bg-surface-inverse text-white">
             <!-- Cover Background Photo with Overlay Gradient -->
-            <div class="absolute inset-0">
+            <div v-if="venue.cover_image_url || venue.image_url" class="absolute inset-0">
                 <img
-                    :src="venue.cover_image_url || '/images/hero_pickleball.png'"
+                    :src="venue.image_url || venue.cover_image_url || ''"
                     :alt="venue.name"
                     class="h-full w-full object-cover opacity-35"
                 />
@@ -94,6 +89,7 @@ function openImageViewer(index = 0) {
 
                     <!-- Preview Venue Image Button -->
                     <button
+                        v-if="courtImages.length > 0"
                         type="button"
                         @click="openImageViewer(0)"
                         class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white backdrop-blur-md transition-all hover:bg-white/20 hover:scale-105 cursor-pointer"
@@ -302,7 +298,7 @@ function openImageViewer(index = 0) {
         </section>
 
         <!-- Court Images & Facility Gallery Section -->
-        <section v-if="venueImages && venueImages.length > 0" class="border-t border-line bg-surface-elevated/20 py-16 sm:py-24">
+        <section v-if="courtImages && courtImages.length > 0" class="border-t border-line bg-surface-elevated/20 py-16 sm:py-24">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -316,7 +312,7 @@ function openImageViewer(index = 0) {
 
                 <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                     <div
-                        v-for="(imgUrl, idx) in venueImages"
+                        v-for="(imgUrl, idx) in courtImages"
                         :key="idx"
                         @click="openImageViewer(idx)"
                         class="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-surface-inverse shadow cursor-pointer"
@@ -339,7 +335,7 @@ function openImageViewer(index = 0) {
         <!-- Fullscreen Venue Image Preview Modal -->
         <VenueImageViewer
             :is-open="isImageViewerOpen"
-            :images="venueImages"
+            :images="courtImages"
             :initial-index="previewImageIndex"
             :title="venue.name"
             @close="isImageViewerOpen = false"

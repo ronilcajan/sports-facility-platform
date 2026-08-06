@@ -67,3 +67,57 @@ test('booking store calculates total price using dynamic slot rates', function (
         'total_price' => 550.00,
     ]);
 });
+
+test('admin can create additional time slots outside default hours and customers can book them', function () {
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole(RoleName::SuperAdmin->value);
+
+    $court = Court::factory()->create([
+        'base_price' => 100.00,
+        'slot_prices' => [],
+    ]);
+
+    // Admin updates court and creates new custom time slots (e.g. 03:00 AM, 05:00 AM)
+    $response = $this->actingAs($superAdmin)
+        ->put(route('admin.courts.update', $court), [
+            'name' => $court->name,
+            'sport_type' => $court->sport_type->value,
+            'status' => $court->status->value,
+            'base_price' => 100.00,
+            'slot_prices' => [
+                '03:00 AM' => 120.00,
+                '05:00 AM' => 150.00,
+            ],
+            'slot_duration_minutes' => 60,
+            'buffer_minutes' => 0,
+            'is_active' => true,
+        ]);
+
+    $response->assertRedirect();
+
+    $court->refresh();
+    expect($court->getSlotPrice('03:00 AM'))->toEqual(120.00);
+    expect($court->getSlotPrice('05:00 AM'))->toEqual(150.00);
+
+    // Customer books the custom time slots
+    $user = User::factory()->create();
+    $user->assignRole(RoleName::Customer->value);
+
+    $bookingResponse = $this->actingAs($user)
+        ->post('/bookings', [
+            'court_id' => $court->id,
+            'name' => 'Jane Smith',
+            'email' => 'jane@example.com',
+            'phone' => '09181234567',
+            'date' => '2026-08-12',
+            'time' => ['03:00 AM', '05:00 AM'],
+        ]);
+
+    $bookingResponse->assertCreated();
+
+    $this->assertDatabaseHas('bookings', [
+        'court_id' => $court->id,
+        'date' => '2026-08-12',
+        'total_price' => 270.00, // 120 + 150
+    ]);
+});

@@ -17,6 +17,7 @@ interface Venue {
     email: string | null;
     is_active: boolean;
     courts_count: number;
+    image_url?: string | null;
     cover_image_url?: string | null;
     created_at: string;
 }
@@ -105,6 +106,27 @@ function removeEditImage() {
     if (editImagePreview.value) {
         URL.revokeObjectURL(editImagePreview.value);
         editImagePreview.value = null;
+    }
+}
+
+function deleteEditImageNow() {
+    if (!editingVenue.value) return;
+    if (confirm(`Permanently remove cover photo for "${editingVenue.value.name}"?`)) {
+        router.delete(`/admin/venues/${editingVenue.value.id}/image`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                editForm.image = null;
+                editForm.delete_image = false;
+                if (editImagePreview.value) {
+                    URL.revokeObjectURL(editImagePreview.value);
+                    editImagePreview.value = null;
+                }
+                if (editingVenue.value) {
+                    editingVenue.value.image_url = null;
+                    editingVenue.value.cover_image_url = null;
+                }
+            },
+        });
     }
 }
 
@@ -442,8 +464,8 @@ function destroy(venue: Venue): void {
                                 <img :src="editImagePreview" alt="Preview" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
                                 <span class="absolute -top-1.5 -right-1.5 bg-emerald-600 text-white text-[8px] font-bold px-1 rounded-full">New</span>
                             </div>
-                            <div v-else-if="editingVenue?.cover_image_url && !editForm.delete_image" class="relative">
-                                <img :src="editingVenue.cover_image_url" alt="Current Cover" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
+                            <div v-else-if="(editingVenue?.image_url || editingVenue?.cover_image_url) && !editForm.delete_image" class="relative">
+                                <img :src="editingVenue.image_url || editingVenue.cover_image_url || ''" alt="Current Cover" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
                             </div>
                             <div v-else class="h-16 w-24 rounded-lg border border-dashed border-input flex items-center justify-center text-xs text-muted-foreground">
                                 No Cover
@@ -451,10 +473,17 @@ function destroy(venue: Venue): void {
 
                             <div class="space-y-1">
                                 <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/avif" @change="onEditImageChange" class="text-xs" />
-                                <div v-if="editingVenue?.cover_image_url && !editForm.delete_image" class="pt-0.5">
-                                    <button type="button" @click="removeEditImage" class="text-[11px] font-semibold text-rose-600 hover:underline">
-                                        Remove cover photo
+                                <div v-if="(editingVenue?.image_url || editingVenue?.cover_image_url) && !editForm.delete_image" class="pt-0.5 flex items-center gap-2">
+                                    <button type="button" @click="removeEditImage" class="text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer">
+                                        Mark for deletion
                                     </button>
+                                    <span class="text-[10px] text-neutral-300 dark:text-neutral-700">|</span>
+                                    <button type="button" @click="deleteEditImageNow" class="text-[11px] font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer">
+                                        Remove now
+                                    </button>
+                                </div>
+                                <div v-if="editForm.delete_image" class="text-[11px] text-rose-500 font-medium">
+                                    Marked for deletion on save.
                                 </div>
                             </div>
                         </div>

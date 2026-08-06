@@ -50,6 +50,7 @@ export type PublicVenue = {
     address?: string | null;
     phone?: string | null;
     email?: string | null;
+    image_url?: string | null;
     payment_methods?: VenuePaymentMethods;
 };
 

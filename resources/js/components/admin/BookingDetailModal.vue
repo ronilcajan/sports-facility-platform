@@ -19,6 +19,7 @@ import {
     Pencil,
     Save,
 } from '@lucide/vue';
+import { getMergedTimeSlots } from '@/utils/timeSlots';
 
 export interface BookingDetail {
     id: number;
@@ -65,12 +66,10 @@ const actionForm = useForm({
 
 const isEditing = ref(false);
 
-const availableTimeSlots = [
-    '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM',
-    '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
-    '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM',
-    '10:00 PM', '11:00 PM', '12:00 AM', '01:00 AM', '02:00 AM',
-];
+const availableTimeSlots = computed(() => {
+    const slots = props.booking?.time_slots || [];
+    return getMergedTimeSlots(slots);
+});
 
 const editForm = useForm({
     name: '',

@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue';
+import { ref, onUnmounted, computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
+import { Plus, Trash2 } from '@lucide/vue';
 import CourtController from '@/actions/App/Http/Controllers/Admin/CourtController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { getMergedTimeSlots, isDefaultTimeSlot } from '@/utils/timeSlots';
 import {
     Select,
     SelectContent,
@@ -49,11 +51,27 @@ const props = defineProps<{
 
 const isEditing = Boolean(props.court);
 
-const allTimeSlots = [
-    '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-    '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM', '06:00 PM',
-    '07:00 PM', '08:00 PM', '09:00 PM', '10:00 PM', '11:00 PM', '12:00 AM',
-];
+const showAddSlotInput = ref(false);
+const newSlotHour = ref('03');
+const newSlotMinute = ref('00');
+const newSlotPeriod = ref<'AM' | 'PM'>('AM');
+
+const allTimeSlots = computed(() => {
+    return getMergedTimeSlots(form.slot_prices);
+});
+
+function addCustomTimeSlot() {
+    const formatted = `${newSlotHour.value.padStart(2, '0')}:${newSlotMinute.value.padStart(2, '0')} ${newSlotPeriod.value}`;
+    if (form.slot_prices[formatted] === undefined) {
+        form.slot_prices[formatted] = '';
+    }
+    showAddSlotInput.value = false;
+}
+
+function removeCustomTimeSlot(slot: string) {
+    if (isDefaultTimeSlot(slot)) return;
+    delete form.slot_prices[slot];
+}
 
 const form = useForm({
     name: props.court?.name ?? '',
@@ -250,20 +268,76 @@ onUnmounted(() => {
 
         <!-- Dynamic Time Slot Specific Pricing Section -->
         <div class="space-y-4 rounded-xl border border-input p-4 bg-muted/20">
-            <div>
-                <h3 class="text-sm font-semibold">Time Slot Specific Pricing (Optional)</h3>
-                <p class="text-xs text-muted-foreground">
-                    Set custom hourly prices for specific time slots. Slots left blank or 0 will default to the court's <strong>Base Price</strong> (₱{{ form.base_price || '0.00' }}).
-                </p>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h3 class="text-sm font-semibold">Time Slot Specific Pricing (Optional)</h3>
+                    <p class="text-xs text-muted-foreground">
+                        Set custom hourly prices for specific time slots. Slots left blank or 0 will default to the court's <strong>Base Price</strong> (₱{{ form.base_price || '0.00' }}).
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    @click="showAddSlotInput = !showAddSlotInput"
+                    class="inline-flex items-center gap-1 shrink-0 rounded-lg bg-emerald-600/10 px-3 py-1.5 text-xs font-bold text-emerald-600 hover:bg-emerald-600/20 transition-all cursor-pointer border border-emerald-600/30"
+                >
+                    <Plus class="size-3.5" />
+                    <span>Add Time Slot</span>
+                </button>
+            </div>
+
+            <!-- Inline Add Custom Time Slot Form -->
+            <div v-if="showAddSlotInput" class="flex flex-wrap items-center gap-2 p-3 rounded-lg border border-emerald-500/30 bg-background shadow-xs">
+                <span class="text-xs font-bold">New Slot Time:</span>
+                <div class="flex items-center gap-1 text-xs font-bold">
+                    <select v-model="newSlotHour" class="rounded-md border border-input bg-background px-2 py-1 text-xs font-bold">
+                        <option v-for="h in ['01','02','03','04','05','06','07','08','09','10','11','12']" :key="h" :value="h">{{ h }}</option>
+                    </select>
+                    <span class="text-muted-foreground">:</span>
+                    <select v-model="newSlotMinute" class="rounded-md border border-input bg-background px-2 py-1 text-xs font-bold">
+                        <option value="00">00</option>
+                        <option value="15">15</option>
+                        <option value="30">30</option>
+                        <option value="45">45</option>
+                    </select>
+                    <select v-model="newSlotPeriod" class="rounded-md border border-input bg-background px-2 py-1 text-xs font-bold">
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                    </select>
+                </div>
+                <button
+                    type="button"
+                    @click="addCustomTimeSlot"
+                    class="rounded-md bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700 transition-colors cursor-pointer"
+                >
+                    Add Slot
+                </button>
+                <button
+                    type="button"
+                    @click="showAddSlotInput = false"
+                    class="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:bg-muted/80 cursor-pointer"
+                >
+                    Cancel
+                </button>
             </div>
 
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 <div v-for="slot in allTimeSlots" :key="slot" class="space-y-1 rounded-lg border border-input bg-background p-2.5 shadow-2xs">
                     <div class="flex items-center justify-between text-[11px] font-bold text-foreground">
                         <span>{{ slot }}</span>
-                        <span class="text-[10px] font-normal text-muted-foreground">
-                            {{ form.slot_prices[slot] && parseFloat(String(form.slot_prices[slot])) > 0 ? 'Custom' : 'Default' }}
-                        </span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[10px] font-normal text-muted-foreground">
+                                {{ form.slot_prices[slot] && parseFloat(String(form.slot_prices[slot])) > 0 ? 'Custom' : 'Default' }}
+                            </span>
+                            <button
+                                v-if="!isDefaultTimeSlot(slot)"
+                                type="button"
+                                @click="removeCustomTimeSlot(slot)"
+                                class="text-rose-500 hover:text-rose-700 p-0.5 rounded cursor-pointer"
+                                title="Remove custom slot"
+                            >
+                                <Trash2 class="size-3" />
+                            </button>
+                        </div>
                     </div>
                     <div class="relative">
                         <span class="absolute left-2.5 top-1.5 text-xs text-muted-foreground">₱</span>

@@ -164,6 +164,12 @@ function deleteBooking(bookingId: number) {
     }
 }
 
+function removeVenueImage() {
+    if (confirm('Permanently remove this venue cover photo?')) {
+        router.delete(`/admin/venues/${props.venue.id}/image`, { preserveScroll: true });
+    }
+}
+
 const activeCourtCount = computed(() => props.courts.filter(c => c.is_active).length);
 const totalBookings = computed(() => props.bookings.data.length);
 </script>
@@ -182,8 +188,8 @@ const totalBookings = computed(() => props.bookings.data.length);
             <!-- Cover Image Banner -->
             <div class="relative h-44 sm:h-56 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
                 <img
-                    v-if="venue.cover_image_url"
-                    :src="venue.cover_image_url"
+                    v-if="venue.image_url || venue.cover_image_url"
+                    :src="venue.image_url || venue.cover_image_url || ''"
                     :alt="venue.name"
                     class="h-full w-full object-cover"
                 />
@@ -191,6 +197,19 @@ const totalBookings = computed(() => props.bookings.data.length);
                     <Building class="h-16 w-16" />
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+
+                <!-- Delete Venue Image Action -->
+                <button
+                    v-if="venue.image_url"
+                    type="button"
+                    @click="removeVenueImage"
+                    class="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-rose-600/90 hover:bg-rose-700 text-white px-3 py-1 text-[11px] font-bold shadow-md transition-all cursor-pointer backdrop-blur-md"
+                    title="Remove Cover Image"
+                >
+                    <Trash2 class="w-3.5 h-3.5" />
+                    <span>Remove Cover Photo</span>
+                </button>
+
                 <span
                     :class="[
                         'absolute right-4 top-4 rounded-full px-3 py-1 text-[11px] font-bold capitalize shadow-md',

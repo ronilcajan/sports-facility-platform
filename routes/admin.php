@@ -60,6 +60,7 @@ Route::middleware([
 
         // Venue Profile (accessible to authorized admins & superadmins)
         Route::get('venues/{venue}', [AdminVenueController::class, 'show'])->name('venues.show');
+        Route::delete('venues/{venue}/image', [AdminVenueController::class, 'destroyImage'])->name('venues.image.destroy');
 
         // Venue Settings — an admin edits their own assigned venue
         Route::get('settings', [SingleVenueController::class, 'edit'])->name('settings.edit');

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
-import { MapPin, Phone, Dumbbell, CalendarCheck, ChevronRight, ZoomIn } from '@lucide/vue';
+import { MapPin, Phone, Dumbbell, CalendarCheck, ChevronRight, ZoomIn, Building } from '@lucide/vue';
 import VenueImageViewer from '@/components/site/VenueImageViewer.vue';
 import type { PublicCourt, PublicVenue } from '@/types';
 
 export interface CatalogVenue extends PublicVenue {
+    image_url?: string | null;
     cover_image_url?: string | null;
     courts_count: number;
     courts: PublicCourt[];
@@ -34,9 +35,6 @@ const imageList = computed(() => {
             }
         });
     }
-    if (list.length === 0) {
-        list.push('/images/hero_pickleball.png');
-    }
     return list;
 });
 </script>
@@ -51,11 +49,15 @@ const imageList = computed(() => {
             class="relative aspect-[16/9] overflow-hidden bg-surface-inverse block group/cover cursor-pointer"
         >
             <img
-                :src="venue.cover_image_url || '/images/hero_pickleball.png'"
+                v-if="venue.cover_image_url || venue.image_url"
+                :src="venue.cover_image_url || venue.image_url || ''"
                 :alt="venue.name"
                 class="h-full w-full object-cover transition-transform duration-500 group-hover/cover:scale-105"
                 loading="lazy"
             />
+            <div v-else class="flex h-full w-full items-center justify-center bg-slate-900 text-slate-500">
+                <Building class="size-14 text-emerald-500/30" />
+            </div>
             <div
                 class="absolute inset-0 bg-gradient-to-t from-surface-inverse/90 via-surface-inverse/30 to-transparent"
             />

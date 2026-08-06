@@ -70,6 +70,7 @@ const props = defineProps<{
 
 const timeRange = ref<'7d' | '30d' | '90d'>('30d');
 const activeAnalyticsTab = ref<'all' | 'trend' | 'pages' | 'devices'>('all');
+const hoveredIndex = ref<number | null>(null);
 
 // Filter trend based on timeframe selector
 const filteredTrend = computed(() => {
@@ -85,31 +86,40 @@ const maxViews = computed(() => {
     return Math.ceil(max / 100) * 100;
 });
 
-// SVG Chart Path Generation
+// SVG Chart Path & Points Generation
 const chartWidth = 700;
 const chartHeight = 220;
 
-const pointsViews = computed(() => {
+const calculatedTrendPoints = computed(() => {
     const data = filteredTrend.value;
-    if (data.length === 0) return '';
-    return data
-        .map((d, i) => {
-            const x = (i / (data.length - 1)) * chartWidth;
-            const y = chartHeight - (d.views / maxViews.value) * (chartHeight - 30) - 15;
-            return `${x.toFixed(1)},${y.toFixed(1)}`;
-        })
+    if (data.length === 0) return [];
+    return data.map((d, i) => {
+        const x = (i / (data.length - 1)) * chartWidth;
+        const yViews = chartHeight - (d.views / maxViews.value) * (chartHeight - 30) - 15;
+        const yVisitors = chartHeight - (d.visitors / maxViews.value) * (chartHeight - 30) - 15;
+        return {
+            ...d,
+            index: i,
+            x,
+            yViews,
+            yVisitors,
+        };
+    });
+});
+
+const activeHoverPoint = computed(() =>
+    hoveredIndex.value !== null ? calculatedTrendPoints.value[hoveredIndex.value] : null
+);
+
+const pointsViews = computed(() => {
+    return calculatedTrendPoints.value
+        .map((p) => `${p.x.toFixed(1)},${p.yViews.toFixed(1)}`)
         .join(' ');
 });
 
 const pointsVisitors = computed(() => {
-    const data = filteredTrend.value;
-    if (data.length === 0) return '';
-    return data
-        .map((d, i) => {
-            const x = (i / (data.length - 1)) * chartWidth;
-            const y = chartHeight - (d.visitors / maxViews.value) * (chartHeight - 30) - 15;
-            return `${x.toFixed(1)},${y.toFixed(1)}`;
-        })
+    return calculatedTrendPoints.value
+        .map((p) => `${p.x.toFixed(1)},${p.yVisitors.toFixed(1)}`)
         .join(' ');
 });
 
@@ -293,7 +303,7 @@ function formatNumber(num: number): string {
             </div>
         </div>
 
-        <!-- ── Interactive Traffic Trend Chart (Visible in 'all' and 'trend') ── -->
+        <!-- ── Interactive Traffic Trend Chart with Floating Tooltip ── -->
         <div v-if="activeAnalyticsTab === 'all' || activeAnalyticsTab === 'trend'" class="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100 dark:border-neutral-800">
                 <div>
@@ -302,7 +312,7 @@ function formatNumber(num: number): string {
                         Daily Page Views &amp; Visitor Trend
                     </h3>
                     <p class="text-xs text-neutral-500 mt-0.5">
-                        Comparing total daily visits (green area) against unique visitors (teal line).
+                        Hover over any date point to view real-time daily metrics.
                     </p>
                 </div>
 
@@ -318,8 +328,37 @@ function formatNumber(num: number): string {
                 </div>
             </div>
 
-            <!-- SVG Vector Chart -->
-            <div class="mt-6 relative w-full overflow-x-auto scrollbar-none">
+            <!-- SVG Vector Chart with Interactive Tooltip Container -->
+            <div class="mt-6 relative w-full">
+                <!-- Floating Glassmorphic Tooltip Card -->
+                <div
+                    v-if="activeHoverPoint"
+                    class="pointer-events-none absolute z-30 flex flex-col rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white/95 dark:bg-neutral-900/95 p-3.5 text-xs shadow-xl backdrop-blur-md transition-all duration-75 transform -translate-x-1/2 -translate-y-full mb-3 min-w-[170px]"
+                    :style="{
+                        left: `${(activeHoverPoint.x / chartWidth) * 100}%`,
+                        top: `${Math.min(activeHoverPoint.yViews, activeHoverPoint.yVisitors)}px`,
+                    }"
+                >
+                    <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2 mb-2">
+                        <span class="font-black text-neutral-900 dark:text-white text-xs">{{ activeHoverPoint.label }}</span>
+                        <span class="text-[10px] font-mono text-neutral-400">{{ activeHoverPoint.date }}</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between gap-4">
+                            <span class="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300 font-bold">
+                                <span class="size-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" /> Views:
+                            </span>
+                            <strong class="font-black text-emerald-600 dark:text-emerald-400 tabular-nums text-xs">{{ formatNumber(activeHoverPoint.views) }}</strong>
+                        </div>
+                        <div class="flex items-center justify-between gap-4">
+                            <span class="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300 font-bold">
+                                <span class="size-2 rounded-full bg-teal-400 shadow-sm shadow-teal-400/50" /> Visitors:
+                            </span>
+                            <strong class="font-black text-teal-600 dark:text-teal-400 tabular-nums text-xs">{{ formatNumber(activeHoverPoint.visitors) }}</strong>
+                        </div>
+                    </div>
+                </div>
+
                 <svg
                     class="w-full h-56 overflow-visible"
                     :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
@@ -341,6 +380,18 @@ function formatNumber(num: number): string {
                     <!-- Views Area -->
                     <path :d="areaPathViews" fill="url(#viewsGradient)" />
 
+                    <!-- Vertical Hover Line -->
+                    <line
+                        v-if="activeHoverPoint"
+                        :x1="activeHoverPoint.x"
+                        y1="10"
+                        :x2="activeHoverPoint.x"
+                        :y2="chartHeight"
+                        stroke="#10b981"
+                        stroke-width="1.5"
+                        stroke-dasharray="3 3"
+                    />
+
                     <!-- Views Line -->
                     <polyline
                         fill="none"
@@ -360,6 +411,26 @@ function formatNumber(num: number): string {
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         :points="pointsVisitors"
+                    />
+
+                    <!-- Active Point Dots -->
+                    <g v-if="activeHoverPoint">
+                        <circle :cx="activeHoverPoint.x" :cy="activeHoverPoint.yViews" r="6" fill="#10b981" stroke="#ffffff" stroke-width="2" />
+                        <circle :cx="activeHoverPoint.x" :cy="activeHoverPoint.yVisitors" r="5" fill="#2dd4bf" stroke="#ffffff" stroke-width="2" />
+                    </g>
+
+                    <!-- Invisible Hover Hitboxes -->
+                    <rect
+                        v-for="(p, i) in calculatedTrendPoints"
+                        :key="p.date"
+                        :x="Math.max(0, p.x - (chartWidth / (calculatedTrendPoints.length * 2)))"
+                        y="0"
+                        :width="chartWidth / calculatedTrendPoints.length"
+                        :height="chartHeight"
+                        fill="transparent"
+                        class="cursor-pointer"
+                        @mouseenter="hoveredIndex = i"
+                        @mouseleave="hoveredIndex = null"
                     />
                 </svg>
 

@@ -4,6 +4,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useSite } from '@/composables/useSite';
 import type { PublicCourt } from '@/types';
 import type { CatalogVenue } from '@/components/site/SiteVenueCard.vue';
+import { getMergedTimeSlots } from '@/utils/timeSlots';
 
 const props = defineProps<{
     court?: PublicCourt | null;
@@ -173,29 +174,10 @@ function removeReceipt() {
 const loadingText = ref('Verifying court schedule availability...');
 const loadingStep = ref(1);
 
-// Available Time Slots (Daily open hours 7 AM to 2 AM)
-const timeSlots = [
-    '07:00 AM',
-    '08:00 AM',
-    '09:00 AM',
-    '10:00 AM',
-    '11:00 AM',
-    '12:00 PM',
-    '01:00 PM',
-    '02:00 PM',
-    '03:00 PM',
-    '04:00 PM',
-    '05:00 PM',
-    '06:00 PM',
-    '07:00 PM',
-    '08:00 PM',
-    '09:00 PM',
-    '10:00 PM',
-    '11:00 PM',
-    '12:00 AM',
-    '01:00 AM',
-    '02:00 AM',
-];
+// Available Time Slots (Default open hours + custom admin created slots)
+const availableTimeSlots = computed(() => {
+    return getMergedTimeSlots(selectedCourt.value?.slot_prices);
+});
 
 // Parse a slot label like '07:00 AM' into a 24-hour number (0-23)
 function parseSlotHour(slot: string): number {
@@ -229,7 +211,7 @@ function slotPeriodLabel(slot: string): string {
 const groupedTimeSlots = computed<{ period: string; slots: string[] }[]>(() => {
     const order = ['Morning', 'Afternoon', 'Evening', 'Night'];
     const groups: Record<string, string[]> = {};
-    for (const slot of timeSlots) {
+    for (const slot of availableTimeSlots.value) {
         const period = slotPeriodLabel(slot);
         (groups[period] ??= []).push(slot);
     }
@@ -436,27 +418,7 @@ async function fetchRealtimeAvailability() {
 
 // Compute booked slots for a specific court id
 function getCourtBookedSlots(courtId: number): string[] {
-    const dbSlots = realtimeBookedSlotsMap.value[String(courtId)] || [];
-
-    // Combine with deterministic seed mock logic for consistent demo testing
-    let seedSlots: string[] = [];
-    if (form.value.date) {
-        const dateNum = form.value.date.split('-').reduce((acc, val) => acc + parseInt(val), 0);
-        const seed = (courtId + dateNum) % 5;
-        if (seed === 0) {
-            seedSlots = ['08:00 AM', '10:00 AM', '04:00 PM', '07:00 PM'];
-        } else if (seed === 1) {
-            seedSlots = ['09:00 AM', '11:00 AM', '05:00 PM', '08:00 PM'];
-        } else if (seed === 2) {
-            seedSlots = ['07:00 AM', '12:00 PM', '06:00 PM', '09:00 PM'];
-        } else if (seed === 3) {
-            seedSlots = ['10:00 AM', '01:00 PM', '03:00 PM', '10:00 PM'];
-        } else {
-            seedSlots = ['08:00 AM', '02:00 PM', '05:00 PM', '11:00 PM'];
-        }
-    }
-
-    return Array.from(new Set([...dbSlots, ...seedSlots]));
+    return realtimeBookedSlotsMap.value[String(courtId)] || [];
 }
 
 function isSlotBooked(slot: string): boolean {
@@ -466,7 +428,7 @@ function isSlotBooked(slot: string): boolean {
 
 function isCourtFullyBooked(court: PublicCourt): boolean {
     const booked = getCourtBookedSlots(court.id);
-    return booked.length >= timeSlots.length;
+    return booked.length >= availableTimeSlots.value.length;
 }
 
 // Watch date changes to refresh server availability and unselect occupied slots

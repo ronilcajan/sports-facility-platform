@@ -134,7 +134,6 @@ class PageController extends Controller
         ]);
 
         $allCourtImages = $bookableCourts->pluck('images')->flatten()->unique()->values();
-        $coverImage = $bookableCourts->firstWhere('primary_image_url', '!==', null)['primary_image_url'] ?? asset('images/hero_pickleball.png');
 
         return Inertia::render('site/VenueShow', [
             'venue' => [
@@ -145,7 +144,8 @@ class PageController extends Controller
                 'address' => $venue->address,
                 'phone' => $venue->phone,
                 'email' => $venue->email,
-                'cover_image_url' => $coverImage,
+                'image_url' => $venue->image_url,
+                'cover_image_url' => $venue->image_url,
                 'courts_count' => $bookableCourts->count(),
                 'courts' => $bookableCourts->values(),
                 'images' => $allCourtImages,
@@ -235,8 +235,6 @@ class PageController extends Controller
                     ],
                 ]);
 
-                $firstImage = $bookableCourts->firstWhere('primary_image_url', '!==', null)['primary_image_url'] ?? null;
-
                 return [
                     'id' => $venue->id,
                     'name' => $venue->name,
@@ -245,7 +243,8 @@ class PageController extends Controller
                     'address' => $venue->address,
                     'phone' => $venue->phone,
                     'email' => $venue->email,
-                    'cover_image_url' => $firstImage ?: asset('images/hero_pickleball.png'),
+                    'image_url' => $venue->image_url,
+                    'cover_image_url' => $venue->image_url,
                     'courts_count' => $bookableCourts->count(),
                     'courts' => $bookableCourts->values(),
                     'payment_methods' => $venue->paymentMethods(),

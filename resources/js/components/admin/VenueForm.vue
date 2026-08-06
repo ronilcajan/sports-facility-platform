@@ -21,12 +21,17 @@ export interface VenueData {
     is_active: boolean;
 }
 
-const props = defineProps<{
-    venue: VenueData;
-    action: string;
-    cancelUrl: string;
-    canManageVenueImages?: boolean;
-}>();
+const props = withDefaults(
+    defineProps<{
+        venue: VenueData;
+        action: string;
+        cancelUrl: string;
+        canManageVenueImages?: boolean;
+    }>(),
+    {
+        canManageVenueImages: true,
+    }
+);
 
 const form = useForm({
     name: props.venue.name,
@@ -68,6 +73,22 @@ function removeImage() {
     if (imagePreview.value) {
         URL.revokeObjectURL(imagePreview.value);
         imagePreview.value = null;
+    }
+}
+
+function deleteImageNow() {
+    if (confirm('Permanently remove this venue cover image?')) {
+        router.delete(`/admin/venues/${props.venue.id}/image`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                form.image = null;
+                form.delete_image = false;
+                if (imagePreview.value) {
+                    URL.revokeObjectURL(imagePreview.value);
+                    imagePreview.value = null;
+                }
+            },
+        });
     }
 }
 
@@ -125,7 +146,7 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <!-- Venue Cover Photo (Super Admin Only) -->
+        <!-- Venue Cover Photo -->
         <div v-if="canManageVenueImages !== false" class="space-y-3 rounded-xl border border-input p-4">
             <div>
                 <h3 class="text-sm font-semibold">Venue Cover Photo</h3>
@@ -146,9 +167,13 @@ onUnmounted(() => {
 
                 <div class="space-y-2">
                     <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp" @change="onImageChange" class="text-xs" />
-                    <div v-if="venue.image_url && !form.delete_image" class="pt-1">
-                        <button type="button" @click="removeImage" class="text-xs font-semibold text-rose-600 hover:underline">
-                            Remove current cover image
+                    <div v-if="venue.image_url && !form.delete_image" class="pt-1 flex items-center gap-3">
+                        <button type="button" @click="removeImage" class="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer">
+                            Mark for deletion on save
+                        </button>
+                        <span class="text-xs text-neutral-300 dark:text-neutral-700">|</span>
+                        <button type="button" @click="deleteImageNow" class="text-xs font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer">
+                            Remove image now
                         </button>
                     </div>
                     <div v-if="form.delete_image" class="text-xs text-rose-500 font-medium">
