@@ -174,12 +174,12 @@
 /*
   Marketing site design tokens — scoped as their own named colors so the
   public site's palette never collides with the neutral dashboard theme above.
-  Derived from the RAMBOY ENTERPRISE logo: rich gold, metallic silver, and onyx.
+  Brand emerald, metallic silver, and onyx.
 */
 @theme {
     --color-ink: #090d16;
-    --color-court: #d97706;
-    --color-volt: #f59e0b;
+    --color-court: #059669;
+    --color-volt: #10b981;
     --color-chalk: #f8fafc;
     --color-fog: #64748b;
 }
@@ -206,7 +206,7 @@
 
 /* ============================================================
    Site theme: NAVY
-   Default (light variant) — clean white + brand gold
+   Default (light variant) — clean white + brand emerald
    .site-dark — deep onyx, original dark palette
    ============================================================ */
 [data-theme='navy'] {
@@ -216,9 +216,9 @@
     --site-content: #0f172a;
     --site-content-muted: #475569;
     --site-content-inverse: #f8fafc;
-    --site-brand: #d97706;
+    --site-brand: #059669;
     --site-brand-foreground: #ffffff;
-    --site-highlight: #92400e;
+    --site-highlight: #065f46;
     --site-line: rgba(15, 23, 42, 0.1);
     --site-radius: 0.9rem;
     --site-shadow-card: 0 20px 45px -20px rgba(15, 23, 42, 0.18);
@@ -232,16 +232,16 @@
     --site-content: #f8fafc;
     --site-content-muted: #94a3b8;
     --site-content-inverse: #f8fafc;
-    --site-brand: #f59e0b;
-    --site-brand-foreground: #090d16;
-    --site-highlight: #cbd5e1;
-    --site-line: rgba(245, 158, 11, 0.15);
+    --site-brand: #10b981;
+    --site-brand-foreground: #052e16;
+    --site-highlight: #34d399;
+    --site-line: rgba(16, 185, 129, 0.15);
     --site-shadow-card: 0 20px 45px -20px rgba(0, 0, 0, 0.65);
 }
 
 /* ============================================================
    Site theme: FAIRWAY
-   Default (light) — warm cream & amber (original look)
+   Default (light) — warm cream surfaces + brand emerald
    .site-dark — deep forest green dark variant
    ============================================================ */
 [data-theme='fairway'] {
@@ -251,9 +251,9 @@
     --site-content: #0f172a;
     --site-content-muted: #64748b;
     --site-content-inverse: #f8fafc;
-    --site-brand: #d97706;
+    --site-brand: #059669;
     --site-brand-foreground: #ffffff;
-    --site-highlight: #b45309;
+    --site-highlight: #047857;
     --site-line: rgba(15, 23, 42, 0.1);
     --site-radius: 1.25rem;
     --site-shadow-card: 0 24px 50px -28px rgba(15, 23, 42, 0.25);
@@ -267,17 +267,17 @@
     --site-content: #ecfdf5;
     --site-content-muted: #86efac;
     --site-content-inverse: #ecfdf5;
-    --site-brand: #d97706;
-    --site-brand-foreground: #ffffff;
-    --site-highlight: #fbbf24;
-    --site-line: rgba(217, 119, 6, 0.18);
+    --site-brand: #10b981;
+    --site-brand-foreground: #052e16;
+    --site-highlight: #34d399;
+    --site-line: rgba(16, 185, 129, 0.18);
     --site-shadow-card: 0 24px 50px -28px rgba(0, 0, 0, 0.55);
 }
 
 /* ============================================================
    Site theme: ELECTRIC
-   Default (light) — clean silver-white + gold accents
-   .site-dark — obsidian dark with electric gold (original look)
+   Default (light) — clean silver-white + brand emerald
+   .site-dark — obsidian dark with brand emerald
    ============================================================ */
 [data-theme='electric'] {
     --site-surface: #f8f9fa;
@@ -286,9 +286,9 @@
     --site-content: #1c2128;
     --site-content-muted: #57606a;
     --site-content-inverse: #f0f6fc;
-    --site-brand: #b45309;
+    --site-brand: #059669;
     --site-brand-foreground: #ffffff;
-    --site-highlight: #92400e;
+    --site-highlight: #047857;
     --site-line: rgba(28, 33, 40, 0.1);
     --site-radius: 0.8rem;
     --site-shadow-card: 0 22px 48px -22px rgba(0, 0, 0, 0.15);
@@ -302,10 +302,10 @@
     --site-content: #f0f6fc;
     --site-content-muted: #8b949e;
     --site-content-inverse: #f0f6fc;
-    --site-brand: #eab308;
-    --site-brand-foreground: #0d1117;
-    --site-highlight: #e2e8f0;
-    --site-line: rgba(234, 179, 8, 0.18);
+    --site-brand: #10b981;
+    --site-brand-foreground: #052e16;
+    --site-highlight: #34d399;
+    --site-line: rgba(16, 185, 129, 0.18);
     --site-shadow-card: 0 22px 48px -22px rgba(0, 0, 0, 0.7);
 }
 

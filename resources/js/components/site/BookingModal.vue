@@ -1760,10 +1760,9 @@ async function downloadVoucher() {
 
                 <!-- Stage 3: Booking Received Screen -->
                 <div v-else-if="step === 'confirmed'" class="min-h-0 flex-1 space-y-5 overflow-y-auto p-8 text-center">
-                    <div class="mx-auto flex items-center justify-center gap-3">
-                        <img v-if="siteLogo" :src="siteLogo" :alt="siteName" class="size-14 rounded-full object-cover ring-2 ring-emerald-500/30 shadow-sm" />
-                        <div class="flex size-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
-                            <svg class="size-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                    <div class="mx-auto flex items-center justify-center">
+                        <div class="flex size-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 ring-2 ring-emerald-500/20">
+                            <svg class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
                         </div>

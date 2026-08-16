@@ -100,7 +100,7 @@ function toggleSiteDark() {
                                 {{ site?.name ?? 'PickleHub' }}
                             </span>
                             <div class="mt-0.5 flex items-center justify-center gap-1.5 text-[10px] font-extrabold uppercase leading-none">
-                                <span class="font-serif tracking-widest text-amber-500">RAMBOY</span>
+                                <span class="font-serif tracking-widest text-brand">RAMBOY</span>
                                 <span
                                     class="font-sans tracking-[0.2em] opacity-70 transition-colors duration-300"
                                     :class="siteDark ? 'text-slate-300' : 'text-slate-500'"
