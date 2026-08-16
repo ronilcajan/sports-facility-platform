@@ -59,6 +59,18 @@ const defaultTimeSlots = [
     '21:00 - 22:00',
 ];
 
+/** Statuses that hand the hour back — mirrors Booking::RELEASED_STATUSES. */
+const releasedStatuses = ['rejected', 'cancelled'];
+
+function bookingsForSlot(slot: string) {
+    return currentMonthBookings.value.filter((b) => b.time_slots && b.time_slots.includes(slot));
+}
+
+/** A slot stays available unless something on it still holds the hour. */
+function slotIsAvailable(slot: string): boolean {
+    return !bookingsForSlot(slot).some((b) => !releasedStatuses.includes(b.status));
+}
+
 function getStatusBadgeClass(status: string) {
     switch (status) {
         case 'approved':
@@ -135,21 +147,29 @@ function getStatusBadgeClass(status: string) {
                         </div>
                     </template>
 
-                    <!-- Booking Match check -->
-                    <template v-else-if="currentMonthBookings.some(b => b.time_slots && b.time_slots.includes(slot))">
+                    <!-- Every booking on this hour, rejections included -->
+                    <template v-else>
                         <div
-                            v-for="b in currentMonthBookings.filter(b => b.time_slots && b.time_slots.includes(slot))"
+                            v-for="b in bookingsForSlot(slot)"
                             :key="b.id"
-                            :class="['inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium border mr-2 my-0.5', getStatusBadgeClass(b.status)]"
+                            :class="[
+                                'inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium border mr-2 my-0.5',
+                                getStatusBadgeClass(b.status),
+                                releasedStatuses.includes(b.status) ? 'opacity-60' : '',
+                            ]"
                         >
                             <CheckCircle v-if="b.status === 'approved' || b.status === 'confirmed'" class="w-3.5 h-3.5" />
                             <AlertCircle v-else class="w-3.5 h-3.5" />
-                            <span>{{ b.name }} ({{ b.status }}) - ₱{{ b.total_price }}</span>
+                            <span :class="releasedStatuses.includes(b.status) ? 'line-through' : ''">
+                                {{ b.name }} ({{ b.status }}) - ₱{{ b.total_price }}
+                            </span>
                         </div>
-                    </template>
 
-                    <template v-else>
-                        <span class="text-xs text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full">
+                        <!-- Still available when nothing on this hour holds it -->
+                        <span
+                            v-if="slotIsAvailable(slot)"
+                            class="text-xs text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full"
+                        >
                             Available Slot
                         </span>
                     </template>

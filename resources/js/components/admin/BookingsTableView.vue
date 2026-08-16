@@ -108,11 +108,45 @@ function shiftDays(daysOffset: number) {
     applyFilters();
 }
 
-// Find booking for cell (dateStr, slot)
-function getBookingForCell(dateStr: string, slot: string): TableBookingItem | undefined {
-    return props.tableBookings.find(
-        (b) => b.date === dateStr && Array.isArray(b.time_slots) && b.time_slots.includes(slot)
-    );
+/** Statuses that hand the hour back — mirrors Booking::RELEASED_STATUSES. */
+const releasedStatuses = ['rejected', 'cancelled'];
+
+// Index every booking by date+slot up front; a slot can hold more than one
+// (a rejection and the confirmed booking that replaced it, for example).
+const cellIndex = computed(() => {
+    const map = new Map<string, TableBookingItem[]>();
+
+    for (const booking of props.tableBookings) {
+        if (!Array.isArray(booking.time_slots)) {
+            continue;
+        }
+
+        for (const slot of booking.time_slots) {
+            const key = `${booking.date}|${slot}`;
+            const existing = map.get(key);
+
+            if (existing) {
+                existing.push(booking);
+            } else {
+                map.set(key, [booking]);
+            }
+        }
+    }
+
+    return map;
+});
+
+function bookingsForCell(dateStr: string, slot: string): TableBookingItem[] {
+    return cellIndex.value.get(`${dateStr}|${slot}`) ?? [];
+}
+
+function isReleased(statusStr: string): boolean {
+    return releasedStatuses.includes(statusStr);
+}
+
+/** A slot stays bookable unless something in it still holds the hour. */
+function cellIsOpen(dateStr: string, slot: string): boolean {
+    return !bookingsForCell(dateStr, slot).some((b) => !isReleased(b.status));
 }
 
 function cellStatusClass(statusStr: string): string {
@@ -345,41 +379,45 @@ const grandTotals = computed(() => {
                         <td
                             v-for="d in tableDates"
                             :key="`${d.dateStr}-${slot}`"
-                            class="p-1.5 border-r border-neutral-100 dark:border-neutral-800/60 align-top h-16"
+                            class="p-1.5 border-r border-neutral-100 dark:border-neutral-800/60 align-top min-h-16"
                         >
-                            <!-- If booking exists for this slot & date -->
-                            <div
-                                v-if="getBookingForCell(d.dateStr, slot)"
-                                @click="emit('select-booking', getBookingForCell(d.dateStr, slot)!)"
-                                class="h-full w-full rounded-xl border p-2 flex flex-col justify-between cursor-pointer transition-all duration-150 shadow-xs"
-                                :class="cellStatusClass(getBookingForCell(d.dateStr, slot)!.status)"
-                            >
-                                <div class="flex items-center justify-between gap-1">
-                                    <span class="font-bold truncate text-[11px]">
-                                        {{ getBookingForCell(d.dateStr, slot)!.name }}
-                                    </span>
-                                    <span class="text-[9px] font-extrabold uppercase px-1 rounded-sm bg-black/10">
-                                        {{ getBookingForCell(d.dateStr, slot)!.status }}
-                                    </span>
+                            <div class="flex h-full min-h-14 w-full flex-col gap-1">
+                                <!-- Every booking on this hour, rejections included -->
+                                <div
+                                    v-for="b in bookingsForCell(d.dateStr, slot)"
+                                    :key="b.id"
+                                    @click="emit('select-booking', b)"
+                                    class="w-full rounded-xl border p-2 flex flex-col justify-between cursor-pointer transition-all duration-150 shadow-xs"
+                                    :class="[cellStatusClass(b.status), isReleased(b.status) ? 'opacity-60' : '']"
+                                >
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="font-bold truncate text-[11px]" :class="isReleased(b.status) ? 'line-through' : ''">
+                                            {{ b.name }}
+                                        </span>
+                                        <span class="text-[9px] font-extrabold uppercase px-1 rounded-sm bg-black/10">
+                                            {{ b.status }}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-[10px] opacity-90 mt-1">
+                                        <span class="truncate font-mono">{{ b.court?.name || 'Court' }}</span>
+                                        <span class="font-bold">₱{{ b.total_price }}</span>
+                                    </div>
                                 </div>
-                                <div class="flex items-center justify-between text-[10px] opacity-90 mt-1">
-                                    <span class="truncate font-mono">{{ getBookingForCell(d.dateStr, slot)!.court?.name || 'Court' }}</span>
-                                    <span class="font-bold">₱{{ getBookingForCell(d.dateStr, slot)!.total_price }}</span>
-                                </div>
-                            </div>
 
-                            <!-- If NO booking exists: Available Slot -->
-                            <div
-                                v-else
-                                @click="emit('create-booking', { date: d.dateStr, slot })"
-                                class="group h-full w-full rounded-xl border border-dashed border-emerald-300/40 dark:border-emerald-800/40 bg-emerald-50/20 dark:bg-emerald-950/10 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 p-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-150"
-                            >
-                                <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 group-hover:hidden flex items-center gap-1">
-                                    <span class="size-1.5 rounded-full bg-emerald-500" /> Open
-                                </span>
-                                <span class="hidden group-hover:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                                    <Plus class="size-3" /> Book
-                                </span>
+                                <!-- Still bookable when nothing here holds the hour -->
+                                <div
+                                    v-if="cellIsOpen(d.dateStr, slot)"
+                                    @click="emit('create-booking', { date: d.dateStr, slot })"
+                                    class="group w-full rounded-xl border border-dashed border-emerald-300/40 dark:border-emerald-800/40 bg-emerald-50/20 dark:bg-emerald-950/10 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 flex flex-col items-center justify-center cursor-pointer transition-all duration-150"
+                                    :class="bookingsForCell(d.dateStr, slot).length ? 'py-1.5' : 'flex-1 p-2'"
+                                >
+                                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 group-hover:hidden flex items-center gap-1">
+                                        <span class="size-1.5 rounded-full bg-emerald-500" /> Open
+                                    </span>
+                                    <span class="hidden group-hover:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                                        <Plus class="size-3" /> Book
+                                    </span>
+                                </div>
                             </div>
                         </td>
                     </tr>
