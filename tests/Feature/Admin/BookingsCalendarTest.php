@@ -69,17 +69,19 @@ test('venue admin calendar only includes their own venue bookings', function () 
         ->assertInertia(fn ($page) => $page->has('days.0.bookings', 1));
 });
 
-test('the calendar hides rejected and cancelled bookings by default', function () {
+test('the calendar shows every status so staff can see rejections', function () {
     $superAdmin = userWithRole(RoleName::SuperAdmin);
     $today = Carbon::now()->toDateString();
     $court = Court::factory()->for(Venue::factory()->create())->create();
 
     Booking::factory()->for($court)->create(['date' => $today, 'status' => 'confirmed']);
+    Booking::factory()->for($court)->create(['date' => $today, 'status' => 'pending']);
+    Booking::factory()->for($court)->create(['date' => $today, 'status' => 'rejected']);
     Booking::factory()->for($court)->create(['date' => $today, 'status' => 'cancelled']);
 
     $this->actingAs($superAdmin)
         ->get(route('admin.bookings.index', ['view' => 'calendar']))
-        ->assertInertia(fn ($page) => $page->has('days.0.bookings', 1));
+        ->assertInertia(fn ($page) => $page->has('days.0.bookings', 4));
 
     $this->actingAs($superAdmin)
         ->get(route('admin.bookings.index', ['view' => 'calendar', 'status' => 'cancelled']))
@@ -177,7 +179,7 @@ test('staff calendar only shows bookings for their assigned courts', function ()
             ->has('days.0.bookings', 1));
 });
 
-test('the table board hides rejected and cancelled bookings by default, matching the calendar', function () {
+test('the table board shows every status, matching the calendar', function () {
     $superAdmin = userWithRole(RoleName::SuperAdmin);
     $today = Carbon::now()->toDateString();
     $court = Court::factory()->for(Venue::factory()->create())->create();
@@ -188,7 +190,7 @@ test('the table board hides rejected and cancelled bookings by default, matching
 
     $this->actingAs($superAdmin)
         ->get(route('admin.bookings.index', ['view' => 'table']))
-        ->assertInertia(fn ($page) => $page->has('tableBookings', 1));
+        ->assertInertia(fn ($page) => $page->has('tableBookings', 3));
 
     // An explicit status filter still surfaces them on demand.
     $this->actingAs($superAdmin)
@@ -209,4 +211,37 @@ test('the list view still shows every booking as the full record log', function 
     $this->actingAs($superAdmin)
         ->get(route('admin.bookings.index', ['view' => 'list']))
         ->assertInertia(fn ($page) => $page->has('bookings.data', 2));
+});
+
+test('a slot left by a rejected booking stays visible on the board and still accepts a new booking', function () {
+    $superAdmin = userWithRole(RoleName::SuperAdmin);
+    $today = Carbon::now()->toDateString();
+    $court = Court::factory()->for(Venue::factory()->create())->create();
+
+    Booking::factory()->for($court)->create([
+        'date' => $today,
+        'time_slots' => ['08:00 AM'],
+        'status' => 'rejected',
+    ]);
+
+    // The rejection stays on the board so staff can see what happened...
+    $this->actingAs($superAdmin)
+        ->get(route('admin.bookings.index', ['view' => 'calendar']))
+        ->assertInertia(fn ($page) => $page
+            ->has('days.0.bookings', 1)
+            ->where('days.0.bookings.0.status', 'rejected'));
+
+    // ...and the hour it used to hold can be booked again.
+    $this->actingAs($superAdmin)
+        ->post(route('admin.bookings.store'), [
+            'court_id' => $court->id,
+            'name' => 'Walk In',
+            'email' => 'walkin@example.com',
+            'phone' => '09171234567',
+            'date' => $today,
+            'time_slots' => ['08:00 AM'],
+        ])
+        ->assertRedirect();
+
+    expect(Booking::where('court_id', $court->id)->where('status', '!=', 'rejected')->count())->toBe(1);
 });

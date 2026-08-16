@@ -63,11 +63,11 @@ class AdminBookingController extends Controller
         ];
 
         if ($view === 'calendar') {
-            // Default board hides rejected/cancelled unless a status is chosen.
+            // The board shows every status so staff can see what was rejected or
+            // cancelled; those bookings no longer hold their slot, so the hours
+            // remain bookable regardless of what is displayed here.
             if ($request->filled('status')) {
                 $query->where('status', $request->input('status'));
-            } else {
-                $query->whereNotIn('status', ['rejected', 'cancelled']);
             }
 
             $start = BookingCalendar::resolveStart($request->input('start'));
@@ -102,12 +102,9 @@ class AdminBookingController extends Controller
                 $curr->addDay();
             }
 
-            // Same board rule as the calendar view: rejected/cancelled are hidden
-            // unless the user explicitly filters for them.
+            // Same board rule as the calendar view: every status stays visible.
             if ($request->filled('status')) {
                 $query->where('status', $request->input('status'));
-            } else {
-                $query->whereNotIn('status', ['rejected', 'cancelled']);
             }
 
             $query->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()]);
