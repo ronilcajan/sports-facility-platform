@@ -54,6 +54,13 @@ class Booking extends Model
     public const REVENUE_STATUSES = ['approved', 'confirmed', 'completed'];
 
     /**
+     * Statuses that release the court slot back to the public calendar.
+     *
+     * @var array<int, string>
+     */
+    public const RELEASED_STATUSES = ['cancelled', 'rejected'];
+
+    /**
      * The accessors to append to the model's array form.
      *
      * @var array<int, string>
@@ -125,5 +132,16 @@ class Booking extends Model
         return $query->whereHas('court', function (Builder $courtQuery) use ($user): void {
             $courtQuery->visibleTo($user);
         });
+    }
+
+    /**
+     * Scope bookings to those still occupying their court slot.
+     *
+     * @param  Builder<Booking>  $query
+     * @return Builder<Booking>
+     */
+    public function scopeHoldingSlots(Builder $query): Builder
+    {
+        return $query->whereNotIn('status', self::RELEASED_STATUSES);
     }
 }

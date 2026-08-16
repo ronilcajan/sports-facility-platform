@@ -176,3 +176,37 @@ test('staff calendar only shows bookings for their assigned courts', function ()
             ->where('view', 'calendar')
             ->has('days.0.bookings', 1));
 });
+
+test('the table board hides rejected and cancelled bookings by default, matching the calendar', function () {
+    $superAdmin = userWithRole(RoleName::SuperAdmin);
+    $today = Carbon::now()->toDateString();
+    $court = Court::factory()->for(Venue::factory()->create())->create();
+
+    Booking::factory()->for($court)->create(['date' => $today, 'status' => 'confirmed']);
+    Booking::factory()->for($court)->create(['date' => $today, 'status' => 'cancelled']);
+    Booking::factory()->for($court)->create(['date' => $today, 'status' => 'rejected']);
+
+    $this->actingAs($superAdmin)
+        ->get(route('admin.bookings.index', ['view' => 'table']))
+        ->assertInertia(fn ($page) => $page->has('tableBookings', 1));
+
+    // An explicit status filter still surfaces them on demand.
+    $this->actingAs($superAdmin)
+        ->get(route('admin.bookings.index', ['view' => 'table', 'status' => 'rejected']))
+        ->assertInertia(fn ($page) => $page
+            ->has('tableBookings', 1)
+            ->where('tableBookings.0.status', 'rejected'));
+});
+
+test('the list view still shows every booking as the full record log', function () {
+    $superAdmin = userWithRole(RoleName::SuperAdmin);
+    $today = Carbon::now()->toDateString();
+    $court = Court::factory()->for(Venue::factory()->create())->create();
+
+    Booking::factory()->for($court)->create(['date' => $today, 'status' => 'confirmed']);
+    Booking::factory()->for($court)->create(['date' => $today, 'status' => 'rejected']);
+
+    $this->actingAs($superAdmin)
+        ->get(route('admin.bookings.index', ['view' => 'list']))
+        ->assertInertia(fn ($page) => $page->has('bookings.data', 2));
+});

@@ -17,10 +17,12 @@ import {
     Eye,
     CalendarPlus,
     Calendar,
+    Image as ImageIcon,
 } from '@lucide/vue';
 import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
 import CreateBookingModal from '@/components/admin/CreateBookingModal.vue';
 import VenueScheduleTab from '@/components/admin/VenueScheduleTab.vue';
+import VenueImageManagerModal, { type VenueImageItem } from '@/components/admin/VenueImageManagerModal.vue';
 
 interface VenueProfile {
     id: number;
@@ -37,6 +39,7 @@ interface VenueProfile {
     maya_number?: string | null;
     maya_qr_url?: string | null;
     is_active: boolean;
+    images?: VenueImageItem[];
     courts_count: number;
     created_at: string;
 }
@@ -86,6 +89,8 @@ const props = defineProps<{
     canDelete: boolean;
     canManageVenue: boolean;
 }>();
+
+const showVenueImageModal = ref(false);
 
 defineOptions({
     layout: {
@@ -242,6 +247,14 @@ const totalBookings = computed(() => props.bookings.data.length);
 
                     <!-- Venue actions -->
                     <div class="flex items-center gap-3">
+                        <button
+                            type="button"
+                            @click="showVenueImageModal = true"
+                            class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-sm transition-colors hover:bg-emerald-700"
+                        >
+                            <ImageIcon class="h-4 w-4" />
+                            <span>Photos ({{ venue.images?.length ?? 0 }})</span>
+                        </button>
                         <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 px-4 py-3 text-center">
                             <p class="text-xl font-black text-emerald-600">{{ venue.courts_count }}</p>
                             <p class="text-[10px] uppercase font-semibold text-neutral-400 tracking-wider">Courts</p>
@@ -555,6 +568,14 @@ const totalBookings = computed(() => props.bookings.data.length);
             :initial-slot="modalInitialSlot"
             action="/admin/bookings"
             @close="isBookingModalOpen = false"
+        />
+
+        <!-- Venue Photo Gallery Modal — bound to the live prop so uploads appear immediately -->
+        <VenueImageManagerModal
+            :is-open="showVenueImageModal"
+            :venue="{ id: venue.id, name: venue.name, images: venue.images ?? [] }"
+            :can-delete="canManageVenue"
+            @close="showVenueImageModal = false"
         />
     </div>
 </template>

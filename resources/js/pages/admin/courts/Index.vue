@@ -98,16 +98,22 @@ const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const editingCourt = ref<Court | null>(null);
 const showImageModal = ref(false);
-const selectedCourtForImages = ref<Court | null>(null);
+const selectedCourtIdForImages = ref<number | null>(null);
+
+// Resolve from the live props so the gallery reflects each upload/delete round-trip.
+const selectedCourtForImages = computed<Court | null>(
+    () => props.courts.find((c) => c.id === selectedCourtIdForImages.value) ?? null,
+);
 
 function openImageModal(court: Court) {
-    selectedCourtForImages.value = court;
+    selectedCourtIdForImages.value = court.id;
     showImageModal.value = true;
 }
 
 const createForm = useForm({
     name: '',
-    venue_id: '' as string | number,
+    // A court needs a venue to be reachable on the venue-first public site.
+    venue_id: (props.venues?.[0]?.id ?? '') as string | number,
     sport_type: props.sportTypes?.[0]?.value || 'pickleball',
     description: '',
     status: 'available',
@@ -447,17 +453,18 @@ function destroy(court: Court): void {
                     </div>
 
                     <div v-if="venues && venues.length > 0" class="space-y-2">
-                        <Label for="create-court-venue">Assigned Venue</Label>
+                        <Label for="create-court-venue">Assigned Venue *</Label>
                         <select
                             id="create-court-venue"
                             v-model="createForm.venue_id"
+                            required
                             class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         >
-                            <option value="">No Venue Assigned</option>
                             <option v-for="v in venues" :key="v.id" :value="v.id">
                                 {{ v.name }}
                             </option>
                         </select>
+                        <p class="text-xs text-muted-foreground">Courts only appear on the public website through their venue.</p>
                         <InputError :message="createForm.errors.venue_id" />
                     </div>
 

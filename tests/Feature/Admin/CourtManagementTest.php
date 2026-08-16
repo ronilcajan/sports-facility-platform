@@ -4,6 +4,7 @@ use App\Enums\CourtStatus;
 use App\Enums\RoleName;
 use App\Enums\SportType;
 use App\Models\Court;
+use App\Models\Venue;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
 function courtPayload(array $overrides = []): array
 {
     return array_merge([
+        'venue_id' => Venue::factory()->create()->id,
         'name' => 'Center Court',
         'sport_type' => SportType::Pickleball->value,
         'description' => 'Premium indoor court.',
@@ -67,6 +69,28 @@ test('court creation validates required fields', function () {
 
     $this->post(route('admin.courts.store'), courtPayload(['name' => '']))
         ->assertSessionHasErrors('name');
+});
+
+test('court creation requires a venue so the court is reachable on the public site', function () {
+    $this->actingAs(userWithRole(RoleName::Admin));
+
+    $this->post(route('admin.courts.store'), courtPayload(['venue_id' => null]))
+        ->assertSessionHasErrors('venue_id');
+});
+
+test('venue scoped admins do not need to send a venue when creating a court', function () {
+    $venue = Venue::factory()->create();
+    $admin = userWithRole(RoleName::Admin);
+    $admin->update(['venue_id' => $venue->id]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.courts.store'), courtPayload(['venue_id' => null, 'name' => 'Scoped Court']))
+        ->assertRedirect(route('admin.courts.index'));
+
+    $this->assertDatabaseHas('courts', [
+        'name' => 'Scoped Court',
+        'venue_id' => $venue->id,
+    ]);
 });
 
 test('duplicate names produce unique slugs', function () {

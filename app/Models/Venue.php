@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -133,5 +134,51 @@ class Venue extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    /**
+     * Gallery photos that belong to this venue.
+     *
+     * @return HasMany<VenueImage, $this>
+     */
+    public function images(): HasMany
+    {
+        return $this->hasMany(VenueImage::class)->orderBy('sort_order');
+    }
+
+    /**
+     * The venue's hero gallery photo.
+     *
+     * @return HasOne<VenueImage, $this>
+     */
+    public function primaryImage(): HasOne
+    {
+        return $this->hasOne(VenueImage::class)->where('is_primary', true);
+    }
+
+    /**
+     * Best available cover photo — the dedicated cover, else the gallery hero.
+     */
+    public function coverImageUrl(): ?string
+    {
+        return $this->image_url ?? $this->primaryImage?->url;
+    }
+
+    /**
+     * Gallery photos shaped for the admin and public payloads.
+     *
+     * @return array<int, array{id: int, path: string, url: string, is_primary: bool, sort_order: int}>
+     */
+    public function galleryPayload(): array
+    {
+        return $this->images
+            ->map(fn (VenueImage $image): array => [
+                'id' => $image->id,
+                'path' => $image->path,
+                'url' => $image->url,
+                'is_primary' => $image->is_primary,
+                'sort_order' => $image->sort_order,
+            ])
+            ->all();
     }
 }

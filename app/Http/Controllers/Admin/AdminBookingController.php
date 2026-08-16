@@ -102,10 +102,12 @@ class AdminBookingController extends Controller
                 $curr->addDay();
             }
 
+            // Same board rule as the calendar view: rejected/cancelled are hidden
+            // unless the user explicitly filters for them.
             if ($request->filled('status')) {
                 $query->where('status', $request->input('status'));
             } else {
-                $query->whereNotIn('status', ['cancelled']);
+                $query->whereNotIn('status', ['rejected', 'cancelled']);
             }
 
             $query->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()]);
@@ -244,7 +246,7 @@ class AdminBookingController extends Controller
             $conflictingBookings = Booking::query()
                 ->where('court_id', $courtId)
                 ->where('date', $date)
-                ->whereNotIn('status', ['cancelled', 'rejected'])
+                ->holdingSlots()
                 ->where('id', '!=', $booking->id)
                 ->get();
 

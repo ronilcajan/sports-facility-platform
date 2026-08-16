@@ -107,7 +107,7 @@ class PageController extends Controller
      */
     public function venueShow(Venue $venue): Response
     {
-        $venue->load(['courts' => function ($q) {
+        $venue->load(['images', 'primaryImage', 'courts' => function ($q) {
             $q->where('status', CourtStatus::Available)
                 ->where('is_active', true)
                 ->with(['primaryImage', 'images'])
@@ -133,7 +133,11 @@ class PageController extends Controller
             ],
         ]);
 
-        $allCourtImages = $bookableCourts->pluck('images')->flatten()->unique()->values();
+        // The venue's own gallery leads; court photos fill in when it is empty.
+        $venuePhotos = $venue->images->map(fn ($image) => $image->url);
+        $galleryImages = $venuePhotos->isNotEmpty()
+            ? $venuePhotos->values()
+            : $bookableCourts->pluck('images')->flatten()->unique()->values();
 
         return Inertia::render('site/VenueShow', [
             'venue' => [
@@ -144,11 +148,11 @@ class PageController extends Controller
                 'address' => $venue->address,
                 'phone' => $venue->phone,
                 'email' => $venue->email,
-                'image_url' => $venue->image_url,
-                'cover_image_url' => $venue->image_url,
+                'image_url' => $venue->coverImageUrl(),
+                'cover_image_url' => $venue->coverImageUrl(),
                 'courts_count' => $bookableCourts->count(),
                 'courts' => $bookableCourts->values(),
-                'images' => $allCourtImages,
+                'images' => $galleryImages,
                 'payment_methods' => $venue->paymentMethods(),
             ],
             'venues' => $this->venueCatalog(),
@@ -208,6 +212,7 @@ class PageController extends Controller
     {
         return Venue::query()
             ->where('is_active', true)
+            ->with(['primaryImage'])
             ->with(['courts' => function ($q) {
                 $q->where('status', CourtStatus::Available)
                     ->where('is_active', true)
@@ -243,8 +248,8 @@ class PageController extends Controller
                     'address' => $venue->address,
                     'phone' => $venue->phone,
                     'email' => $venue->email,
-                    'image_url' => $venue->image_url,
-                    'cover_image_url' => $venue->image_url,
+                    'image_url' => $venue->coverImageUrl(),
+                    'cover_image_url' => $venue->coverImageUrl(),
                     'courts_count' => $bookableCourts->count(),
                     'courts' => $bookableCourts->values(),
                     'payment_methods' => $venue->paymentMethods(),

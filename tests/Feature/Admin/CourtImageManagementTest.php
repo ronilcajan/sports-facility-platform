@@ -57,3 +57,30 @@ test('super admin can change primary hero image and delete an image', function (
 
     $this->assertDatabaseMissing('court_images', ['id' => $image1->id]);
 });
+
+test('courts index ships every uploaded image so the gallery modal can refresh', function () {
+    Storage::fake('public');
+
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole(RoleName::SuperAdmin->value);
+
+    $court = Court::factory()->create();
+
+    foreach (['first.jpg', 'second.jpg', 'third.jpg'] as $filename) {
+        $this->actingAs($superAdmin)
+            ->post(route('admin.courts.images.store', $court->id), [
+                'image' => UploadedFile::fake()->create($filename, 100, 'image/jpeg'),
+            ])
+            ->assertRedirect();
+    }
+
+    expect(CourtImage::where('court_id', $court->id)->count())->toBe(3);
+
+    $this->actingAs($superAdmin)
+        ->get(route('admin.courts.index'))
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/courts/Index')
+            ->where('courts.0.id', $court->id)
+            ->has('courts.0.images', 3)
+        );
+});
