@@ -40,7 +40,7 @@ export interface TopPageItem {
     category: string;
     views: number;
     visitors: number;
-    conversion: string;
+    bounceRate: string;
 }
 
 export interface DeviceBreakdownItem {
@@ -458,7 +458,7 @@ function formatNumber(num: number): string {
                                 <Globe class="size-5 text-emerald-500" />
                                 Most Visited Website Pages
                             </h3>
-                            <p class="text-xs text-neutral-500 mt-0.5">Top performing routes and booking conversion rates.</p>
+                            <p class="text-xs text-neutral-500 mt-0.5">Most-viewed public routes over the last 30 days.</p>
                         </div>
                     </div>
 
@@ -470,7 +470,7 @@ function formatNumber(num: number): string {
                                     <th class="py-2.5 px-3">Category</th>
                                     <th class="py-2.5 px-3 text-right">Views</th>
                                     <th class="py-2.5 px-3 text-right">Visitors</th>
-                                    <th class="py-2.5 px-3 text-right">Booking Conv.</th>
+                                    <th class="py-2.5 px-3 text-right">Bounce</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800 font-semibold">
@@ -492,7 +492,7 @@ function formatNumber(num: number): string {
                                     </td>
                                     <td class="py-3 px-3 text-right">
                                         <span class="font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
-                                            {{ page.conversion }}
+                                            {{ page.bounceRate }}
                                         </span>
                                     </td>
                                 </tr>
