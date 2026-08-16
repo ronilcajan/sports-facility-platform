@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { getMergedTimeSlots } from '@/utils/timeSlots';
+import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
 interface CourtOption {
     id: number;
@@ -131,29 +132,19 @@ const groupedTimeSlots = computed<{ period: string; slots: string[] }[]>(() => {
 });
 
 // --- Realtime Availability State ---
-const realtimeBookedMap = ref<Record<string, string[]>>({});
-const isLoadingAvailability = ref(false);
+const {
+    isLoading: isLoadingAvailability,
+    fetchAvailability: loadAvailability,
+    slotsForCourt,
+} = useCourtAvailability();
 
 async function fetchRealtimeAvailability() {
-    if (!form.date || typeof window === 'undefined') return;
-    isLoadingAvailability.value = true;
-    try {
-        const res = await fetch(`/bookings/availability?date=${encodeURIComponent(form.date)}`, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
-        });
-        if (res.ok) {
-            const data = await res.json();
-            realtimeBookedMap.value = data.booked_slots || {};
-        }
-    } catch {
-        // Fallback gracefully
-    } finally {
-        isLoadingAvailability.value = false;
-    }
+    if (!form.date) return;
+    await loadAvailability({ date: form.date });
 }
 
 function getCourtBookedSlots(courtId: number): string[] {
-    return realtimeBookedMap.value[String(courtId)] || [];
+    return slotsForCourt(courtId);
 }
 
 function isSlotBooked(slot: string): boolean {

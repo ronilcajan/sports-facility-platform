@@ -55,7 +55,7 @@ test('booking store calculates total price using dynamic slot rates', function (
             'name' => 'John Doe',
             'email' => 'john@example.com',
             'phone' => '09171234567',
-            'date' => '2026-08-10',
+            'date' => now()->addDays(3)->toDateString(),
             'time' => ['10:00 AM', '06:00 PM', '07:00 PM'],
         ]);
 
@@ -63,7 +63,7 @@ test('booking store calculates total price using dynamic slot rates', function (
 
     $this->assertDatabaseHas('bookings', [
         'court_id' => $court->id,
-        'date' => '2026-08-10',
+        'date' => now()->addDays(3)->toDateString(),
         'total_price' => 550.00,
     ]);
 });
@@ -109,7 +109,7 @@ test('admin can create additional time slots outside default hours and customers
             'name' => 'Jane Smith',
             'email' => 'jane@example.com',
             'phone' => '09181234567',
-            'date' => '2026-08-12',
+            'date' => now()->addDays(5)->toDateString(),
             'time' => ['03:00 AM', '05:00 AM'],
         ]);
 
@@ -117,7 +117,7 @@ test('admin can create additional time slots outside default hours and customers
 
     $this->assertDatabaseHas('bookings', [
         'court_id' => $court->id,
-        'date' => '2026-08-12',
+        'date' => now()->addDays(5)->toDateString(),
         'total_price' => 270.00, // 120 + 150
     ]);
 });

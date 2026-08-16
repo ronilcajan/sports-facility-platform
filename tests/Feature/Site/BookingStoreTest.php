@@ -24,7 +24,7 @@ test('a booking-received confirmation email is sent to the customer', function (
         'time' => ['08:00 AM'],
     ])->assertStatus(201);
 
-    Mail::assertSent(BookingReceivedMail::class, function (BookingReceivedMail $mail) {
+    Mail::assertQueued(BookingReceivedMail::class, function (BookingReceivedMail $mail) {
         return $mail->hasTo('alice@example.com');
     });
 });

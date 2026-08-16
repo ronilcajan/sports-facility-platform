@@ -38,24 +38,25 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user() ? [
-                    'id' => $request->user()->id,
-                    'name' => $request->user()->name,
-                    'email' => $request->user()->email,
-                    'roles' => $request->user()->getRoleNames(),
-                    'is_super_admin' => $request->user()->hasRole(RoleName::SuperAdmin->value),
-                    'is_admin' => $request->user()->hasRole(RoleName::Admin->value),
-                    'can_manage_all_courts' => $request->user()->canManageAllCourts(),
-                    'is_staff' => $request->user()->isStaff(),
-                    'assigned_courts' => $request->user()->assignedCourts->map(fn ($c) => [
-                        'id' => $c->id,
-                        'name' => $c->name,
-                        'slug' => $c->slug,
-                    ]),
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'roles' => $user->getRoleNames(),
+                    'is_super_admin' => $user->hasRole(RoleName::SuperAdmin->value),
+                    'is_admin' => $user->hasRole(RoleName::Admin->value),
+                    'can_manage_all_courts' => $user->canManageAllCourts(),
+                    'is_staff' => $user->isStaff(),
+                    // Only staff navigation consumes this; skip the query otherwise.
+                    'assigned_courts' => $user->isStaff()
+                        ? $user->assignedCourts()->get(['courts.id', 'courts.name', 'courts.slug'])
+                        : [],
                 ] : null,
             ],
             'site' => $this->siteData(),

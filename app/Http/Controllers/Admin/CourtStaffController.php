@@ -26,7 +26,7 @@ class CourtStaffController extends Controller
                 Rule::exists('users', 'id')->where(
                     fn ($query) => $query->whereIn(
                         'id',
-                        User::role(RoleName::Staff->value)->pluck('id'),
+                        User::role(RoleName::Staff->value)->select('id'),
                     ),
                 ),
             ],

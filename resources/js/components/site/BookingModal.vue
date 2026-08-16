@@ -5,6 +5,7 @@ import { useSite } from '@/composables/useSite';
 import type { PublicCourt } from '@/types';
 import type { CatalogVenue } from '@/components/site/SiteVenueCard.vue';
 import { getMergedTimeSlots } from '@/utils/timeSlots';
+import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
 const props = defineProps<{
     court?: PublicCourt | null;
@@ -32,7 +33,8 @@ const currentUser = computed(
 // Selection State
 const selectedVenueId = ref<number | null>(null);
 const selectedCourtId = ref<number | null>(null);
-const realtimeBookedSlotsMap = ref<Record<string, string[]>>({});
+const { fetchAvailability: loadAvailability, slotsForCourt } =
+    useCourtAvailability();
 
 const activeVenue = computed<CatalogVenue | null>(() => {
     if (props.venue) return props.venue;
@@ -402,23 +404,13 @@ function scrollCourts(dir: 'prev' | 'next'): void {
 
 // Fetch real-time court availability from server
 async function fetchRealtimeAvailability() {
-    if (!form.value.date || typeof window === 'undefined') return;
-    try {
-        const res = await fetch(`/bookings/availability?date=${encodeURIComponent(form.value.date)}`, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-        });
-        if (res.ok) {
-            const data = await res.json();
-            realtimeBookedSlotsMap.value = data.booked_slots || {};
-        }
-    } catch (e) {
-        // Fallback gracefully
-    }
+    if (!form.value.date) return;
+    await loadAvailability({ date: form.value.date });
 }
 
 // Compute booked slots for a specific court id
 function getCourtBookedSlots(courtId: number): string[] {
-    return realtimeBookedSlotsMap.value[String(courtId)] || [];
+    return slotsForCourt(courtId);
 }
 
 function isSlotBooked(slot: string): boolean {

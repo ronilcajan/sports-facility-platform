@@ -24,8 +24,7 @@ class AdminUserController extends Controller
         /** @var User $currentUser */
         $currentUser = $request->user();
 
-        $query = User::withCount('assignedCourts')
-            ->latest();
+        $query = User::query()->latest();
 
         // Venue admins only manage their own venue's user accounts: staff
         // assigned to the venue, plus customers who have booked there.

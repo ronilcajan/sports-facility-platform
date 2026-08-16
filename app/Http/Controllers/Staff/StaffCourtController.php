@@ -68,6 +68,11 @@ class StaffCourtController extends Controller
         $validated['slug'] = $this->uniqueSlug($validated['name']);
         unset($validated['image'], $validated['delete_image']);
 
+        // Venue admins can only file courts under their own venue.
+        if ($request->user()->isVenueScopedAdmin()) {
+            $validated['venue_id'] = $request->user()->venue_id;
+        }
+
         $court = Court::create($validated);
 
         if ($request->hasFile('image')) {
@@ -114,6 +119,12 @@ class StaffCourtController extends Controller
         ]);
 
         unset($validated['image'], $validated['delete_image']);
+
+        // Venue admins cannot move a court to a different venue.
+        if ($request->user()->isVenueScopedAdmin()) {
+            $validated['venue_id'] = $court->venue_id;
+        }
+
         $court->update($validated);
 
         if ($request->hasFile('image')) {

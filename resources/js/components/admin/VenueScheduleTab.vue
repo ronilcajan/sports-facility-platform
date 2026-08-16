@@ -12,6 +12,7 @@ import {
     Zap,
 } from '@lucide/vue';
 import { getMergedTimeSlots } from '@/utils/timeSlots';
+import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
 interface CourtItem {
     id: number;
@@ -133,30 +134,19 @@ function slotPrice(court: CourtItem, slot: string): number {
 }
 
 // ── Availability fetch ───────────────────────────────────────────
-const bookedMap = ref<Record<string, string[]>>({});
-const isLoading = ref(false);
+const {
+    isLoading,
+    fetchAvailability: loadAvailability,
+    slotsForCourt,
+} = useCourtAvailability();
 
 async function fetchAvailability() {
-    if (!selectedDate.value || typeof window === 'undefined') return;
-    isLoading.value = true;
-    try {
-        const res = await fetch(
-            `/bookings/availability?date=${encodeURIComponent(selectedDate.value)}`,
-            { headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' } }
-        );
-        if (res.ok) {
-            const data = await res.json();
-            bookedMap.value = data.booked_slots || {};
-        }
-    } catch {
-        // silent
-    } finally {
-        isLoading.value = false;
-    }
+    if (!selectedDate.value) return;
+    await loadAvailability({ date: selectedDate.value });
 }
 
 function bookedSlots(courtId: number): string[] {
-    return bookedMap.value[String(courtId)] || [];
+    return slotsForCourt(courtId);
 }
 
 function isBooked(courtId: number, slot: string): boolean {

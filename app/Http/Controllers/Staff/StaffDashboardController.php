@@ -58,7 +58,7 @@ class StaffDashboardController extends Controller
         $activeCourts = Court::visibleTo($user)->where('is_active', true)->count();
         $totalBookings = Booking::visibleTo($user)->count();
         $pendingBookingsCount = Booking::visibleTo($user)->where('status', 'pending')->count();
-        $totalRevenue = Booking::visibleTo($user)->whereIn('status', ['approved', 'confirmed', 'completed'])->sum('total_price');
+        $totalRevenue = Booking::visibleTo($user)->whereIn('status', Booking::REVENUE_STATUSES)->sum('total_price');
         $totalCustomers = User::role(RoleName::Customer->value)
             ->whereHas('bookings', fn (Builder $query) => $query->visibleTo($user))
             ->count();
@@ -74,7 +74,7 @@ class StaffDashboardController extends Controller
             $monthsTrend[] = [
                 'month' => $monthStart->format('M Y'),
                 'bookings' => (clone $monthBookings)->count(),
-                'revenue' => (float) (clone $monthBookings)->whereIn('status', ['approved', 'confirmed', 'completed'])->sum('total_price'),
+                'revenue' => (float) (clone $monthBookings)->whereIn('status', Booking::REVENUE_STATUSES)->sum('total_price'),
             ];
         }
 
@@ -83,7 +83,7 @@ class StaffDashboardController extends Controller
             ->withCount('staff')
             ->withCount(['bookings as total_bookings'])
             ->withSum(['bookings as total_revenue' => function ($query) {
-                $query->whereIn('status', ['approved', 'confirmed', 'completed']);
+                $query->whereIn('status', Booking::REVENUE_STATUSES);
             }], 'total_price')
             ->get()
             ->map(function ($court) {
@@ -115,7 +115,7 @@ class StaffDashboardController extends Controller
                     'court_name' => $booking->court?->name ?? 'Deleted Court',
                     'sport_type' => $booking->court?->sport_type?->label() ?? 'N/A',
                     'venue_name' => $booking->court?->venue?->name ?? 'N/A',
-                    'date' => (string) $booking->date,
+                    'date' => $booking->date->toDateString(),
                     'time_slots' => $booking->time_slots,
                     'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
                     'receipt_url' => $booking->receipt_url,

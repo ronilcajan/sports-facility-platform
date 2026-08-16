@@ -3,6 +3,7 @@ import { Link, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import { FileText, Dumbbell, Edit2, AlertCircle, Calendar } from '@lucide/vue';
 import { getMergedTimeSlots } from '@/utils/timeSlots';
+import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
 export interface CourtItem {
     id: number;
@@ -34,8 +35,15 @@ const props = defineProps<{
 // Edit Booking State
 const selectedBooking = ref<BookingItem | null>(null);
 const isEditModalOpen = ref(false);
-const realtimeBookedSlots = ref<string[]>([]);
-const isLoadingSlots = ref(false);
+const {
+    isLoading: isLoadingSlots,
+    fetchAvailability: loadAvailability,
+    slotsForCourt,
+} = useCourtAvailability();
+
+const realtimeBookedSlots = computed<string[]>(() =>
+    editForm.court_id ? slotsForCourt(editForm.court_id) : [],
+);
 
 const availableTimeSlots = computed(() => {
     const customFromBookings = props.bookings.flatMap((b) => b.time_slots || []);
@@ -79,21 +87,12 @@ const calculatedTotalPrice = computed(() => {
 
 async function fetchAvailability() {
     if (!editForm.date || !editForm.court_id || !selectedBooking.value) return;
-    isLoadingSlots.value = true;
-    try {
-        const res = await fetch(`/bookings/availability?date=${encodeURIComponent(editForm.date)}&court_id=${editForm.court_id}&exclude_booking_id=${selectedBooking.value.id}`, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-        });
-        if (res.ok) {
-            const data = await res.json();
-            const bookedForCourt = data.booked_slots?.[String(editForm.court_id)] || [];
-            realtimeBookedSlots.value = bookedForCourt;
-        }
-    } catch (e) {
-        // Fallback
-    } finally {
-        isLoadingSlots.value = false;
-    }
+
+    await loadAvailability({
+        date: editForm.date,
+        courtId: editForm.court_id,
+        excludeBookingId: selectedBooking.value.id,
+    });
 }
 
 function openEditModal(booking: BookingItem) {

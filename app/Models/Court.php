@@ -30,6 +30,14 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
+ *
+ * Aggregate aliases populated by withCount()/withSum() in the dashboard and
+ * report queries; absent unless the query requested them.
+ * @property-read int|null $staff_count
+ * @property-read int|null $total_bookings
+ * @property-read int|null $approved_count
+ * @property-read string|null $total_revenue
+ * @property-read string|null $revenue
  */
 #[Fillable([
     'venue_id',

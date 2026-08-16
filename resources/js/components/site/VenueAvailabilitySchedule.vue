@@ -11,6 +11,7 @@ import {
 import type { CatalogVenue } from '@/components/site/SiteVenueCard.vue';
 import type { PublicCourt } from '@/types';
 import { getMergedTimeSlots } from '@/utils/timeSlots';
+import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
 const props = defineProps<{
     venue: CatalogVenue;
@@ -61,8 +62,11 @@ function getSlotPriceForCourt(court: PublicCourt, slot: string): number {
 }
 
 // Realtime availability map: courtId -> array of booked slot strings
-const realtimeBookedMap = ref<Record<string, string[]>>({});
-const isLoading = ref(false);
+const {
+    isLoading,
+    fetchAvailability: loadAvailability,
+    slotsForCourt,
+} = useCourtAvailability();
 
 // Generate 14 upcoming days for quick selector
 const upcomingDays = computed(() => {
@@ -127,26 +131,13 @@ const groupedTimeSlots = computed(() => {
 
 // Fetch realtime server availability
 async function fetchAvailability() {
-    if (!selectedDate.value || typeof window === 'undefined') return;
-    isLoading.value = true;
-    try {
-        const res = await fetch(`/bookings/availability?date=${encodeURIComponent(selectedDate.value)}`, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-        });
-        if (res.ok) {
-            const data = await res.json();
-            realtimeBookedMap.value = data.booked_slots || {};
-        }
-    } catch (e) {
-        // Fallback
-    } finally {
-        isLoading.value = false;
-    }
+    if (!selectedDate.value) return;
+    await loadAvailability({ date: selectedDate.value });
 }
 
 // Compute full booked slots from database bookings
 function getCourtBookedSlots(courtId: number): string[] {
-    return realtimeBookedMap.value[String(courtId)] || [];
+    return slotsForCourt(courtId);
 }
 
 function isSlotBooked(courtId: number, slot: string): boolean {

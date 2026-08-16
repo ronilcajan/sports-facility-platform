@@ -6,12 +6,13 @@ use App\Models\Booking;
 use App\Models\SiteSetting;
 use App\Support\QrCodePng;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class BookingReceivedMail extends Mailable
+class BookingReceivedMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -21,6 +22,8 @@ class BookingReceivedMail extends Mailable
     public function __construct(public Booking $booking)
     {
         $this->booking->loadMissing('court.venue');
+
+        $this->afterCommit();
     }
 
     /**
@@ -50,7 +53,7 @@ class BookingReceivedMail extends Mailable
                 'customerName' => $this->booking->name,
                 'venueName' => $court?->venue?->name ?? 'Sports Facility',
                 'courtName' => $court?->name ?? 'Court',
-                'date' => $this->booking->date,
+                'date' => $this->booking->date->toDateString(),
                 'timeSlots' => implode(', ', $this->booking->time_slots ?? []),
                 'duration' => ($hours === floor($hours) ? (int) $hours : $hours).' '.($hours === 1.0 ? 'hour' : 'hours'),
                 'total' => number_format((float) $this->booking->total_price, 2),

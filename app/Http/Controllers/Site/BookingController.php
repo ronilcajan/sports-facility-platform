@@ -16,8 +16,10 @@ use BaconQrCode\Writer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class BookingController extends Controller
@@ -44,31 +46,40 @@ class BookingController extends Controller
      */
     public function store(StoreBookingRequest $request): JsonResponse
     {
-        $court = Court::findOrFail($request->validated('court_id'));
+        $court = Court::findOrFail((int) $request->validated('court_id'));
 
         // Save receipt to public storage disk (optional — booking is valid without it)
         $receiptPath = $request->hasFile('receipt')
             ? $request->file('receipt')->store('receipts', 'public')
             : null;
 
-        // Calculate total price based on duration slots & dynamic slot pricing
-        $totalPrice = collect($request->validated('time'))->sum(fn (string $slot) => $court->getSlotPrice($slot));
+        $requestedSlots = $request->validated('time');
+        $date = $request->validated('date');
 
-        // Persist booking record
-        $booking = Booking::create([
+        $attributes = [
             'court_id' => $court->id,
             'user_id' => auth()->id(),
             'name' => $request->validated('name'),
             'email' => $request->validated('email'),
             'phone' => $request->validated('phone'),
-            'date' => $request->validated('date'),
-            'time_slots' => $request->validated('time'),
+            'date' => $date,
+            'time_slots' => $requestedSlots,
             'notes' => $request->validated('notes'),
-            'total_price' => $totalPrice,
+            // Total price is driven by the court's dynamic per-slot pricing.
+            'total_price' => collect($requestedSlots)->sum(fn (string $slot) => $court->getSlotPrice($slot)),
             'receipt_path' => $receiptPath,
             'transaction_code' => $request->validated('transaction_code'),
             'status' => 'pending',
-        ]);
+        ];
+
+        // The form request already rejected taken slots, but that check and this
+        // insert are not atomic — two concurrent requests can both pass it. Hold
+        // a per-court/per-day lock and re-verify before committing.
+        $booking = Cache::lock("booking:{$court->id}:{$date}", 10)->block(5, function () use ($court, $date, $requestedSlots, $attributes): Booking {
+            $this->assertSlotsAreFree($court->id, $date, $requestedSlots);
+
+            return Booking::create($attributes);
+        });
 
         // Send notification to staff assigned to this court
         foreach ($court->staff as $staffMember) {
@@ -91,13 +102,37 @@ class BookingController extends Controller
                 'id' => $booking->id,
                 'reference_code' => 'DY-RESRV-'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
                 'name' => $booking->name,
-                'date' => $booking->date,
+                'date' => $booking->date->toDateString(),
                 'time_slots' => $booking->time_slots,
                 'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
                 'receipt_url' => $booking->receipt_path ? asset('storage/'.$booking->receipt_path) : null,
                 'qr_code' => $this->bookingQrDataUri($booking),
             ],
         ], 201);
+    }
+
+    /**
+     * Abort with a validation error when any requested slot is already taken.
+     *
+     * @param  array<int, string>  $requestedSlots
+     */
+    private function assertSlotsAreFree(int $courtId, string $date, array $requestedSlots): void
+    {
+        $takenSlots = Booking::query()
+            ->where('court_id', $courtId)
+            ->where('date', $date)
+            ->where('status', '!=', 'cancelled')
+            ->pluck('time_slots')
+            ->flatten()
+            ->all();
+
+        foreach ($requestedSlots as $slot) {
+            if (in_array($slot, $takenSlots)) {
+                throw ValidationException::withMessages([
+                    'time' => "The slot '{$slot}' is already booked.",
+                ]);
+            }
+        }
     }
 
     /**
@@ -132,18 +167,19 @@ class BookingController extends Controller
             $bookedSlots[$cId] = array_merge($bookedSlots[$cId], $b->time_slots ?? []);
         }
 
-        // Also fetch staff court unavailabilities
+        // Also fetch staff court unavailabilities. Slot-level blackouts map to a
+        // single start_time; all-day blackouts have no slot to pin them to.
         $unavailabilities = CourtUnavailability::query()
             ->where('date', $date)
-            ->get(['court_id', 'slot_time']);
+            ->when($courtId, fn ($unavailabilityQuery) => $unavailabilityQuery->where('court_id', $courtId))
+            ->get(['court_id', 'start_time', 'all_day']);
 
-        foreach ($unavailabilities as $u) {
-            $cId = (string) $u->court_id;
-            if (! isset($bookedSlots[$cId])) {
-                $bookedSlots[$cId] = [];
-            }
-            if ($u->slot_time) {
-                $bookedSlots[$cId][] = $u->slot_time;
+        foreach ($unavailabilities as $unavailability) {
+            $courtKey = (string) $unavailability->court_id;
+            $bookedSlots[$courtKey] ??= [];
+
+            if (! $unavailability->all_day && $unavailability->start_time) {
+                $bookedSlots[$courtKey][] = $unavailability->start_time;
             }
         }
 
@@ -179,7 +215,7 @@ class BookingController extends Controller
         ]);
 
         $courtId = $validated['court_id'] ?? $booking->court_id;
-        $date = $validated['date'] ?? $booking->date;
+        $date = $validated['date'] ?? $booking->date->toDateString();
         $requestedSlots = $validated['time'] ?? $validated['time_slots'] ?? $booking->time_slots;
 
         // Double-booking check if court, date, or time slots are being modified

@@ -32,26 +32,35 @@ class AdminReportController extends Controller
         }
 
         $totalBookings = (clone $bookingsQuery)->count();
-        $totalRevenue = (clone $bookingsQuery)->whereIn('status', ['approved', 'confirmed', 'completed'])->sum('total_price');
-        $approvedBookings = (clone $bookingsQuery)->whereIn('status', ['approved', 'confirmed', 'completed'])->count();
+        $totalRevenue = (clone $bookingsQuery)->whereIn('status', Booking::REVENUE_STATUSES)->sum('total_price');
+        $approvedBookings = (clone $bookingsQuery)->whereIn('status', Booking::REVENUE_STATUSES)->count();
         $rejectedBookings = (clone $bookingsQuery)->where('status', 'rejected')->count();
         $cancelledBookings = (clone $bookingsQuery)->where('status', 'cancelled')->count();
 
-        // Breakdown by court (scoped to the venue for admins)
+        // Breakdown by court (scoped to the venue for admins), aggregated in SQL
+        // rather than loading every booking of every court into memory.
         $courtBreakdown = Court::query()
             ->visibleTo($user)
-            ->with(['bookings' => function ($query) use ($startDate, $endDate) {
+            ->withCount(['bookings as total_bookings' => function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('date', [$startDate, $endDate]);
-            }])->get()->map(function ($court) {
-                $approved = $court->bookings->whereIn('status', ['approved', 'confirmed', 'completed']);
-
+            }])
+            ->withCount(['bookings as approved_count' => function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('date', [$startDate, $endDate])
+                    ->whereIn('status', Booking::REVENUE_STATUSES);
+            }])
+            ->withSum(['bookings as revenue' => function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('date', [$startDate, $endDate])
+                    ->whereIn('status', Booking::REVENUE_STATUSES);
+            }], 'total_price')
+            ->get()
+            ->map(function (Court $court): array {
                 return [
                     'id' => $court->id,
                     'name' => $court->name,
                     'sport_type' => $court->sport_type->label(),
-                    'total_bookings' => $court->bookings->count(),
-                    'approved_count' => $approved->count(),
-                    'revenue' => (float) $approved->sum('total_price'),
+                    'total_bookings' => $court->total_bookings,
+                    'approved_count' => $court->approved_count,
+                    'revenue' => (float) ($court->revenue ?? 0),
                 ];
             });
 

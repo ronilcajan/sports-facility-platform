@@ -58,7 +58,7 @@ test('customer can update their booking court date and time slots', function () 
 
     $updated = $booking->fresh();
     expect($updated->court_id)->toBe($court2->id);
-    expect($updated->date)->toBe('2026-08-02');
+    expect($updated->date->toDateString())->toBe('2026-08-02');
     expect($updated->time_slots)->toBe(['09:00 AM', '10:00 AM']);
     expect((float) $updated->total_price)->toBe(300.0);
 });

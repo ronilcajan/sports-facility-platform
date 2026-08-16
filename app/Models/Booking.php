@@ -17,7 +17,7 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $email
  * @property string $phone
- * @property Carbon|string $date
+ * @property Carbon $date
  * @property array $time_slots
  * @property string|null $notes
  * @property string $total_price
@@ -47,6 +47,13 @@ class Booking extends Model
     use HasFactory;
 
     /**
+     * Statuses that represent a booking which counts toward revenue.
+     *
+     * @var array<int, string>
+     */
+    public const REVENUE_STATUSES = ['approved', 'confirmed', 'completed'];
+
+    /**
      * The accessors to append to the model's array form.
      *
      * @var array<int, string>
@@ -63,6 +70,7 @@ class Booking extends Model
         return [
             'court_id' => 'integer',
             'user_id' => 'integer',
+            'date' => 'date:Y-m-d',
             'time_slots' => 'array',
             'total_price' => 'decimal:2',
         ];

@@ -39,31 +39,30 @@ class StoreBookingRequest extends FormRequest
     }
 
     /**
-     * Configure the validator instance with double-booking checks.
+     * Reject slots that are already taken on the same court and date.
      *
-     * @param  Validator  $validator
+     * @return array<int, callable>
      */
-    public function withValidator($validator): void
+    public function after(): array
     {
-        $validator->after(function ($validator): void {
-            $courtId = $this->input('court_id');
-            $date = $this->input('date');
-            $requestedSlots = $this->input('time', []);
+        return [
+            function (Validator $validator): void {
+                $courtId = $this->input('court_id');
+                $date = $this->input('date');
+                $requestedSlots = $this->input('time', []);
 
-            if (! $courtId || ! $date || empty($requestedSlots)) {
-                return;
-            }
+                if (! $courtId || ! $date || empty($requestedSlots)) {
+                    return;
+                }
 
-            // Find all existing bookings for this court and date
-            $existingBookings = Booking::query()
-                ->where('court_id', $courtId)
-                ->where('date', $date)
-                ->where('status', '!=', 'cancelled')
-                ->get();
+                $bookedSlots = Booking::query()
+                    ->where('court_id', $courtId)
+                    ->where('date', $date)
+                    ->where('status', '!=', 'cancelled')
+                    ->pluck('time_slots')
+                    ->flatten()
+                    ->all();
 
-            // Check if any requested slot is already booked
-            foreach ($existingBookings as $booking) {
-                $bookedSlots = $booking->time_slots ?? [];
                 foreach ($requestedSlots as $slot) {
                     if (in_array($slot, $bookedSlots)) {
                         $validator->errors()->add('time', "The slot '{$slot}' is already booked.");
@@ -71,7 +70,7 @@ class StoreBookingRequest extends FormRequest
                         return;
                     }
                 }
-            }
-        });
+            },
+        ];
     }
 }

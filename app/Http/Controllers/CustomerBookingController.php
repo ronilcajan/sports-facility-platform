@@ -47,25 +47,33 @@ class CustomerBookingController extends Controller
             })
             ->latest()
             ->get()
-            ->map(function (Booking $booking) {
-                return [
-                    'id' => $booking->id,
-                    'reference_code' => 'DY-RESRV-'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
-                    'court' => $booking->court ? [
-                        'id' => $booking->court->id,
-                        'name' => $booking->court->name,
-                        'sport_type' => $booking->court->sport_type?->label() ?? $booking->court->sport_type,
-                    ] : null,
-                    'name' => $booking->name,
-                    'email' => $booking->email,
-                    'phone' => $booking->phone,
-                    'date' => $booking->date,
-                    'time_slots' => $booking->time_slots,
-                    'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
-                    'receipt_url' => $booking->receipt_url,
-                    'status' => $booking->status,
-                    'notes' => $booking->notes,
-                ];
-            });
+            ->map(self::toListPayload(...));
+    }
+
+    /**
+     * Shape a single booking for the customer-facing booking list.
+     *
+     * @return array<string, mixed>
+     */
+    private static function toListPayload(Booking $booking): array
+    {
+        return [
+            'id' => $booking->id,
+            'reference_code' => 'DY-RESRV-'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
+            'court' => $booking->court ? [
+                'id' => $booking->court->id,
+                'name' => $booking->court->name,
+                'sport_type' => $booking->court->sport_type->label(),
+            ] : null,
+            'name' => $booking->name,
+            'email' => $booking->email,
+            'phone' => $booking->phone,
+            'date' => $booking->date->toDateString(),
+            'time_slots' => $booking->time_slots,
+            'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
+            'receipt_url' => $booking->receipt_url,
+            'status' => $booking->status,
+            'notes' => $booking->notes,
+        ];
     }
 }

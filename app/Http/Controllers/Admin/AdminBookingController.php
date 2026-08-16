@@ -116,7 +116,7 @@ class AdminBookingController extends Controller
                 'name' => $booking->name,
                 'email' => $booking->email,
                 'phone' => $booking->phone,
-                'date' => $booking->date,
+                'date' => $booking->date->toDateString(),
                 'time_slots' => $booking->time_slots,
                 'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
                 'receipt_url' => $booking->receipt_url,
@@ -233,7 +233,7 @@ class AdminBookingController extends Controller
         ]);
 
         $courtId = $validated['court_id'] ?? $booking->court_id;
-        $date = $validated['date'] ?? $booking->date;
+        $date = $validated['date'] ?? $booking->date->toDateString();
         $requestedSlots = $validated['time_slots'] ?? $booking->time_slots;
 
         // Scope check for venue admins

@@ -38,8 +38,8 @@ class StaffReportController extends Controller
             ->whereBetween('date', [$startDate, $endDate]);
 
         $totalBookings = (clone $bookingsQuery)->count();
-        $totalRevenue = (clone $bookingsQuery)->whereIn('status', ['approved', 'confirmed', 'completed'])->sum('total_price');
-        $approvedBookings = (clone $bookingsQuery)->whereIn('status', ['approved', 'confirmed', 'completed'])->count();
+        $totalRevenue = (clone $bookingsQuery)->whereIn('status', Booking::REVENUE_STATUSES)->sum('total_price');
+        $approvedBookings = (clone $bookingsQuery)->whereIn('status', Booking::REVENUE_STATUSES)->count();
         $pendingBookings = (clone $bookingsQuery)->where('status', 'pending')->count();
         $rejectedBookings = (clone $bookingsQuery)->where('status', 'rejected')->count();
         $cancelledBookings = (clone $bookingsQuery)->where('status', 'cancelled')->count();
@@ -50,11 +50,11 @@ class StaffReportController extends Controller
             }])
             ->withCount(['bookings as approved_count' => function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('date', [$startDate, $endDate])
-                    ->whereIn('status', ['approved', 'confirmed', 'completed']);
+                    ->whereIn('status', Booking::REVENUE_STATUSES);
             }])
             ->withSum(['bookings as revenue' => function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('date', [$startDate, $endDate])
-                    ->whereIn('status', ['approved', 'confirmed', 'completed']);
+                    ->whereIn('status', Booking::REVENUE_STATUSES);
             }], 'total_price')
             ->get()
             ->map(function ($court) {

@@ -36,7 +36,7 @@ class BookingCalendar
                 'name' => $booking->name,
                 'email' => $booking->email,
                 'phone' => $booking->phone,
-                'date' => $booking->date,
+                'date' => $booking->date->toDateString(),
                 'time_slots' => $booking->time_slots,
                 'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
                 'status' => $booking->status,
