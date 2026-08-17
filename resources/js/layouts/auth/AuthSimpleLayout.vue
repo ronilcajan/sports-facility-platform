@@ -28,28 +28,16 @@ function toggleSiteDark() {
 
 <template>
     <div
-        class="relative flex min-h-svh flex-col items-center justify-center gap-6 overflow-hidden p-6 md:p-10 transition-colors duration-300"
-        :class="siteDark
-            ? 'bg-[#090d16] text-slate-100'
-            : 'bg-slate-50 text-slate-900'"
+        class="relative flex min-h-svh flex-col items-center justify-center gap-6 overflow-hidden bg-surface p-6 text-content transition-colors duration-300 md:p-10"
     >
         <!-- Decorative court lines (matches logo and hero court motif) -->
         <div
             class="pointer-events-none absolute inset-0 opacity-15"
             aria-hidden="true"
         >
-            <div
-                class="absolute inset-8 rounded-[2.5rem] border sm:inset-16 transition-colors duration-300"
-                :class="siteDark ? 'border-amber-500/20' : 'border-amber-600/30'"
-            ></div>
-            <div
-                class="absolute inset-x-8 top-1/2 h-px -translate-y-1/2 sm:inset-x-16 transition-colors duration-300"
-                :class="siteDark ? 'bg-amber-500/20' : 'bg-amber-600/25'"
-            ></div>
-            <div
-                class="absolute inset-y-8 left-1/2 w-px -translate-x-1/2 sm:inset-y-16 transition-colors duration-300"
-                :class="siteDark ? 'bg-amber-500/20' : 'bg-amber-600/25'"
-            ></div>
+            <div class="absolute inset-8 rounded-[2.5rem] border border-brand/30 sm:inset-16 transition-colors duration-300"></div>
+            <div class="absolute inset-x-8 top-1/2 h-px -translate-y-1/2 bg-brand/25 sm:inset-x-16 transition-colors duration-300"></div>
+            <div class="absolute inset-y-8 left-1/2 w-px -translate-x-1/2 bg-brand/25 sm:inset-y-16 transition-colors duration-300"></div>
         </div>
 
         <!-- Dark mode toggle — floating top-right -->
@@ -57,10 +45,7 @@ function toggleSiteDark() {
             type="button"
             :title="siteDark ? 'Switch to light mode' : 'Switch to dark mode'"
             :aria-label="siteDark ? 'Switch to light mode' : 'Switch to dark mode'"
-            class="absolute right-5 top-5 z-20 inline-flex size-10 items-center justify-center rounded-full border transition-all duration-200 hover:scale-110"
-            :class="siteDark
-                ? 'border-amber-500/30 bg-[#131b2e]/80 text-slate-400 hover:bg-[#131b2e] hover:text-amber-400'
-                : 'border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-100 hover:text-slate-700'"
+            class="absolute right-5 top-5 z-20 inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface-elevated text-content-muted shadow-sm transition-all duration-200 hover:scale-110 hover:text-brand"
             @click="toggleSiteDark"
         >
             <!-- Sun icon — shown in dark mode, click to go light -->
@@ -76,10 +61,7 @@ function toggleSiteDark() {
 
         <div class="relative z-10 w-full max-w-sm">
             <div
-                class="rounded-2xl border p-8 shadow-2xl backdrop-blur-md transition-colors duration-300"
-                :class="siteDark
-                    ? 'border-amber-500/20 bg-[#131b2e]/90 shadow-amber-500/5'
-                    : 'border-slate-200/80 bg-white shadow-slate-200/60'"
+                class="rounded-2xl border border-line bg-surface-elevated p-8 shadow-2xl shadow-brand/5 backdrop-blur-md transition-colors duration-300"
             >
                 <div class="flex flex-col items-center gap-4">
                     <Link
@@ -89,34 +71,21 @@ function toggleSiteDark() {
                         <img
                             :src="site?.logo ?? '/logo.jpg'"
                             :alt="site?.name ?? 'Logo'"
-                            class="size-14 rounded-full object-cover ring-2 shadow-md transition-colors duration-300"
-                            :class="siteDark ? 'ring-amber-500/40 shadow-amber-500/20' : 'ring-amber-600/30 shadow-amber-600/10'"
+                            class="size-14 rounded-full object-cover shadow-md ring-2 ring-brand/40 shadow-brand/15 transition-colors duration-300"
                         />
                         <div class="flex flex-col items-center text-center">
-                            <span
-                                class="font-display text-xl font-extrabold tracking-tight transition-colors duration-300"
-                                :class="siteDark ? 'text-white' : 'text-slate-900'"
-                            >
+                            <span class="font-display text-xl font-extrabold tracking-tight text-content transition-colors duration-300">
                                 {{ site?.name ?? 'PickleHub' }}
                             </span>
                             <div class="mt-0.5 flex items-center justify-center gap-1.5 text-[10px] font-extrabold uppercase leading-none">
                                 <span class="font-serif tracking-widest text-brand">RAMBOY</span>
-                                <span
-                                    class="font-sans tracking-[0.2em] opacity-70 transition-colors duration-300"
-                                    :class="siteDark ? 'text-slate-300' : 'text-slate-500'"
-                                >ENTERPRISE</span>
+                                <span class="font-sans tracking-[0.2em] text-content-muted opacity-70 transition-colors duration-300">ENTERPRISE</span>
                             </div>
                         </div>
                     </Link>
                     <div class="space-y-1.5 text-center">
-                        <h1
-                            class="font-display text-xl font-bold transition-colors duration-300"
-                            :class="siteDark ? 'text-slate-100' : 'text-slate-900'"
-                        >{{ title }}</h1>
-                        <p
-                            class="text-center text-sm transition-colors duration-300"
-                            :class="siteDark ? 'text-slate-400' : 'text-slate-500'"
-                        >
+                        <h1 class="font-display text-xl font-bold text-content transition-colors duration-300">{{ title }}</h1>
+                        <p class="text-center text-sm text-content-muted transition-colors duration-300">
                             {{ description }}
                         </p>
                     </div>

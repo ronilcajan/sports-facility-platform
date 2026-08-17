@@ -26,7 +26,7 @@ defineProps<{
 
     <div
         v-if="status"
-        class="mb-4 text-center text-sm font-medium text-green-600"
+        class="mb-4 text-center text-sm font-medium text-brand"
     >
         {{ status }}
     </div>
@@ -48,7 +48,7 @@ defineProps<{
 
             <div class="my-6 flex items-center justify-start">
                 <Button
-                    class="w-full bg-amber-500 hover:bg-amber-600 text-neutral-950 font-bold shadow-lg shadow-amber-500/20 focus-visible:ring-amber-500 border-0 transition-all duration-200"
+                    class="w-full bg-brand text-brand-foreground font-bold shadow-lg shadow-brand/20 hover:bg-brand/90 focus-visible:ring-brand border-0 transition-all duration-200"
                     :disabled="processing"
                     data-test="email-password-reset-link-button"
                 >
