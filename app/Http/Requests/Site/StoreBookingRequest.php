@@ -58,7 +58,7 @@ class StoreBookingRequest extends FormRequest
                 $bookedSlots = Booking::query()
                     ->where('court_id', $courtId)
                     ->where('date', $date)
-                    ->where('status', '!=', 'cancelled')
+                    ->holdingSlots()
                     ->pluck('time_slots')
                     ->flatten()
                     ->all();

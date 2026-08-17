@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { Plus, Pencil, X, Dumbbell, Users, Image as ImageIcon } from '@lucide/vue';
 import CourtImageManagerModal from '@/components/admin/CourtImageManagerModal.vue';
@@ -69,10 +69,15 @@ const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const editingCourt = ref<Court | null>(null);
 const showImageModal = ref(false);
-const selectedCourtForImages = ref<Court | null>(null);
+const selectedCourtIdForImages = ref<number | null>(null);
+
+// Resolve from the live props so the gallery reflects each upload/delete round-trip.
+const selectedCourtForImages = computed<Court | null>(
+    () => props.courts.find((c) => c.id === selectedCourtIdForImages.value) ?? null,
+);
 
 function openImageModal(court: Court) {
-    selectedCourtForImages.value = court;
+    selectedCourtIdForImages.value = court.id;
     showImageModal.value = true;
 }
 

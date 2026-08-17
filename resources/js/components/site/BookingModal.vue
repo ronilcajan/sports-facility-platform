@@ -715,6 +715,9 @@ function handleSubmit() {
         .then(([resData]) => {
             bookingDetails.value = resData.booking;
             step.value = 'confirmed';
+            // The booking posts outside Inertia, so nothing reloads the slot map
+            // on its own — pull it again so the just-taken hours show as booked.
+            void fetchRealtimeAvailability();
         })
         .catch((err) => {
             step.value = 'form';

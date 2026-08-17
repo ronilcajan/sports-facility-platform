@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Staff;
 use App\Http\Controllers\Controller;
 use App\Models\Court;
 use App\Models\CourtImage;
+use App\Support\ImageStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -23,7 +24,7 @@ class StaffCourtImageController extends Controller
             'is_primary' => ['nullable', 'boolean'],
         ]);
 
-        $path = $request->file('image')->store('courts', 'public');
+        $path = ImageStorage::photo($request->file('image'), 'courts');
         $isPrimary = $request->boolean('is_primary');
 
         if ($isPrimary) {

@@ -9,6 +9,7 @@ use App\Models\Booking;
 use App\Models\Court;
 use App\Models\CourtUnavailability;
 use App\Notifications\BookingStatusNotification;
+use App\Support\ImageStorage;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -50,7 +51,7 @@ class BookingController extends Controller
 
         // Save receipt to public storage disk (optional — booking is valid without it)
         $receiptPath = $request->hasFile('receipt')
-            ? $request->file('receipt')->store('receipts', 'public')
+            ? ImageStorage::receipt($request->file('receipt'), 'receipts')
             : null;
 
         $requestedSlots = $request->validated('time');
@@ -121,7 +122,7 @@ class BookingController extends Controller
         $takenSlots = Booking::query()
             ->where('court_id', $courtId)
             ->where('date', $date)
-            ->where('status', '!=', 'cancelled')
+            ->holdingSlots()
             ->pluck('time_slots')
             ->flatten()
             ->all();
@@ -146,7 +147,7 @@ class BookingController extends Controller
 
         $query = Booking::query()
             ->where('date', $date)
-            ->where('status', '!=', 'cancelled');
+            ->holdingSlots();
 
         if ($courtId) {
             $query->where('court_id', $courtId);
@@ -223,7 +224,7 @@ class BookingController extends Controller
             $conflictingBookings = Booking::query()
                 ->where('court_id', $courtId)
                 ->where('date', $date)
-                ->where('status', '!=', 'cancelled')
+                ->holdingSlots()
                 ->where('id', '!=', $booking->id)
                 ->get();
 

@@ -82,7 +82,7 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     </div>
                     <InputError :message="errors.code" />
                 </div>
-                <Button type="submit" class="w-full" :disabled="processing"
+                <Button type="submit" class="w-full bg-brand text-brand-foreground font-bold shadow-lg shadow-brand/20 hover:bg-brand/90 focus-visible:ring-brand border-0 transition-all duration-200" :disabled="processing"
                     >Continue</Button
                 >
                 <div class="text-center text-sm text-muted-foreground">
@@ -113,7 +113,7 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     required
                 />
                 <InputError :message="errors.recovery_code" />
-                <Button type="submit" class="w-full" :disabled="processing"
+                <Button type="submit" class="w-full bg-brand text-brand-foreground font-bold shadow-lg shadow-brand/20 hover:bg-brand/90 focus-visible:ring-brand border-0 transition-all duration-200" :disabled="processing"
                     >Continue</Button
                 >
 

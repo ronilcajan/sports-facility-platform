@@ -6,13 +6,18 @@ use App\Models\Booking;
 use App\Models\SiteSetting;
 use App\Support\QrCodePng;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class BookingReceivedMail extends Mailable implements ShouldQueue
+/**
+ * Deliberately NOT ShouldQueue. This application is hosted on shared hosting
+ * with no queue worker, so a queued mailable would sit in the jobs table and
+ * never reach the customer. The caller wraps the send in a try/catch, so an
+ * SMTP failure degrades to a logged warning rather than a failed booking.
+ */
+class BookingReceivedMail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -22,8 +27,6 @@ class BookingReceivedMail extends Mailable implements ShouldQueue
     public function __construct(public Booking $booking)
     {
         $this->booking->loadMissing('court.venue');
-
-        $this->afterCommit();
     }
 
     /**

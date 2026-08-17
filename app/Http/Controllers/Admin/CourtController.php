@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\UpdateCourtRequest;
 use App\Models\Booking;
 use App\Models\Court;
 use App\Models\Venue;
+use App\Support\ImageStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -77,7 +78,7 @@ class CourtController extends Controller
         $court = Court::create($data);
 
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('courts', 'public');
+            $path = ImageStorage::photo($request->file('image'), 'courts');
             $court->images()->create([
                 'path' => $path,
                 'is_primary' => true,
@@ -213,7 +214,7 @@ class CourtController extends Controller
         $court->update($data);
 
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('courts', 'public');
+            $path = ImageStorage::photo($request->file('image'), 'courts');
             $court->images()->update(['is_primary' => false]);
             $maxSortOrder = $court->images()->max('sort_order') ?? 0;
             $court->images()->create([

@@ -20,6 +20,16 @@ class StoreCourtRequest extends FormRequest
     }
 
     /**
+     * Venue admins always file courts under their own venue, so the form need not send it.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->user()?->isVenueScopedAdmin()) {
+            $this->merge(['venue_id' => $this->user()->venue_id]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -27,7 +37,8 @@ class StoreCourtRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'venue_id' => ['nullable', 'exists:venues,id'],
+            // Required: the public site is venue-first, so a venue-less court renders nowhere.
+            'venue_id' => ['required', 'exists:venues,id'],
             'name' => ['required', 'string', 'max:255'],
             'sport_type' => ['required', new Enum(SportType::class)],
             'description' => ['nullable', 'string', 'max:2000'],

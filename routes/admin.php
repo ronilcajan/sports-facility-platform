@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\AdminReportController;
 use App\Http\Controllers\Admin\AdminStaffController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminVenueController;
+use App\Http\Controllers\Admin\AdminVenueImageController;
 use App\Http\Controllers\Admin\AppearanceController;
 use App\Http\Controllers\Admin\CourtController;
 use App\Http\Controllers\Admin\CourtStaffController;
@@ -61,6 +62,14 @@ Route::middleware([
         // Venue Profile (accessible to authorized admins & superadmins)
         Route::get('venues/{venue}', [AdminVenueController::class, 'show'])->name('venues.show');
         Route::delete('venues/{venue}/image', [AdminVenueController::class, 'destroyImage'])->name('venues.image.destroy');
+
+        // Venue Gallery Photos (authorization is per-venue via VenuePolicy)
+        Route::post('venues/{venue}/images', [AdminVenueImageController::class, 'store'])
+            ->name('venues.images.store');
+        Route::patch('venues/{venue}/images/{image}/primary', [AdminVenueImageController::class, 'setPrimary'])
+            ->name('venues.images.primary');
+        Route::delete('venues/{venue}/images/{image}', [AdminVenueImageController::class, 'destroy'])
+            ->name('venues.images.destroy');
 
         // Venue Settings — an admin edits their own assigned venue
         Route::get('settings', [SingleVenueController::class, 'edit'])->name('settings.edit');

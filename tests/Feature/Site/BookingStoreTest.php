@@ -24,9 +24,12 @@ test('a booking-received confirmation email is sent to the customer', function (
         'time' => ['08:00 AM'],
     ])->assertStatus(201);
 
-    Mail::assertQueued(BookingReceivedMail::class, function (BookingReceivedMail $mail) {
+    // Sent inline, not queued — this app runs on shared hosting with no queue worker.
+    Mail::assertSent(BookingReceivedMail::class, function (BookingReceivedMail $mail) {
         return $mail->hasTo('alice@example.com');
     });
+
+    Mail::assertNothingQueued();
 });
 
 test('a guest can successfully book a court and save it to the database', function (): void {

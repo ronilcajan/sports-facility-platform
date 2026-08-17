@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\SiteSetting;
+use App\Support\ImageStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -46,7 +47,7 @@ class AppearanceController extends Controller
         SiteSetting::set('contact_address', $validated['contact_address'] ?? '');
 
         if ($request->hasFile('logo')) {
-            SiteSetting::set('site_logo', $request->file('logo')->store('branding', 'public'));
+            SiteSetting::set('site_logo', ImageStorage::photo($request->file('logo'), 'branding'));
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Branding updated.')]);

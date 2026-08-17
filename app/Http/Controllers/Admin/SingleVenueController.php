@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Venue;
+use App\Support\ImageStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -38,6 +39,7 @@ class SingleVenueController extends Controller
                 'maya_number' => $venue->maya_number,
                 'maya_qr_url' => $venue->paymentMethods()['maya']['qr_url'] ?? null,
                 'is_active' => $venue->is_active,
+                'images' => $venue->galleryPayload(),
             ],
             'canManageVenueImages' => true,
         ]);
@@ -73,7 +75,7 @@ class SingleVenueController extends Controller
             if ($venue->image_path && Storage::disk('public')->exists($venue->image_path)) {
                 Storage::disk('public')->delete($venue->image_path);
             }
-            $validated['image_path'] = $request->file('image')->store('venues', 'public');
+            $validated['image_path'] = ImageStorage::photo($request->file('image'), 'venues');
         } elseif ($request->boolean('delete_image')) {
             if ($venue->image_path && Storage::disk('public')->exists($venue->image_path)) {
                 Storage::disk('public')->delete($venue->image_path);
@@ -82,11 +84,11 @@ class SingleVenueController extends Controller
         }
 
         if ($request->hasFile('gcash_qr')) {
-            $validated['gcash_qr_path'] = $request->file('gcash_qr')->store('venue-qr', 'public');
+            $validated['gcash_qr_path'] = ImageStorage::qrCode($request->file('gcash_qr'), 'venue-qr');
         }
 
         if ($request->hasFile('maya_qr')) {
-            $validated['maya_qr_path'] = $request->file('maya_qr')->store('venue-qr', 'public');
+            $validated['maya_qr_path'] = ImageStorage::qrCode($request->file('maya_qr'), 'venue-qr');
         }
 
         unset($validated['image'], $validated['delete_image'], $validated['gcash_qr'], $validated['maya_qr']);
