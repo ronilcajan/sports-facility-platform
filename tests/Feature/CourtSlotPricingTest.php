@@ -48,6 +48,8 @@ test('booking store calculates total price using dynamic slot rates', function (
     $user = User::factory()->create();
     $user->assignRole(RoleName::Customer->value);
 
+    $bookingDate = now()->addDays(2)->format('Y-m-d');
+
     // Book 3 slots: 10:00 AM (100) + 06:00 PM (200) + 07:00 PM (250) = 550
     $response = $this->actingAs($user)
         ->post('/bookings', [
@@ -55,7 +57,7 @@ test('booking store calculates total price using dynamic slot rates', function (
             'name' => 'John Doe',
             'email' => 'john@example.com',
             'phone' => '09171234567',
-            'date' => now()->addDays(3)->toDateString(),
+            'date' => $bookingDate,
             'time' => ['10:00 AM', '06:00 PM', '07:00 PM'],
         ]);
 
@@ -63,7 +65,7 @@ test('booking store calculates total price using dynamic slot rates', function (
 
     $this->assertDatabaseHas('bookings', [
         'court_id' => $court->id,
-        'date' => now()->addDays(3)->toDateString(),
+        'date' => $bookingDate,
         'total_price' => 550.00,
     ]);
 });
@@ -103,13 +105,15 @@ test('admin can create additional time slots outside default hours and customers
     $user = User::factory()->create();
     $user->assignRole(RoleName::Customer->value);
 
+    $bookingDate2 = now()->addDays(3)->format('Y-m-d');
+
     $bookingResponse = $this->actingAs($user)
         ->post('/bookings', [
             'court_id' => $court->id,
             'name' => 'Jane Smith',
             'email' => 'jane@example.com',
             'phone' => '09181234567',
-            'date' => now()->addDays(5)->toDateString(),
+            'date' => $bookingDate2,
             'time' => ['03:00 AM', '05:00 AM'],
         ]);
 
@@ -117,7 +121,7 @@ test('admin can create additional time slots outside default hours and customers
 
     $this->assertDatabaseHas('bookings', [
         'court_id' => $court->id,
-        'date' => now()->addDays(5)->toDateString(),
+        'date' => $bookingDate2,
         'total_price' => 270.00, // 120 + 150
     ]);
 });

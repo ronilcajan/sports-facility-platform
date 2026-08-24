@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { Search, Plus, Pencil, Trash2, X, ArrowUpRight } from '@lucide/vue';
+import { Search, Plus, Pencil, Trash2, X, ArrowUpRight, Sparkles, Gift } from '@lucide/vue';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,8 @@ interface UserItem {
     name: string;
     email: string;
     roles: string[];
+    points: number;
+    claims_count: number;
     created_at: string;
 }
 
@@ -45,7 +47,9 @@ const search = ref(props.filters.search || '');
 const role = ref(props.filters.role || '');
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
+const showPointsModal = ref(false);
 const editingUser = ref<UserItem | null>(null);
+const pointsUser = ref<UserItem | null>(null);
 
 const createForm = useForm({
     name: '',
@@ -59,6 +63,12 @@ const editForm = useForm({
     email: '',
     password: '',
     role: '',
+});
+
+const pointsForm = useForm({
+    action: 'add' as 'add' | 'deduct',
+    amount: 50,
+    reason: '',
 });
 
 function applyFilters() {
@@ -108,6 +118,27 @@ function submitEdit() {
     });
 }
 
+function openPointsModal(user: UserItem) {
+    pointsUser.value = user;
+    pointsForm.reset();
+    pointsForm.action = 'add';
+    pointsForm.amount = 50;
+    pointsForm.reason = '';
+    pointsForm.clearErrors();
+    showPointsModal.value = true;
+}
+
+function submitPoints() {
+    if (!pointsUser.value) return;
+    pointsForm.post(`/admin/users/${pointsUser.value.id}/adjust-points`, {
+        onSuccess: () => {
+            showPointsModal.value = false;
+            pointsUser.value = null;
+        },
+        preserveScroll: true,
+    });
+}
+
 function destroyUser(user: UserItem) {
     if (confirm(`Delete "${user.name}"? This action cannot be undone.`)) {
         router.delete(`/admin/users/${user.id}`, { preserveScroll: true });
@@ -150,12 +181,12 @@ function rolePill(r: string): string {
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">User Accounts</h1>
-                <p class="text-xs text-neutral-500">Manage registered users and their roles.</p>
+                <p class="text-xs text-neutral-500">Manage registered users, loyalty points balances, and administrative roles.</p>
             </div>
             <button
                 v-if="canManageUsers"
                 @click="openCreateModal"
-                class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow transition-colors hover:bg-emerald-700"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow transition-colors hover:bg-emerald-700 cursor-pointer"
             >
                 <Plus class="w-4 h-4" /> Create User
             </button>
@@ -181,8 +212,8 @@ function rolePill(r: string): string {
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <button @click="applyFilters" class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700">Filter</button>
-                <button @click="clearFilters" class="px-3 py-1.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg text-xs font-semibold">Clear</button>
+                <button @click="applyFilters" class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 cursor-pointer">Filter</button>
+                <button @click="clearFilters" class="px-3 py-1.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg text-xs font-semibold cursor-pointer">Clear</button>
             </div>
         </div>
 
@@ -195,6 +226,7 @@ function rolePill(r: string): string {
                         <th class="py-3 px-3">Name</th>
                         <th class="py-3 px-3">Email</th>
                         <th class="py-3 px-3">Roles</th>
+                        <th class="py-3 px-3">Loyalty Points</th>
                         <th class="py-3 px-3">Registered</th>
                         <th class="py-3 px-3 text-right">Actions</th>
                     </tr>
@@ -224,17 +256,36 @@ function rolePill(r: string): string {
                                 {{ r }}
                             </span>
                         </td>
+                        <td class="py-3 px-3">
+                            <button
+                                type="button"
+                                @click="openPointsModal(user)"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs transition-colors cursor-pointer"
+                                title="Click to adjust points"
+                            >
+                                <Sparkles class="w-3.5 h-3.5 text-amber-500" />
+                                <span>{{ user.points }} pts</span>
+                            </button>
+                        </td>
                         <td class="py-3 px-3 text-neutral-500">{{ user.created_at }}</td>
                         <td class="py-3 px-3 text-right">
                             <div class="flex items-center justify-end gap-1">
-                                <Link :href="`/admin/users/${user.id}`" class="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white" title="View">
+                                <button
+                                    type="button"
+                                    @click="openPointsModal(user)"
+                                    class="p-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded transition-colors cursor-pointer"
+                                    title="Adjust Loyalty Points"
+                                >
+                                    <Sparkles class="w-4 h-4" />
+                                </button>
+                                <Link :href="`/admin/users/${user.id}`" class="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded" title="View Profile">
                                     <ArrowUpRight class="w-4 h-4" />
                                 </Link>
                                 <template v-if="canManageUsers">
-                                    <button @click="openEditModal(user)" class="p-1 text-emerald-600 hover:text-emerald-700" title="Edit">
+                                    <button @click="openEditModal(user)" class="p-1 text-emerald-600 hover:text-emerald-700 rounded cursor-pointer" title="Edit">
                                         <Pencil class="w-4 h-4" />
                                     </button>
-                                    <button @click="destroyUser(user)" class="p-1 text-rose-400 hover:text-rose-600" title="Delete">
+                                    <button @click="destroyUser(user)" class="p-1 text-rose-400 hover:text-rose-600 rounded cursor-pointer" title="Delete">
                                         <Trash2 class="w-4 h-4" />
                                     </button>
                                 </template>
@@ -242,12 +293,92 @@ function rolePill(r: string): string {
                         </td>
                     </tr>
                     <tr v-if="users.data.length === 0">
-                        <td colspan="6" class="py-8 text-center text-xs text-neutral-400">No users found.</td>
+                        <td colspan="7" class="py-8 text-center text-xs text-neutral-400">No users found.</td>
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
+
+    <!-- Adjust Points Modal -->
+    <Teleport to="body">
+        <div v-if="showPointsModal && pointsUser" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" @click.self="showPointsModal = false">
+            <div class="w-full max-w-md rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
+                            <Sparkles class="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h2 class="text-base font-black text-neutral-900 dark:text-white">Adjust Customer Points</h2>
+                            <p class="text-xs text-neutral-500">{{ pointsUser.name }} (Current: {{ pointsUser.points }} pts)</p>
+                        </div>
+                    </div>
+                    <button @click="showPointsModal = false" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white cursor-pointer">
+                        <X class="h-5 w-5" />
+                    </button>
+                </div>
+
+                <form @submit.prevent="submitPoints" class="space-y-4">
+                    <div class="space-y-1.5">
+                        <Label>Adjustment Action</Label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                @click="pointsForm.action = 'add'"
+                                class="py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                :class="[
+                                    pointsForm.action === 'add'
+                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                        : 'bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300',
+                                ]"
+                            >
+                                <span>+ Add Bonus Points</span>
+                            </button>
+                            <button
+                                type="button"
+                                @click="pointsForm.action = 'deduct'"
+                                class="py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                :class="[
+                                    pointsForm.action === 'deduct'
+                                        ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                                        : 'bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300',
+                                ]"
+                            >
+                                <span>- Deduct Points</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <Label for="points-amount">Points Amount</Label>
+                        <Input id="points-amount" v-model.number="pointsForm.amount" type="number" min="1" max="50000" required />
+                        <InputError :message="pointsForm.errors.amount" />
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <Label for="points-reason">Reason / Memo (Required for Audit Trail)</Label>
+                        <Input id="points-reason" v-model="pointsForm.reason" placeholder="e.g. Loyalty promotion bonus, special event reward, etc." required />
+                        <InputError :message="pointsForm.errors.reason" />
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 text-xs flex items-center justify-between font-bold">
+                        <span class="text-neutral-500">Calculated New Balance:</span>
+                        <span class="text-emerald-600 dark:text-emerald-400">
+                            {{ pointsForm.action === 'add' ? (pointsUser.points + (pointsForm.amount || 0)) : (pointsUser.points - (pointsForm.amount || 0)) }} pts
+                        </span>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                        <Button variant="outline" type="button" @click="showPointsModal = false">Cancel</Button>
+                        <Button type="submit" :disabled="pointsForm.processing" class="bg-emerald-600 hover:bg-emerald-700 text-white">
+                            {{ pointsForm.processing ? 'Adjusting...' : 'Save Points' }}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </Teleport>
 
     <!-- Create User Modal -->
     <Teleport to="body">

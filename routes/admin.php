@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminBookingController;
 use App\Http\Controllers\Admin\AdminCourtImageController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminReportController;
+use App\Http\Controllers\Admin\AdminRewardController;
 use App\Http\Controllers\Admin\AdminStaffController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminVenueController;
@@ -54,7 +55,15 @@ Route::middleware([
         Route::post('users', [AdminUserController::class, 'store'])->name('users.store');
         Route::get('users/{user}', [AdminUserController::class, 'show'])->name('users.show');
         Route::put('users/{user}', [AdminUserController::class, 'update'])->name('users.update');
+        Route::post('users/{user}/adjust-points', [AdminUserController::class, 'adjustPoints'])->name('users.adjust-points');
         Route::delete('users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+
+        // Freebies & Rewards Management (CRUD)
+        Route::get('rewards', [AdminRewardController::class, 'index'])->name('rewards.index');
+        Route::post('rewards', [AdminRewardController::class, 'store'])->name('rewards.store');
+        Route::put('rewards/{reward}', [AdminRewardController::class, 'update'])->name('rewards.update');
+        Route::patch('rewards/{reward}/toggle-active', [AdminRewardController::class, 'toggleActive'])->name('rewards.toggle-active');
+        Route::delete('rewards/{reward}', [AdminRewardController::class, 'destroy'])->name('rewards.destroy');
 
         // Reports (venue-scoped for admins, global for super-admins)
         Route::get('reports', [AdminReportController::class, 'index'])->name('reports.index');

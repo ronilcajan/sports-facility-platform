@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { Plus, ChevronRight } from '@lucide/vue';
+import { Plus, ChevronRight, Gift, Sparkles } from '@lucide/vue';
 import { dashboard } from '@/routes';
 import BookingsTable, { type BookingItem, type CourtItem } from '@/components/customer/BookingsTable.vue';
 import StatCardsSlideshow from '@/components/customer/StatCardsSlideshow.vue';
+import PointsSummaryCard, { type LoyaltySummary } from '@/components/customer/PointsSummaryCard.vue';
 
 const props = defineProps<{
     bookings: BookingItem[];
     courts?: CourtItem[];
+    loyaltySummary?: LoyaltySummary;
 }>();
 
 defineOptions({
@@ -51,15 +53,26 @@ const recentBookings = computed(() => props.bookings.slice(0, 5));
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-600/10 via-teal-600/5 to-transparent p-6 rounded-2xl border border-emerald-500/10 dark:border-emerald-500/5">
             <div>
                 <h1 class="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">Welcome Back!</h1>
-                <p class="text-xs text-neutral-500 mt-1">Manage your active court reservations, upload receipts, and check booking statuses.</p>
+                <p class="text-xs text-neutral-500 mt-1">Manage your active court reservations, earn loyalty points, and claim exclusive member freebies.</p>
             </div>
-            <Link
-                href="/courts"
-                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all hover:translate-y-[-1px] flex items-center gap-1.5"
-            >
-                <Plus class="w-4 h-4" /> Book a New Court
-            </Link>
+            <div class="flex items-center gap-2">
+                <Link
+                    href="/customer/rewards"
+                    class="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-white rounded-xl text-xs font-bold border border-neutral-700/60 shadow-sm transition-all hover:translate-y-[-1px] flex items-center gap-1.5"
+                >
+                    <Gift class="w-4 h-4 text-emerald-400" /> Freebies Hub
+                </Link>
+                <Link
+                    href="/courts"
+                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all hover:translate-y-[-1px] flex items-center gap-1.5"
+                >
+                    <Plus class="w-4 h-4" /> Book a New Court
+                </Link>
+            </div>
         </div>
+
+        <!-- Loyalty Points & Rewards Overview Card -->
+        <PointsSummaryCard :loyalty="loyaltySummary" />
 
         <!-- Stat Cards Slideshow (Mobile Slideshow / Desktop Grid) -->
         <StatCardsSlideshow :stats="stats" />

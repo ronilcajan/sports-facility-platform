@@ -54,6 +54,8 @@ class AdminUserController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'roles' => $user->getRoleNames(),
+                'points' => $user->points ?? 0,
+                'claims_count' => $user->rewardClaims()->count(),
                 'created_at' => $user->created_at?->toFormattedDateString(),
             ];
         })->withQueryString();
@@ -94,6 +96,21 @@ class AdminUserController extends Controller
             ->latest()
             ->paginate(10);
 
+        $claims = $user->rewardClaims()
+            ->with('reward')
+            ->latest()
+            ->get()
+            ->map(fn ($c) => [
+                'id' => $c->id,
+                'voucher_code' => $c->voucher_code,
+                'reward_name' => $c->reward?->name ?? 'Reward Voucher',
+                'points_spent' => $c->points_spent,
+                'status' => $c->status,
+                'expires_at' => $c->expires_at?->toFormattedDateString(),
+                'created_at' => $c->created_at?->toFormattedDateString() ?? '',
+            ])
+            ->toArray();
+
         return Inertia::render('admin/users/Show', [
             'user' => [
                 'id' => $user->id,
@@ -103,7 +120,49 @@ class AdminUserController extends Controller
                 'created_at' => $user->created_at?->toFormattedDateString(),
             ],
             'bookings' => $bookings,
+            'loyaltySummary' => $user->getLoyaltySummary(),
+            'claims' => $claims,
         ]);
+    }
+
+    /**
+     * Adjust loyalty points for a user (Add bonus points or deduct points).
+     */
+    public function adjustPoints(Request $request, User $user): RedirectResponse
+    {
+        $this->authorize('update', $user);
+
+        $validated = $request->validate([
+            'action' => ['required', 'string', Rule::in(['add', 'deduct'])],
+            'amount' => ['required', 'integer', 'min:1', 'max:50000'],
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        /** @var User $admin */
+        $admin = $request->user();
+        $amount = (int) $validated['amount'];
+        $action = $validated['action'];
+        $reason = $validated['reason'];
+
+        if ($action === 'deduct') {
+            $newBalance = max(0, $user->points - $amount);
+            $signedPoints = -min($user->points, $amount);
+        } else {
+            $newBalance = $user->points + $amount;
+            $signedPoints = $amount;
+        }
+
+        $user->update(['points' => $newBalance]);
+
+        $user->pointTransactions()->create([
+            'points' => $signedPoints,
+            'type' => 'admin_adjustment',
+            'description' => "Admin adjustment by {$admin->name}: {$reason}",
+            'created_by_id' => $admin->id,
+        ]);
+
+        return redirect()->back()
+            ->with('success', "Loyalty points for {$user->name} adjusted successfully.");
     }
 
     /**

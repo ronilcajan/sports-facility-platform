@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { usePage, Link } from '@inertiajs/vue3';
-import { LayoutGrid, CalendarDays, PlusCircle, User } from '@lucide/vue';
+import { LayoutGrid, CalendarDays, PlusCircle, Gift, User } from '@lucide/vue';
 
 const page = usePage();
 const currentUrl = computed(() => page.url);
@@ -25,6 +25,12 @@ const navItems = [
         href: '/my-bookings',
         icon: CalendarDays,
         isActive: (url: string) => url.startsWith('/my-bookings'),
+    },
+    {
+        name: 'Rewards',
+        href: '/customer/rewards',
+        icon: Gift,
+        isActive: (url: string) => url.startsWith('/customer/rewards'),
     },
     {
         name: 'Explore',

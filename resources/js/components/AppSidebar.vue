@@ -12,6 +12,7 @@ import {
     Palette,
     Dumbbell,
     Settings,
+    Gift,
 } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -85,6 +86,11 @@ const navGroups = computed<NavGroup[]>(() => {
                             href: '/admin/users',
                             icon: Users,
                         },
+                        {
+                            title: 'Freebies & Rewards',
+                            href: '/admin/rewards',
+                            icon: Gift,
+                        },
                     ],
                 },
                 {
@@ -131,6 +137,11 @@ const navGroups = computed<NavGroup[]>(() => {
                         title: 'Customers',
                         href: '/admin/users?role=customer',
                         icon: Users,
+                    },
+                    {
+                        title: 'Freebies & Rewards',
+                        href: '/admin/rewards',
+                        icon: Gift,
                     },
                 ],
             },
@@ -207,6 +218,11 @@ const navGroups = computed<NavGroup[]>(() => {
                     title: 'Bookings',
                     href: '/my-bookings',
                     icon: CalendarDays,
+                },
+                {
+                    title: 'Rewards & Points',
+                    href: '/customer/rewards',
+                    icon: Gift,
                 },
             ],
         },

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CustomerBookingController;
+use App\Http\Controllers\CustomerRewardController;
 use App\Http\Controllers\Site\BookingController;
 use App\Http\Controllers\Site\PageController;
 use App\Models\Court;
@@ -40,10 +41,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'base_price' => (string) $court->base_price,
                 ];
             }),
+            'loyaltySummary' => $user->getLoyaltySummary(),
         ]);
     })->name('dashboard');
 
     Route::get('/my-bookings', [CustomerBookingController::class, 'index'])->name('customer.bookings.index');
+
+    // Customer Rewards & Points
+    Route::get('/customer/rewards', [CustomerRewardController::class, 'index'])->name('customer.rewards.index');
+    Route::post('/customer/rewards/{reward}/claim', [CustomerRewardController::class, 'claim'])->name('customer.rewards.claim');
 
     Route::patch('/bookings/{booking}', [BookingController::class, 'update'])->name('site.bookings.update');
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('site.bookings.destroy');
