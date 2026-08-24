@@ -87,7 +87,11 @@ const monthYearLabel = computed(() => {
     return `${monthName(first)} – ${monthName(last)} ${last.getFullYear()}`;
 });
 
+function isPastDate(d: Date) {
+    return toDateKey(d) < todayDateString.value;
+}
 function selectDay(d: Date) {
+    if (isPastDate(d)) return;
     form.date = toDateKey(d);
 }
 function isSelectedDay(d: Date) {
@@ -202,7 +206,11 @@ watch(
             form.reset();
             form.clearErrors();
             form.court_id = props.initialCourtId ?? sortedCourts.value[0]?.id ?? null;
-            form.date = props.initialDate ?? todayDateString.value;
+            let initialDateStr = props.initialDate ?? todayDateString.value;
+            if (initialDateStr < todayDateString.value) {
+                initialDateStr = todayDateString.value;
+            }
+            form.date = initialDateStr;
 
             if (form.date) {
                 const targetDate = new Date(form.date);
@@ -229,7 +237,11 @@ watch(
 function validateStep1(): boolean {
     const e: typeof localErrors.value = {};
     if (!form.court_id) e.court = 'Please select a court.';
-    if (!form.date) e.date = 'Booking date is required.';
+    if (!form.date) {
+        e.date = 'Booking date is required.';
+    } else if (form.date < todayDateString.value) {
+        e.date = 'Booking date cannot be in the past.';
+    }
     if (form.time_slots.length === 0) e.time = 'Select at least one time slot.';
     localErrors.value = e;
     return Object.keys(e).length === 0;
@@ -355,9 +367,10 @@ function submit() {
                                         v-for="d in visibleDays"
                                         :key="toDateKey(d)"
                                         type="button"
+                                        :disabled="isPastDate(d)"
                                         @click="selectDay(d)"
-                                        class="group flex flex-col items-center gap-1.5 rounded-xl border py-2 transition-all cursor-pointer"
-                                        :class="isSelectedDay(d) ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40' : 'border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'"
+                                        class="group flex flex-col items-center gap-1.5 rounded-xl border py-2 transition-all"
+                                        :class="isPastDate(d) ? 'opacity-30 cursor-not-allowed border-transparent' : isSelectedDay(d) ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 cursor-pointer' : 'border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer'"
                                     >
                                         <span class="text-[10px] font-bold uppercase tracking-wide" :class="isSelectedDay(d) ? 'text-emerald-600' : 'text-neutral-500 dark:text-neutral-400'">{{ dayLabels[d.getDay()] }}</span>
                                         <span class="flex size-9 items-center justify-center rounded-full text-sm font-bold transition-all" :class="isSelectedDay(d) ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20' : 'bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white group-hover:bg-neutral-100 dark:group-hover:bg-neutral-800'">{{ d.getDate() }}</span>

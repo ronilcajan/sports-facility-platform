@@ -367,7 +367,12 @@ const dateLeaveTo = computed(() =>
     slideDir.value === 'next' ? 'opacity-0 -translate-x-6' : 'opacity-0 translate-x-6',
 );
 
+function isPastDate(d: Date): boolean {
+    return toDateKey(d) < todayDateString.value;
+}
+
 function selectDay(d: Date): void {
+    if (isPastDate(d)) return;
     form.value.date = toDateKey(d);
 }
 
@@ -478,7 +483,10 @@ watch(
 
             // Sync date from props or default to today
             slideDir.value = 'next';
-            const targetDateStr = props.initialDate || todayDateString.value;
+            let targetDateStr = props.initialDate || todayDateString.value;
+            if (targetDateStr < todayDateString.value) {
+                targetDateStr = todayDateString.value;
+            }
             form.value.date = targetDateStr;
 
             // Calculate weekOffset so initialDate is highlighted in visible slider
@@ -1229,11 +1237,14 @@ async function downloadVoucher() {
                                                 v-for="d in visibleDays"
                                                 :key="toDateKey(d)"
                                                 type="button"
+                                                :disabled="isPastDate(d)"
                                                 @click="selectDay(d)"
-                                                class="group flex flex-col items-center gap-1.5 rounded-xl border py-2 transition-all cursor-pointer"
-                                                :class="isSelectedDay(d)
-                                                    ? 'border-brand bg-brand/5'
-                                                    : 'border-transparent hover:bg-surface-elevated/50'"
+                                                class="group flex flex-col items-center gap-1.5 rounded-xl border py-2 transition-all"
+                                                :class="isPastDate(d)
+                                                    ? 'opacity-30 cursor-not-allowed border-transparent'
+                                                    : isSelectedDay(d)
+                                                        ? 'border-brand bg-brand/5 cursor-pointer'
+                                                        : 'border-transparent hover:bg-surface-elevated/50 cursor-pointer'"
                                             >
                                                 <span
                                                     class="text-[10px] font-bold uppercase tracking-wide"
@@ -1242,9 +1253,11 @@ async function downloadVoucher() {
                                                 >
                                                 <span
                                                     class="flex size-9 items-center justify-center rounded-full text-sm font-bold transition-all"
-                                                    :class="isSelectedDay(d)
-                                                        ? 'bg-brand text-brand-foreground shadow-md shadow-brand/30'
-                                                        : 'bg-surface-elevated/60 text-content group-hover:bg-surface-elevated'"
+                                                    :class="isPastDate(d)
+                                                        ? 'bg-surface-elevated/40 text-content-muted'
+                                                        : isSelectedDay(d)
+                                                            ? 'bg-brand text-brand-foreground shadow-md shadow-brand/30'
+                                                            : 'bg-surface-elevated/60 text-content group-hover:bg-surface-elevated'"
                                                     >{{ d.getDate() }}</span
                                                 >
                                                 <span

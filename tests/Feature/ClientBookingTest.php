@@ -37,10 +37,13 @@ test('customer can update their booking court date and time slots', function () 
     $court1 = Court::factory()->create(['base_price' => 100]);
     $court2 = Court::factory()->create(['base_price' => 150]);
 
+    $futureDate1 = now()->addDays(2)->toDateString();
+    $futureDate2 = now()->addDays(3)->toDateString();
+
     $booking = Booking::factory()->create([
         'user_id' => $customer->id,
         'court_id' => $court1->id,
-        'date' => '2026-08-01',
+        'date' => $futureDate1,
         'time_slots' => ['08:00 AM'],
         'total_price' => 100,
     ]);
@@ -51,16 +54,43 @@ test('customer can update their booking court date and time slots', function () 
             'name' => $customer->name,
             'email' => $customer->email,
             'phone' => '1234567890',
-            'date' => '2026-08-02',
+            'date' => $futureDate2,
             'time' => ['09:00 AM', '10:00 AM'],
         ])
         ->assertOk();
 
     $updated = $booking->fresh();
     expect($updated->court_id)->toBe($court2->id);
-    expect($updated->date->toDateString())->toBe('2026-08-02');
+    expect($updated->date->toDateString())->toBe($futureDate2);
     expect($updated->time_slots)->toBe(['09:00 AM', '10:00 AM']);
     expect((float) $updated->total_price)->toBe(300.0);
+});
+
+test('customer cannot update their booking date to a past date', function () {
+    $customer = User::factory()->create();
+    $customer->assignRole(RoleName::Customer->value);
+
+    $court = Court::factory()->create();
+    $futureDate = now()->addDays(2)->toDateString();
+
+    $booking = Booking::factory()->create([
+        'user_id' => $customer->id,
+        'court_id' => $court->id,
+        'date' => $futureDate,
+        'time_slots' => ['08:00 AM'],
+    ]);
+
+    $this->actingAs($customer)
+        ->patch(route('site.bookings.update', $booking->id), [
+            'name' => $customer->name,
+            'email' => $customer->email,
+            'phone' => '1234567890',
+            'date' => now()->subDay()->toDateString(),
+            'time' => ['08:00 AM'],
+        ])
+        ->assertSessionHasErrors(['date']);
+
+    expect($booking->fresh()->date->toDateString())->toBe($futureDate);
 });
 
 test('customer cannot update another customers booking details', function () {

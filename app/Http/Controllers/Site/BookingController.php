@@ -207,7 +207,7 @@ class BookingController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
-            'date' => ['sometimes', 'required', 'date'],
+            'date' => ['sometimes', 'required', 'date', 'after_or_equal:today'],
             'time' => ['sometimes', 'required', 'array', 'min:1'],
             'time.*' => ['required', 'string'],
             'time_slots' => ['sometimes', 'required', 'array', 'min:1'],

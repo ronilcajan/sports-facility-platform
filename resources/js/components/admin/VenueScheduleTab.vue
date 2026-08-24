@@ -51,6 +51,7 @@ function parseLocalDate(s: string): Date {
 const todayKey = computed(() => toDateKey(new Date()));
 const selectedDate = ref(todayKey.value);
 const selectedCourtId = ref<number | null>(null);
+const isPastDate = computed(() => selectedDate.value < todayKey.value);
 
 const formattedDate = computed(() => {
     const d = parseLocalDate(selectedDate.value);
@@ -441,22 +442,24 @@ onMounted(fetchAvailability);
                                 :class="[
                                     isBooked(court.id, slot)
                                         ? 'border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40 cursor-not-allowed'
-                                        : 'border-emerald-100 dark:border-emerald-900/40 bg-emerald-50/60 dark:bg-emerald-950/20 cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:shadow-md hover:shadow-emerald-500/10 hover:-translate-y-0.5',
+                                        : isPastDate
+                                            ? 'border-neutral-200/60 dark:border-neutral-800/40 bg-neutral-100/40 dark:bg-neutral-800/20 cursor-not-allowed opacity-60'
+                                            : 'border-emerald-100 dark:border-emerald-900/40 bg-emerald-50/60 dark:bg-emerald-950/20 cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:shadow-md hover:shadow-emerald-500/10 hover:-translate-y-0.5',
                                 ]"
-                                @click="!isBooked(court.id, slot) && emit('book-slot', { court, date: selectedDate, slot })"
+                                @click="!isBooked(court.id, slot) && !isPastDate && emit('book-slot', { court, date: selectedDate, slot })"
                             >
                                 <!-- Available glow dot -->
-                                <span v-if="!isBooked(court.id, slot)"
+                                <span v-if="!isBooked(court.id, slot) && !isPastDate"
                                     class="absolute top-2 right-2 size-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/60" />
 
                                 <span
                                     class="text-xs font-black leading-tight"
-                                    :class="isBooked(court.id, slot) ? 'line-through text-neutral-300 dark:text-neutral-600' : 'text-neutral-900 dark:text-white'"
+                                    :class="isBooked(court.id, slot) ? 'line-through text-neutral-300 dark:text-neutral-600' : isPastDate ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-900 dark:text-white'"
                                 >{{ slot }}</span>
 
                                 <span
                                     class="mt-1 text-[10px] font-extrabold"
-                                    :class="isBooked(court.id, slot) ? 'text-neutral-300 dark:text-neutral-700' : 'text-emerald-600 dark:text-emerald-400'"
+                                    :class="isBooked(court.id, slot) || isPastDate ? 'text-neutral-300 dark:text-neutral-700' : 'text-emerald-600 dark:text-emerald-400'"
                                 >₱{{ slotPrice(court, slot) }}</span>
 
                                 <span
@@ -464,6 +467,12 @@ onMounted(fetchAvailability);
                                     class="mt-1.5 inline-flex items-center gap-1 rounded-md bg-rose-100 dark:bg-rose-950/60 px-2 py-0.5 text-[9px] font-bold text-rose-400 dark:text-rose-500"
                                 >
                                     <XCircle class="size-2.5" /> Taken
+                                </span>
+                                <span
+                                    v-else-if="isPastDate"
+                                    class="mt-1.5 inline-flex items-center gap-1 rounded-md bg-neutral-200/60 dark:bg-neutral-800 px-2 py-0.5 text-[9px] font-bold text-neutral-400 dark:text-neutral-500"
+                                >
+                                    Closed
                                 </span>
                                 <span
                                     v-else

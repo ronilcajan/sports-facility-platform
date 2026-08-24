@@ -245,3 +245,42 @@ test('a slot left by a rejected booking stays visible on the board and still acc
 
     expect(Booking::where('court_id', $court->id)->where('status', '!=', 'rejected')->count())->toBe(1);
 });
+
+test('an admin cannot manually create a booking with a past date', function () {
+    $superAdmin = userWithRole(RoleName::SuperAdmin);
+    $court = Court::factory()->for(Venue::factory()->create())->create(['base_price' => 30]);
+
+    $this->actingAs($superAdmin)
+        ->post(route('admin.bookings.store'), [
+            'court_id' => $court->id,
+            'name' => 'Past Booking',
+            'email' => 'past@example.com',
+            'phone' => '09170000000',
+            'date' => Carbon::now()->subDay()->toDateString(),
+            'time_slots' => ['08:00 AM'],
+        ])
+        ->assertSessionHasErrors(['date']);
+
+    $this->assertDatabaseMissing('bookings', ['email' => 'past@example.com']);
+});
+
+test('an admin cannot update a booking date to a past date', function () {
+    $superAdmin = userWithRole(RoleName::SuperAdmin);
+    $court = Court::factory()->for(Venue::factory()->create())->create();
+    $booking = Booking::factory()->for($court)->create([
+        'date' => Carbon::now()->addDay()->toDateString(),
+        'time_slots' => ['08:00 AM'],
+    ]);
+
+    $this->actingAs($superAdmin)
+        ->patch(route('admin.bookings.update', $booking->id), [
+            'name' => $booking->name,
+            'email' => $booking->email,
+            'phone' => $booking->phone,
+            'date' => Carbon::now()->subDays(2)->toDateString(),
+            'time_slots' => ['08:00 AM'],
+        ])
+        ->assertSessionHasErrors(['date']);
+
+    expect($booking->fresh()->date->toDateString())->toBe(Carbon::now()->addDay()->toDateString());
+});

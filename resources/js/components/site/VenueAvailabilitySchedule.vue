@@ -153,6 +153,10 @@ const courtsToDisplay = computed<PublicCourt[]>(() => {
 });
 
 watch(selectedDate, (newDate) => {
+    if (newDate && newDate < todayDateKey.value) {
+        selectedDate.value = todayDateKey.value;
+        return;
+    }
     fetchAvailability();
     emit('date-selected', newDate);
 });

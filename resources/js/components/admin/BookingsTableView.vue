@@ -144,6 +144,19 @@ function isReleased(statusStr: string): boolean {
     return releasedStatuses.includes(statusStr);
 }
 
+function toDateKey(d: Date): string {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+const todayDateString = computed(() => toDateKey(new Date()));
+
+function isPastDate(dateStr: string): boolean {
+    return dateStr < todayDateString.value;
+}
+
 /** A slot stays bookable unless something in it still holds the hour. */
 function cellIsOpen(dateStr: string, slot: string): boolean {
     return !bookingsForCell(dateStr, slot).some((b) => !isReleased(b.status));
@@ -404,9 +417,9 @@ const grandTotals = computed(() => {
                                     </div>
                                 </div>
 
-                                <!-- Still bookable when nothing here holds the hour -->
+                                <!-- Still bookable when nothing here holds the hour and date is not in the past -->
                                 <div
-                                    v-if="cellIsOpen(d.dateStr, slot)"
+                                    v-if="cellIsOpen(d.dateStr, slot) && !isPastDate(d.dateStr)"
                                     @click="emit('create-booking', { date: d.dateStr, slot })"
                                     class="group w-full rounded-xl border border-dashed border-emerald-300/40 dark:border-emerald-800/40 bg-emerald-50/20 dark:bg-emerald-950/10 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 flex flex-col items-center justify-center cursor-pointer transition-all duration-150"
                                     :class="bookingsForCell(d.dateStr, slot).length ? 'py-1.5' : 'flex-1 p-2'"
@@ -416,6 +429,17 @@ const grandTotals = computed(() => {
                                     </span>
                                     <span class="hidden group-hover:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
                                         <Plus class="size-3" /> Book
+                                    </span>
+                                </div>
+                                <!-- Vacant slot on past dates: non-clickable, viewing past history only -->
+                                <div
+                                    v-else-if="cellIsOpen(d.dateStr, slot) && isPastDate(d.dateStr)"
+                                    class="w-full rounded-xl border border-dashed border-neutral-200/50 dark:border-neutral-800/40 bg-neutral-100/30 dark:bg-neutral-900/20 flex flex-col items-center justify-center select-none"
+                                    :class="bookingsForCell(d.dateStr, slot).length ? 'py-1.5' : 'flex-1 p-2'"
+                                    title="Past date: vacant slot not bookable"
+                                >
+                                    <span class="text-[9px] font-bold text-neutral-400 dark:text-neutral-500">
+                                        —
                                     </span>
                                 </div>
                             </div>

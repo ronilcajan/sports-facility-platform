@@ -108,8 +108,21 @@ function toggleTimeSlot(slot: string) {
     }
 }
 
+function toDateKey(d: Date): string {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+const todayDateString = computed(() => toDateKey(new Date()));
+
 function submitEdit() {
     if (!props.booking) return;
+    if (editForm.date && editForm.date < todayDateString.value) {
+        editForm.setError('date', 'Booking date cannot be in the past.');
+        return;
+    }
     editForm.patch(`${props.updateRoutePrefix}/${props.booking.id}`, {
         preserveScroll: true,
         onSuccess: () => {
@@ -294,9 +307,11 @@ function statusClasses(s: string): string {
                                 <input
                                     v-model="editForm.date"
                                     type="date"
+                                    :min="todayDateString"
                                     required
                                     class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-xs font-bold text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
                                 />
+                                <span v-if="editForm.errors.date" class="text-[10px] text-rose-500 font-semibold mt-1 block">{{ editForm.errors.date }}</span>
                             </div>
 
                             <div class="space-y-2">

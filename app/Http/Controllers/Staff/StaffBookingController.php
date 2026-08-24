@@ -103,7 +103,7 @@ class StaffBookingController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
-            'date' => ['required', 'date'],
+            'date' => ['required', 'date', 'after_or_equal:today'],
             'time_slots' => ['required', 'array', 'min:1'],
             'time_slots.*' => ['string'],
             'notes' => ['nullable', 'string', 'max:1000'],
