@@ -10,6 +10,7 @@ interface Booking {
     date: string;
     time_slots: string[];
     notes?: string;
+    admin_notes?: string;
     total_price: string;
     receipt_path?: string | null;
     receipt_url?: string | null;
@@ -108,6 +109,12 @@ function updateStatus(newStatus: string) {
                                 <span v-else class="italic text-neutral-400">Not provided</span>
                             </p>
                             <p><strong>Current Status:</strong> <span class="font-bold capitalize">{{ booking.status }}</span></p>
+                            <div v-if="booking.admin_notes" class="pt-1">
+                                <strong>{{ booking.status === 'rejected' ? 'Rejection Reason:' : 'Admin Note:' }}</strong>
+                                <span class="block mt-1 p-2 rounded-lg" :class="booking.status === 'rejected' ? 'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900/40' : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/40'">
+                                    {{ booking.admin_notes }}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>

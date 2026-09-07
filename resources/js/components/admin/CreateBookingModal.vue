@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { getMergedTimeSlots } from '@/utils/timeSlots';
+import { getMergedTimeSlots, formatSlotRange } from '@/utils/timeSlots';
 import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
 interface CourtOption {
@@ -439,7 +439,7 @@ function submit() {
                                                     :disabled="isSlotBooked(slot)"
                                                     class="sr-only"
                                                 />
-                                                <span class="text-xs font-bold" :class="{ 'line-through text-neutral-400': isSlotBooked(slot) }">{{ slot }}</span>
+                                                <span class="text-[11px] sm:text-xs font-bold tracking-tight whitespace-nowrap" :class="{ 'line-through text-neutral-400': isSlotBooked(slot) }">{{ formatSlotRange(slot) }}</span>
                                                 <span class="mt-0.5 text-[9px] font-extrabold" :class="isSlotBooked(slot) ? 'text-neutral-400' : 'text-emerald-600 dark:text-emerald-400'">
                                                     ₱{{ getSlotPriceForCourt(slot) }}
                                                 </span>

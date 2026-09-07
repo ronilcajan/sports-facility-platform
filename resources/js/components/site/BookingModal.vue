@@ -4,7 +4,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useSite } from '@/composables/useSite';
 import type { PublicCourt } from '@/types';
 import type { CatalogVenue } from '@/components/site/SiteVenueCard.vue';
-import { getMergedTimeSlots } from '@/utils/timeSlots';
+import { getMergedTimeSlots, formatSlotRange } from '@/utils/timeSlots';
 import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
 const props = defineProps<{
@@ -802,9 +802,11 @@ async function downloadVoucher() {
     const date = bookingDetails.value
         ? bookingDetails.value.date
         : form.value.date;
-    const times = bookingDetails.value
-        ? bookingDetails.value.time_slots.join(', ')
-        : form.value.time.join(', ');
+    const times = (bookingDetails.value
+        ? bookingDetails.value.time_slots
+        : form.value.time)
+        .map(s => formatSlotRange(s, selectedCourt.value?.slot_duration_minutes || 60))
+        .join(', ');
     const durationMinutes = bookingDetails.value
         ? bookingDetails.value.time_slots.length *
           (selectedCourt.value?.slot_duration_minutes || 60)
@@ -1372,7 +1374,7 @@ async function downloadVoucher() {
                                                     :disabled="isSlotBooked(slot)"
                                                     class="sr-only"
                                                 />
-                                                <span class="text-xs font-bold">{{ slot }}</span>
+                                                <span class="text-[11px] sm:text-xs font-bold tracking-tight whitespace-nowrap">{{ formatSlotRange(slot, selectedCourt?.slot_duration_minutes || 60) }}</span>
                                                 <span v-if="selectedCourt" class="text-[9px] font-extrabold text-brand">₱{{ getSlotPriceForCourt(slot) }}</span>
                                                 <span
                                                     v-if="isSlotBooked(slot)"
@@ -1550,7 +1552,7 @@ async function downloadVoucher() {
                                     </div>
                                     <div class="flex items-center justify-between gap-3">
                                         <span class="shrink-0 text-content-muted">Time Slots</span>
-                                        <span class="truncate text-right font-bold text-content">{{ form.time.join(', ') }}</span>
+                                        <span class="truncate text-right font-bold text-content">{{ form.time.map(s => formatSlotRange(s, selectedCourt?.slot_duration_minutes || 60)).join(', ') }}</span>
                                     </div>
                                     <div class="flex items-center justify-between gap-3">
                                         <span class="text-content-muted">Duration</span>
@@ -1816,7 +1818,7 @@ async function downloadVoucher() {
                         </div>
                         <div class="flex justify-between">
                             <span class="text-content-muted">Slots:</span>
-                            <span class="font-bold text-content">{{ bookingDetails?.time_slots ? bookingDetails.time_slots.join(', ') : form.time.join(', ') }}</span>
+                            <span class="font-bold text-content">{{ (bookingDetails?.time_slots || form.time).map(s => formatSlotRange(s, selectedCourt?.slot_duration_minutes || 60)).join(', ') }}</span>
                         </div>
                     </div>
 

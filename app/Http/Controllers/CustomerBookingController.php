@@ -74,6 +74,7 @@ class CustomerBookingController extends Controller
             'receipt_url' => $booking->receipt_url,
             'status' => $booking->status,
             'notes' => $booking->notes,
+            'admin_notes' => $booking->admin_notes,
         ];
     }
 }

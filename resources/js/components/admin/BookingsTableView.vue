@@ -17,7 +17,7 @@ import {
     BarChart2,
     DollarSign,
 } from '@lucide/vue';
-import { getMergedTimeSlots } from '@/utils/timeSlots';
+import { getMergedTimeSlots, calculateBookingHours, formatHours } from '@/utils/timeSlots';
 
 interface CourtOption {
     id: number;
@@ -46,6 +46,7 @@ export interface TableBookingItem {
     phone: string;
     date: string;
     time_slots: string[];
+    total_hours?: number;
     total_price: string;
     status: string;
     receipt_url?: string | null;
@@ -214,6 +215,18 @@ function getTotalPriceForDate(dateStr: string): number {
         .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
 }
 
+function getTotalHoursForDate(dateStr: string): number {
+    const list = getBookingsForDate(dateStr);
+    return list
+        .filter((b) => b.status === 'approved' || b.status === 'confirmed' || b.status === 'completed')
+        .reduce((sum, b) => {
+            if (b.total_hours !== undefined && b.total_hours !== null && !isNaN(Number(b.total_hours))) {
+                return sum + Number(b.total_hours);
+            }
+            return sum + calculateBookingHours(b.time_slots);
+        }, 0);
+}
+
 function formatPrice(val: number): string {
     return '₱' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -223,17 +236,20 @@ const grandTotals = computed(() => {
     let pending = 0;
     let rejected = 0;
     let revenue = 0;
+    let hours = 0;
     props.tableDates.forEach((d) => {
         confirmed += getCountByStatus(d.dateStr, 'confirmed');
         pending += getCountByStatus(d.dateStr, 'pending');
         rejected += getCountByStatus(d.dateStr, 'rejected');
         revenue += getTotalPriceForDate(d.dateStr);
+        hours += getTotalHoursForDate(d.dateStr);
     });
     return {
         confirmed,
         pending,
         rejected,
         revenue,
+        hours,
         total: confirmed + pending + rejected,
     };
 });
@@ -459,7 +475,7 @@ const grandTotals = computed(() => {
                         <span>Booking Status &amp; Daily Revenue Summary</span>
                     </h3>
                     <p class="text-xs text-neutral-500 mt-0.5">
-                        Breakdown of booking totals, statuses, and daily total revenue for each date in view.
+                        Breakdown of booking totals, statuses, daily total hours, and daily total revenue for each date in view.
                     </p>
                 </div>
 
@@ -476,6 +492,10 @@ const grandTotals = computed(() => {
                     <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold">
                         <span class="size-2 rounded-full bg-rose-500" />
                         <span>Rejected: {{ grandTotals.rejected }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-sky-300 dark:border-sky-800 bg-sky-100/70 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 text-xs font-extrabold shadow-2xs">
+                        <Clock class="size-3.5 text-sky-600" />
+                        <span>Total Hours: {{ formatHours(grandTotals.hours) }}</span>
                     </div>
                     <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-teal-300 dark:border-teal-800 bg-teal-100/70 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 text-xs font-extrabold shadow-2xs">
                         <span>Revenue: {{ formatPrice(grandTotals.revenue) }}</span>
@@ -553,6 +573,19 @@ const grandTotals = computed(() => {
                             </td>
                             <td v-for="d in tableDates" :key="`tot-${d.dateStr}`" class="py-2.5 px-3 text-center border-r border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white font-extrabold text-xs">
                                 {{ getTotalCountForDate(d.dateStr) }}
+                            </td>
+                        </tr>
+
+                        <!-- Daily Total Hours Row -->
+                        <tr class="bg-sky-50/70 dark:bg-sky-950/30 font-black border-t-2 border-sky-500/20">
+                            <td class="sticky left-0 z-10 bg-sky-100/80 dark:bg-sky-950/80 py-3 px-4 text-sky-900 dark:text-sky-300 uppercase tracking-wider text-[11px] border-r border-sky-200 dark:border-sky-800 flex items-center gap-1.5">
+                                <Clock class="size-3.5 text-sky-600" />
+                                Daily Total Hours
+                            </td>
+                            <td v-for="d in tableDates" :key="`hours-${d.dateStr}`" class="py-3 px-3 text-center border-r border-sky-200/60 dark:border-sky-900/40 text-sky-700 dark:text-sky-300 font-black text-xs">
+                                <span :class="getTotalHoursForDate(d.dateStr) > 0 ? 'text-sky-700 dark:text-sky-300 bg-sky-100 dark:bg-sky-900/60 px-2 py-0.5 rounded-full text-xs font-black' : 'text-neutral-400 font-semibold'">
+                                    {{ formatHours(getTotalHoursForDate(d.dateStr)) }}
+                                </span>
                             </td>
                         </tr>
 

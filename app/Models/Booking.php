@@ -20,10 +20,12 @@ use Illuminate\Support\Carbon;
  * @property Carbon $date
  * @property array $time_slots
  * @property string|null $notes
+ * @property string|null $admin_notes
  * @property string $total_price
  * @property string|null $receipt_path
  * @property string|null $transaction_code
  * @property string $status
+ * @property-read float $total_hours
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -36,6 +38,7 @@ use Illuminate\Support\Carbon;
     'date',
     'time_slots',
     'notes',
+    'admin_notes',
     'total_price',
     'receipt_path',
     'transaction_code',
@@ -65,7 +68,7 @@ class Booking extends Model
      *
      * @var array<int, string>
      */
-    protected $appends = ['receipt_url'];
+    protected $appends = ['receipt_url', 'total_hours'];
 
     /**
      * Get the attributes that should be cast.
@@ -81,6 +84,55 @@ class Booking extends Model
             'time_slots' => 'array',
             'total_price' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Calculate total duration in hours from time_slots.
+     */
+    public function calculateDurationHours(): float
+    {
+        if (empty($this->time_slots) || ! is_array($this->time_slots)) {
+            return 0.0;
+        }
+
+        $totalMinutes = 0;
+        foreach ($this->time_slots as $slot) {
+            if (! is_string($slot) || trim($slot) === '') {
+                continue;
+            }
+
+            // Check if slot represents a range, e.g. "9:00 AM – 11:00 AM" or "07:00 AM - 08:00 AM"
+            $parts = preg_split('/\s*(?:–|-|\bto\b)\s*/u', trim($slot));
+            if (is_array($parts) && count($parts) === 2) {
+                try {
+                    $start = Carbon::parse($parts[0]);
+                    $end = Carbon::parse($parts[1]);
+                    $diff = $start->diffInMinutes($end, false);
+                    if ($diff < 0) {
+                        $diff += 24 * 60;
+                    }
+                    if ($diff > 0) {
+                        $totalMinutes += $diff;
+
+                        continue;
+                    }
+                } catch (\Throwable) {
+                    // Fallback to default single slot duration
+                }
+            }
+
+            $totalMinutes += $this->court?->slot_duration_minutes ?? 60;
+        }
+
+        return round($totalMinutes / 60, 2);
+    }
+
+    /**
+     * Accessor for total_hours.
+     */
+    public function getTotalHoursAttribute(): float
+    {
+        return $this->calculateDurationHours();
     }
 
     /**

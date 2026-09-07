@@ -160,13 +160,27 @@ class StaffBookingController extends Controller
 
         $validated = $request->validate([
             'status' => ['required', 'string', Rule::in(['pending', 'approved', 'confirmed', 'rejected', 'cancelled', 'completed'])],
-            'notes' => ['nullable', 'string', 'max:500'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'admin_notes' => [
+                Rule::requiredIf(fn () => $request->input('status') === 'rejected'),
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+        ], [
+            'admin_notes.required' => 'A reason or note is required when rejecting a booking.',
         ]);
 
-        $booking->update([
-            'status' => $validated['status'],
-            'notes' => $validated['notes'] ?? $booking->notes,
-        ]);
+        $adminNote = $request->has('admin_notes')
+            ? $validated['admin_notes']
+            : ($validated['notes'] ?? null);
+
+        $updateData = ['status' => $validated['status']];
+        if ($adminNote !== null || $request->has('admin_notes')) {
+            $updateData['admin_notes'] = $adminNote;
+        }
+
+        $booking->update($updateData);
 
         Inertia::flash('toast', [
             'type' => 'success',

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
-import { ChevronLeft, ChevronRight, CalendarCheck, FileText, X, CheckCircle, XCircle, Trash2, Dumbbell } from '@lucide/vue';
+import { ChevronLeft, ChevronRight, CalendarCheck, FileText, X, CheckCircle, XCircle, Trash2, Dumbbell, Clock } from '@lucide/vue';
+import { calculateBookingHours, formatHours } from '@/utils/timeSlots';
 
 import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
 
@@ -17,6 +18,7 @@ interface BoardBooking {
     phone: string;
     date: string;
     time_slots: string[];
+    total_hours?: number;
     total_price: string;
     status: string;
     receipt_url?: string | null;
@@ -131,6 +133,17 @@ function dayTotalAmount(day: Day): number {
     return day.bookings
         .filter((b) => confirmedStatuses.includes(b.status))
         .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
+}
+
+function dayTotalHours(day: Day): number {
+    return day.bookings
+        .filter((b) => confirmedStatuses.includes(b.status))
+        .reduce((sum, b) => {
+            if (b.total_hours !== undefined && b.total_hours !== null && !isNaN(Number(b.total_hours))) {
+                return sum + Number(b.total_hours);
+            }
+            return sum + calculateBookingHours(b.time_slots);
+        }, 0);
 }
 
 function statusClasses(s: string): string {
@@ -276,6 +289,7 @@ function deleteBooking() {
                 <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">{{ day.weekday }}</span>
                 <span class="text-base font-black text-neutral-900 dark:text-white">{{ day.dayNum }}</span>
                 <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">₱{{ dayTotalAmount(day).toLocaleString('en-US', { minimumFractionDigits: 0 }) }}</span>
+                <span class="text-[9px] font-semibold text-sky-600 dark:text-sky-400">{{ formatHours(dayTotalHours(day)) }}</span>
                 <span class="text-[9px] font-medium text-neutral-400">{{ dayTotalCount(day) }} {{ dayTotalCount(day) === 1 ? 'booking' : 'bkgs' }}</span>
                 <span v-if="day.isToday" class="mt-0.5 h-1 w-1 rounded-full bg-emerald-500"></span>
             </button>
@@ -302,9 +316,12 @@ function deleteBooking() {
                         <div class="text-lg font-black text-neutral-900 dark:text-white leading-none">
                             {{ day.dayNum }} <span class="text-xs font-semibold text-neutral-400">{{ day.month }}</span>
                         </div>
-                        <div class="flex items-center gap-1 text-xs">
+                        <div class="flex items-center gap-1.5 text-xs flex-wrap">
                             <span class="font-bold text-emerald-600 dark:text-emerald-400">
                                 ₱{{ dayTotalAmount(day).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                            </span>
+                            <span class="text-[11px] font-bold text-sky-600 dark:text-sky-400">
+                                • {{ formatHours(dayTotalHours(day)) }}
                             </span>
                             <span class="text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
                                 ({{ dayTotalCount(day) }})
@@ -318,6 +335,7 @@ function deleteBooking() {
                     <div class="flex items-baseline gap-2 flex-wrap">
                         <span class="text-base font-black text-neutral-900 dark:text-white">{{ day.weekday }}, {{ day.month }} {{ day.dayNum }}</span>
                         <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">₱{{ dayTotalAmount(day).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+                        <span class="text-xs font-bold text-sky-600 dark:text-sky-400">• {{ formatHours(dayTotalHours(day)) }}</span>
                         <span class="text-[10px] font-medium text-neutral-500">({{ dayTotalCount(day) }} {{ dayTotalCount(day) === 1 ? 'booking' : 'bookings' }})</span>
                     </div>
                     <span v-if="day.isToday" class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">Today</span>

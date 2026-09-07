@@ -25,6 +25,7 @@ export interface BookingItem {
     receipt_url?: string | null;
     status: string;
     notes?: string | null;
+    admin_notes?: string | null;
 }
 
 const props = defineProps<{
@@ -203,6 +204,9 @@ function cancelBooking(bookingId: number) {
                             >
                                 {{ booking.status }}
                             </span>
+                            <p v-if="booking.admin_notes" class="mt-1 text-[11px] leading-tight max-w-xs truncate" :class="booking.status === 'rejected' ? 'text-rose-600 dark:text-rose-400 font-medium' : 'text-neutral-500 dark:text-neutral-400'" :title="booking.admin_notes">
+                                <span class="font-bold">{{ booking.status === 'rejected' ? 'Reason:' : 'Note:' }}</span> {{ booking.admin_notes }}
+                            </p>
                         </td>
                         <td class="py-4 px-3 text-right">
                             <div class="flex items-center justify-end gap-2">
@@ -262,6 +266,15 @@ function cancelBooking(bookingId: number) {
                     >
                         {{ booking.status }}
                     </span>
+                </div>
+
+                <div v-if="booking.admin_notes" class="mt-2 text-[11px] p-2 rounded-lg border leading-relaxed"
+                    :class="booking.status === 'rejected'
+                        ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/50'
+                        : 'bg-neutral-50 dark:bg-neutral-800/60 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700'"
+                >
+                    <strong class="font-bold">{{ booking.status === 'rejected' ? 'Reason for Rejection:' : 'Admin Note / Remarks:' }}</strong>
+                    <span class="ml-1">{{ booking.admin_notes }}</span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 pt-0.5">

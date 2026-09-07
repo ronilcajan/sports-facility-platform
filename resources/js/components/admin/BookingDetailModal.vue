@@ -19,7 +19,7 @@ import {
     Pencil,
     Save,
 } from '@lucide/vue';
-import { getMergedTimeSlots } from '@/utils/timeSlots';
+import { getMergedTimeSlots, formatSlotRange, calculateBookingHours, formatHours } from '@/utils/timeSlots';
 
 export interface BookingDetail {
     id: number;
@@ -35,11 +35,13 @@ export interface BookingDetail {
     sport_type?: string;
     date: string;
     time_slots: string[];
+    total_hours?: number;
     total_price: string;
     receipt_url?: string | null;
     receipt_path?: string | null;
     status: string;
     notes?: string | null;
+    admin_notes?: string | null;
     created_at?: string;
 }
 
@@ -62,7 +64,9 @@ const emit = defineEmits<{
 
 const actionForm = useForm({
     status: '',
+    admin_notes: '',
 });
+const actionFormError = ref('');
 
 const isEditing = ref(false);
 
@@ -78,6 +82,7 @@ const editForm = useForm({
     date: '',
     time_slots: [] as string[],
     notes: '',
+    admin_notes: '',
     status: '',
 });
 
@@ -89,6 +94,7 @@ function startEditing() {
     editForm.date = props.booking.date || '';
     editForm.time_slots = [...(props.booking.time_slots || [])];
     editForm.notes = props.booking.notes || '';
+    editForm.admin_notes = props.booking.admin_notes || '';
     editForm.status = props.booking.status || 'pending';
     editForm.clearErrors();
     isEditing.value = true;
@@ -131,12 +137,20 @@ function submitEdit() {
     });
 }
 
-watch(() => props.isOpen, (newVal) => {
-    if (!newVal) {
-        isEditing.value = false;
-        editForm.clearErrors();
-    }
-});
+watch(
+    () => [props.isOpen, props.booking],
+    ([newOpen]) => {
+        if (newOpen) {
+            actionForm.admin_notes = props.booking?.admin_notes || '';
+            actionFormError.value = '';
+        } else {
+            isEditing.value = false;
+            editForm.clearErrors();
+            actionFormError.value = '';
+        }
+    },
+    { immediate: true },
+);
 
 const displayName = computed(() => {
     if (!props.booking) return '';
@@ -177,6 +191,20 @@ const formattedReference = computed(() => {
     return `DY-RESRV-${String(props.booking.id).padStart(6, '0')}`;
 });
 
+function confirmBooking() {
+    actionFormError.value = '';
+    updateStatus('approved');
+}
+
+function rejectBooking() {
+    if (!actionForm.admin_notes?.trim()) {
+        actionFormError.value = 'A reason or note is required when rejecting a booking.';
+        return;
+    }
+    actionFormError.value = '';
+    updateStatus('rejected');
+}
+
 function updateStatus(newStatus: string) {
     if (!props.booking || !props.canUpdate) return;
     actionForm.status = newStatus;
@@ -184,6 +212,11 @@ function updateStatus(newStatus: string) {
         preserveScroll: true,
         onSuccess: () => {
             emit('close');
+        },
+        onError: (errors: any) => {
+            if (errors?.admin_notes) {
+                actionFormError.value = errors.admin_notes;
+            }
         },
     });
 }
@@ -327,13 +360,13 @@ function statusClasses(s: string): string {
                                         type="button"
                                         @click="toggleTimeSlot(slot)"
                                         :class="[
-                                            'px-2 py-1.5 rounded-lg text-xs font-mono font-bold transition-all text-center border',
+                                            'px-2 py-1.5 rounded-lg text-xs font-mono font-bold transition-all text-center border whitespace-nowrap',
                                             editForm.time_slots.includes(slot)
                                                 ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
                                                 : 'bg-neutral-50 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700 hover:border-emerald-400',
                                         ]"
                                     >
-                                        {{ slot }}
+                                        {{ formatSlotRange(slot) }}
                                     </button>
                                 </div>
                             </div>
@@ -345,6 +378,16 @@ function statusClasses(s: string): string {
                                 v-model="editForm.notes"
                                 rows="2"
                                 placeholder="Special requests or admin notes..."
+                                class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-3 py-2 text-xs font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                            />
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-neutral-700 dark:text-neutral-300">Admin Note / Remarks</label>
+                            <textarea
+                                v-model="editForm.admin_notes"
+                                rows="2"
+                                placeholder="Admin remarks or rejection reason..."
                                 class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-3 py-2 text-xs font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
                             />
                         </div>
@@ -475,9 +518,9 @@ function statusClasses(s: string): string {
                                         <span
                                             v-for="slot in booking.time_slots"
                                             :key="slot"
-                                            class="rounded-lg bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 font-mono text-xs font-bold text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700"
+                                            class="rounded-lg bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 font-mono text-xs font-bold text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 whitespace-nowrap"
                                         >
-                                            {{ slot }}
+                                            {{ formatSlotRange(slot) }}
                                         </span>
                                     </div>
                                 </div>
@@ -485,7 +528,9 @@ function statusClasses(s: string): string {
                                 <div class="col-span-2 flex items-center justify-between rounded-xl bg-emerald-50 dark:bg-emerald-950/40 p-3 border border-emerald-200 dark:border-emerald-900/60 mt-1">
                                     <div>
                                         <span class="block text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">Total Booking Amount</span>
-                                        <span class="text-xs text-neutral-500 font-medium">{{ booking.time_slots ? booking.time_slots.length : 1 }} slot(s) reserved</span>
+                                        <span class="text-xs text-neutral-500 font-medium">
+                                            {{ formatHours(booking.total_hours ?? calculateBookingHours(booking.time_slots)) }} • {{ booking.time_slots ? booking.time_slots.length : 1 }} slot(s) reserved
+                                        </span>
                                     </div>
                                     <span class="text-xl font-black text-emerald-600 dark:text-emerald-400">
                                         ₱{{ booking.total_price }}
@@ -504,6 +549,34 @@ function statusClasses(s: string): string {
                             </div>
                             <p class="text-xs leading-relaxed text-neutral-700 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-800/50 p-2.5 rounded-lg border border-neutral-100 dark:border-neutral-800 italic">
                                 "{{ booking.notes }}"
+                            </p>
+                        </div>
+
+                        <!-- Admin Note / Remarks (if previously recorded) -->
+                        <div
+                            v-if="booking.admin_notes"
+                            class="rounded-xl border p-4 space-y-1.5 shadow-sm"
+                            :class="booking.status === 'rejected'
+                                ? 'border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/30'
+                                : 'border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/30'"
+                        >
+                            <div class="flex items-center justify-between">
+                                <h4
+                                    class="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+                                    :class="booking.status === 'rejected' ? 'text-rose-700 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'"
+                                >
+                                    <MessageSquare class="size-4" />
+                                    <span>{{ booking.status === 'rejected' ? 'Reason for Rejection' : 'Admin Note / Remarks' }}</span>
+                                </h4>
+                                <span
+                                    class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
+                                    :class="booking.status === 'rejected' ? 'bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300' : 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'"
+                                >
+                                    From Admin
+                                </span>
+                            </div>
+                            <p class="text-xs leading-relaxed text-neutral-800 dark:text-neutral-200 font-medium whitespace-pre-wrap pl-6">
+                                {{ booking.admin_notes }}
                             </p>
                         </div>
 
@@ -542,40 +615,68 @@ function statusClasses(s: string): string {
                     <!-- Footer Action Buttons (Confirm / Reject) -->
                     <div
                         v-if="!isEditing"
-                        class="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-neutral-100 dark:border-neutral-800 px-6 py-4 bg-neutral-50/50 dark:bg-neutral-800/40"
+                        class="border-t border-neutral-100 dark:border-neutral-800 px-6 py-4 bg-neutral-50/50 dark:bg-neutral-800/40 space-y-3"
                     >
-                        <button
-                            type="button"
-                            @click="emit('close')"
-                            class="w-full sm:w-auto rounded-xl border border-neutral-300 dark:border-neutral-700 px-4 py-2 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
-                        >
-                            Close Details
-                        </button>
+                        <!-- Admin Note / Remarks input field before taking action -->
+                        <div v-if="canUpdate !== false" class="space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <label for="action-admin-notes" class="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider flex items-center gap-1.5">
+                                    <MessageSquare class="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>Note / Remarks</span>
+                                </label>
+                                <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
+                                    Optional for confirm &bull; <strong class="text-rose-600 dark:text-rose-400 font-semibold">Required for reject</strong>
+                                </span>
+                            </div>
+                            <textarea
+                                id="action-admin-notes"
+                                v-model="actionForm.admin_notes"
+                                rows="2"
+                                placeholder="Add note or reason (e.g. 'Court 1 confirmed', 'Under maintenance on this date', etc.)..."
+                                class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-xs font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors"
+                                :class="{ 'border-rose-500 dark:border-rose-500 ring-1 ring-rose-500': actionFormError }"
+                                @input="actionFormError = ''"
+                            />
+                            <p v-if="actionFormError" class="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                                <AlertCircle class="size-3.5 shrink-0" />
+                                <span>{{ actionFormError }}</span>
+                            </p>
+                        </div>
 
-                        <div v-if="canUpdate !== false" class="flex w-full sm:w-auto items-center gap-2">
-                            <!-- Confirm / Approve Button -->
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
                             <button
                                 type="button"
-                                @click="updateStatus('approved')"
-                                :disabled="actionForm.processing"
-                                class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-extrabold text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
-                                title="Confirm this booking reservation"
+                                @click="emit('close')"
+                                class="w-full sm:w-auto rounded-xl border border-neutral-300 dark:border-neutral-700 px-4 py-2 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
                             >
-                                <CheckCircle class="size-4" />
-                                <span>Confirm Booking</span>
+                                Close Details
                             </button>
 
-                            <!-- Reject Button -->
-                            <button
-                                type="button"
-                                @click="updateStatus('rejected')"
-                                :disabled="actionForm.processing"
-                                class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 px-5 py-2 text-xs font-extrabold text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
-                                title="Reject this booking reservation"
-                            >
-                                <XCircle class="size-4" />
-                                <span>Reject Booking</span>
-                            </button>
+                            <div v-if="canUpdate !== false" class="flex w-full sm:w-auto items-center gap-2">
+                                <!-- Confirm / Approve Button -->
+                                <button
+                                    type="button"
+                                    @click="confirmBooking"
+                                    :disabled="actionForm.processing"
+                                    class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-extrabold text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
+                                    title="Confirm this booking reservation"
+                                >
+                                    <CheckCircle class="size-4" />
+                                    <span>Confirm Booking</span>
+                                </button>
+
+                                <!-- Reject Button -->
+                                <button
+                                    type="button"
+                                    @click="rejectBooking"
+                                    :disabled="actionForm.processing"
+                                    class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 px-5 py-2 text-xs font-extrabold text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
+                                    title="Reject this booking reservation"
+                                >
+                                    <XCircle class="size-4" />
+                                    <span>Reject Booking</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

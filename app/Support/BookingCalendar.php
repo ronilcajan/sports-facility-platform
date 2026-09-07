@@ -38,6 +38,7 @@ class BookingCalendar
                 'phone' => $booking->phone,
                 'date' => $booking->date->toDateString(),
                 'time_slots' => $booking->time_slots,
+                'total_hours' => $booking->total_hours,
                 'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
                 'status' => $booking->status,
                 'receipt_url' => $booking->receipt_url,
