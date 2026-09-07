@@ -37,6 +37,11 @@ const courtImages = computed(() => {
     return props.venue.images || [];
 });
 
+// Court-specific gallery state
+const isCourtGalleryOpen = ref(false);
+const courtGalleryImages = ref<string[]>([]);
+const courtGalleryTitle = ref('');
+
 function openBookingForCourt(court?: PublicCourt, date?: string, slot?: string) {
     selectedCourtForBooking.value = court || null;
     if (date) {
@@ -53,6 +58,19 @@ function handleScheduleDateChange(date: string) {
 function openImageViewer(index = 0) {
     previewImageIndex.value = index;
     isImageViewerOpen.value = true;
+}
+
+function openCourtGallery(court: PublicCourt) {
+    const images = (court as PublicCourt & { images?: string[] }).images || [];
+    if (images.length > 0) {
+        courtGalleryImages.value = images;
+    } else if (court.primary_image_url) {
+        courtGalleryImages.value = [court.primary_image_url];
+    } else {
+        courtGalleryImages.value = ['/images/court_pickleball.png'];
+    }
+    courtGalleryTitle.value = court.name;
+    isCourtGalleryOpen.value = true;
 }
 </script>
 
@@ -238,9 +256,9 @@ function openImageViewer(index = 0) {
                         :key="c.id"
                         class="group flex flex-col overflow-hidden rounded-[var(--site-radius,1.25rem)] border border-line bg-surface-elevated shadow-md transition-all duration-300 hover:-translate-y-2 hover:border-brand/50 hover:shadow-2xl"
                     >
-                        <!-- Court Cover Image (Clickable for preview) -->
+                        <!-- Court Cover Image (Clickable for court gallery preview) -->
                         <div
-                            @click="openImageViewer(0)"
+                            @click="openCourtGallery(c)"
                             class="relative aspect-[16/10] overflow-hidden bg-surface-inverse cursor-pointer"
                         >
                             <img
@@ -339,6 +357,15 @@ function openImageViewer(index = 0) {
             :initial-index="previewImageIndex"
             :title="venue.name"
             @close="isImageViewerOpen = false"
+        />
+
+        <!-- Fullscreen Court Gallery Preview Modal -->
+        <VenueImageViewer
+            :is-open="isCourtGalleryOpen"
+            :images="courtGalleryImages"
+            :initial-index="0"
+            :title="courtGalleryTitle"
+            @close="isCourtGalleryOpen = false"
         />
 
         <!-- Booking Modal Window -->

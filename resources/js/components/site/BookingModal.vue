@@ -6,6 +6,7 @@ import type { PublicCourt } from '@/types';
 import type { CatalogVenue } from '@/components/site/SiteVenueCard.vue';
 import { getMergedTimeSlots, formatSlotRange } from '@/utils/timeSlots';
 import { useCourtAvailability } from '@/composables/useCourtAvailability';
+import VenueImageViewer from '@/components/site/VenueImageViewer.vue';
 
 const props = defineProps<{
     court?: PublicCourt | null;
@@ -967,6 +968,26 @@ async function downloadVoucher() {
     link.click();
     document.body.removeChild(link);
 }
+
+// Court gallery preview within booking modal
+const isBookingCourtGalleryOpen = ref(false);
+const bookingCourtGalleryImages = ref<string[]>([]);
+const bookingCourtGalleryTitle = ref('');
+
+function openBookingCourtGallery() {
+    if (!selectedCourt.value) return;
+    const court = selectedCourt.value as PublicCourt & { images?: string[] };
+    const images = court.images || [];
+    if (images.length > 0) {
+        bookingCourtGalleryImages.value = images;
+    } else if (court.primary_image_url) {
+        bookingCourtGalleryImages.value = [court.primary_image_url];
+    } else {
+        bookingCourtGalleryImages.value = ['/images/court_pickleball.png'];
+    }
+    bookingCourtGalleryTitle.value = court.name;
+    isBookingCourtGalleryOpen.value = true;
+}
 </script>
 
 <template>
@@ -1338,6 +1359,31 @@ async function downloadVoucher() {
                                 <p v-if="errors.court" class="mt-1 text-xs font-semibold text-destructive">
                                     {{ errors.court }}
                                 </p>
+                            </div>
+
+                            <!-- Selected Court Preview with Gallery -->
+                            <div
+                                v-if="selectedCourt"
+                                class="flex items-center gap-3 rounded-xl border border-line bg-surface-elevated/40 p-2.5 cursor-pointer transition-all hover:border-brand/40"
+                                @click="openBookingCourtGallery"
+                            >
+                                <div class="relative size-14 shrink-0 overflow-hidden rounded-lg bg-surface-inverse">
+                                    <img
+                                        :src="selectedCourt.primary_image_url || '/images/court_pickleball.png'"
+                                        :alt="selectedCourt.name"
+                                        class="h-full w-full object-cover"
+                                    />
+                                    <div class="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity hover:opacity-100">
+                                        <svg class="size-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <span class="block text-[9px] font-bold uppercase tracking-[0.2em] text-brand">Selected Court</span>
+                                    <h4 class="truncate text-sm font-bold text-content">{{ selectedCourt.name }}</h4>
+                                    <p class="text-[10px] text-content-muted">₱{{ selectedCourt.base_price }} / {{ selectedCourt.slot_duration_minutes }}min · Click to view gallery</p>
+                                </div>
                             </div>
 
                             <!-- Time Slots Grid -->
@@ -1854,4 +1900,13 @@ async function downloadVoucher() {
             </div>
         </div>
     </transition>
+
+    <!-- Court Gallery Viewer (inside booking modal) -->
+    <VenueImageViewer
+        :is-open="isBookingCourtGalleryOpen"
+        :images="bookingCourtGalleryImages"
+        :initial-index="0"
+        :title="bookingCourtGalleryTitle"
+        @close="isBookingCourtGalleryOpen = false"
+    />
 </template>

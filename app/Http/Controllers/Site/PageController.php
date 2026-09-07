@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Court;
 use App\Models\CourtImage;
 use App\Models\Venue;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -189,6 +190,24 @@ class PageController extends Controller
         ]);
     }
 
+    /**
+     * Return gallery images for a specific court as JSON.
+     */
+    public function courtGallery(Court $court): JsonResponse
+    {
+        $court->load(['images', 'primaryImage']);
+
+        return response()->json([
+            'court_id' => $court->id,
+            'court_name' => $court->name,
+            'sport_type' => $court->sport_type->label(),
+            'primary_image_url' => $court->primaryImage
+                ? (str_starts_with($court->primaryImage->path, 'http') ? $court->primaryImage->path : asset('storage/'.$court->primaryImage->path))
+                : null,
+            'images' => $court->images->map(fn ($img) => $img->url)->values(),
+        ]);
+    }
+
     public function privacy(): Response
     {
         return Inertia::render('site/Privacy', [
@@ -216,7 +235,7 @@ class PageController extends Controller
             ->with(['courts' => function ($q) {
                 $q->where('status', CourtStatus::Available)
                     ->where('is_active', true)
-                    ->with('primaryImage')
+                    ->with(['primaryImage', 'images'])
                     ->orderBy('name');
             }])
             ->orderBy('name')
@@ -232,6 +251,7 @@ class PageController extends Controller
                     'slot_prices' => $court->slot_prices,
                     'slot_duration_minutes' => $court->slot_duration_minutes,
                     'primary_image_url' => $court->primaryImage ? (str_starts_with($court->primaryImage->path, 'http') ? $court->primaryImage->path : asset('storage/'.$court->primaryImage->path)) : null,
+                    'images' => $court->images->map(fn ($img) => $img->url)->values(),
                     'venue' => [
                         'id' => $venue->id,
                         'name' => $venue->name,
@@ -265,7 +285,7 @@ class PageController extends Controller
     private function bookableCourts(?int $limit = null, ?int $venueId = null): Collection
     {
         return Court::query()
-            ->with(['primaryImage', 'venue'])
+            ->with(['primaryImage', 'images', 'venue'])
             ->where('status', CourtStatus::Available)
             ->where('is_active', true)
             ->when($venueId, fn ($query) => $query->where('venue_id', $venueId))
@@ -282,6 +302,7 @@ class PageController extends Controller
                 'slot_prices' => $court->slot_prices,
                 'slot_duration_minutes' => $court->slot_duration_minutes,
                 'primary_image_url' => $court->primaryImage ? (str_starts_with($court->primaryImage->path, 'http') ? $court->primaryImage->path : asset('storage/'.$court->primaryImage->path)) : null,
+                'images' => $court->images->map(fn ($img) => $img->url)->values(),
                 'venue' => $court->venue ? [
                     'id' => $court->venue->id,
                     'name' => $court->venue->name,

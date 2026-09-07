@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { ZoomIn } from '@lucide/vue';
 import { show as showCourt } from '@/routes/site/courts';
 import type { PublicCourt } from '@/types';
 
 defineProps<{ court: PublicCourt }>();
 defineEmits<{
     (e: 'book', court: PublicCourt): void;
+    (e: 'gallery', court: PublicCourt): void;
 }>();
 </script>
 
@@ -15,13 +17,18 @@ defineEmits<{
     >
         <!-- Court Visual Container -->
         <div class="relative aspect-[16/10] overflow-hidden bg-surface-inverse">
-            <!-- Court Image -->
-            <img
-                :src="court.primary_image_url || '/images/court_pickleball.png'"
-                :alt="court.name"
-                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                loading="lazy"
-            />
+            <!-- Court Image (Clickable for gallery) -->
+            <div
+                class="absolute inset-0 cursor-pointer"
+                @click.stop="$emit('gallery', court)"
+            >
+                <img
+                    :src="court.primary_image_url || '/images/court_pickleball.png'"
+                    :alt="court.name"
+                    class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                />
+            </div>
             <!-- Dark Overlay for visual hierarchy -->
             <div
                 class="absolute inset-0 bg-gradient-to-t from-surface-inverse/85 via-surface-inverse/20 to-transparent"
@@ -59,6 +66,14 @@ defineEmits<{
                         {{ court.name }}
                     </Link>
                 </h3>
+            </div>
+
+            <!-- Gallery preview icon -->
+            <div
+                class="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100 backdrop-blur-sm cursor-pointer z-10"
+                @click.stop="$emit('gallery', court)"
+            >
+                <ZoomIn class="size-4" />
             </div>
         </div>
 

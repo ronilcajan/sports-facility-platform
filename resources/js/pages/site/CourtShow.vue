@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import SiteCourtCard from '@/components/site/SiteCourtCard.vue';
 import BookingModal from '@/components/site/BookingModal.vue';
+import VenueImageViewer from '@/components/site/VenueImageViewer.vue';
 import { courts as courtsRoute } from '@/routes/site';
 import type { PublicCourt } from '@/types';
 
@@ -104,6 +105,24 @@ onMounted(() => {
 onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown);
 });
+
+// Related court gallery state
+const isRelatedCourtGalleryOpen = ref(false);
+const relatedCourtGalleryImages = ref<string[]>([]);
+const relatedCourtGalleryTitle = ref('');
+
+function handleRelatedCourtGallery(court: PublicCourt) {
+    const images = (court as PublicCourt & { images?: string[] }).images || [];
+    if (images.length > 0) {
+        relatedCourtGalleryImages.value = images;
+    } else if (court.primary_image_url) {
+        relatedCourtGalleryImages.value = [court.primary_image_url];
+    } else {
+        relatedCourtGalleryImages.value = ['/images/court_pickleball.png'];
+    }
+    relatedCourtGalleryTitle.value = court.name;
+    isRelatedCourtGalleryOpen.value = true;
+}
 </script>
 
 <template>
@@ -510,6 +529,7 @@ onUnmounted(() => {
                         :key="rc.id"
                         :court="rc"
                         @book="handleBook"
+                        @gallery="handleRelatedCourtGallery"
                     />
                 </div>
             </div>
@@ -521,6 +541,15 @@ onUnmounted(() => {
         :court="activeCourt"
         :is-open="isBookingOpen"
         @close="isBookingOpen = false"
+    />
+
+    <!-- Related Court Gallery Viewer -->
+    <VenueImageViewer
+        :is-open="isRelatedCourtGalleryOpen"
+        :images="relatedCourtGalleryImages"
+        :initial-index="0"
+        :title="relatedCourtGalleryTitle"
+        @close="isRelatedCourtGalleryOpen = false"
     />
 
     <!-- Lightbox Modal overlay -->

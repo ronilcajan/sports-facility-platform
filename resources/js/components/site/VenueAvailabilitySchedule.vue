@@ -10,7 +10,7 @@ import {
 } from '@lucide/vue';
 import type { CatalogVenue } from '@/components/site/SiteVenueCard.vue';
 import type { PublicCourt } from '@/types';
-import { getMergedTimeSlots } from '@/utils/timeSlots';
+import { getMergedTimeSlots, formatSlotRange } from '@/utils/timeSlots';
 import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
 const props = defineProps<{
@@ -361,7 +361,7 @@ onMounted(() => {
                                     @click="!isSlotBooked(court.id, slot) && emit('book-court', court, selectedDate, slot)"
                                 >
                                     <span class="text-xs font-black tracking-tight" :class="{ 'line-through text-slate-400': isSlotBooked(court.id, slot) }">
-                                        {{ slot }}
+                                        {{ formatSlotRange(slot, court.slot_duration_minutes || 60) }}
                                     </span>
                                     <span class="text-[10px] font-extrabold text-brand mt-0.5">₱{{ getSlotPriceForCourt(court, slot) }}</span>
 

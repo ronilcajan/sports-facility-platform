@@ -5,6 +5,7 @@ import PageHero from '@/components/site/PageHero.vue';
 import SiteVenueCard, { type CatalogVenue } from '@/components/site/SiteVenueCard.vue';
 import SiteCourtCard from '@/components/site/SiteCourtCard.vue';
 import BookingModal from '@/components/site/BookingModal.vue';
+import VenueImageViewer from '@/components/site/VenueImageViewer.vue';
 import { MapPin, Phone, Mail, ArrowLeft, Building2 } from '@lucide/vue';
 import type { PublicCourt } from '@/types';
 
@@ -49,6 +50,24 @@ function handleBookCourt(court: PublicCourt) {
     activeCourt.value = court;
     activeBookingVenue.value = props.venues.find(v => v.id === court.venue?.id) || null;
     isBookingOpen.value = true;
+}
+
+// Court gallery state
+const isCourtGalleryOpen = ref(false);
+const courtGalleryImages = ref<string[]>([]);
+const courtGalleryTitle = ref('');
+
+function handleCourtGallery(court: PublicCourt) {
+    const images = (court as PublicCourt & { images?: string[] }).images || [];
+    if (images.length > 0) {
+        courtGalleryImages.value = images;
+    } else if (court.primary_image_url) {
+        courtGalleryImages.value = [court.primary_image_url];
+    } else {
+        courtGalleryImages.value = ['/images/court_pickleball.png'];
+    }
+    courtGalleryTitle.value = court.name;
+    isCourtGalleryOpen.value = true;
 }
 </script>
 
@@ -165,6 +184,7 @@ function handleBookCourt(court: PublicCourt) {
                         :key="court.id"
                         :court="court"
                         @book="handleBookCourt"
+                        @gallery="handleCourtGallery"
                     />
                 </div>
 
@@ -182,5 +202,14 @@ function handleBookCourt(court: PublicCourt) {
         :venues="venues"
         :is-open="isBookingOpen"
         @close="isBookingOpen = false"
+    />
+
+    <!-- Court Gallery Viewer -->
+    <VenueImageViewer
+        :is-open="isCourtGalleryOpen"
+        :images="courtGalleryImages"
+        :initial-index="0"
+        :title="courtGalleryTitle"
+        @close="isCourtGalleryOpen = false"
     />
 </template>

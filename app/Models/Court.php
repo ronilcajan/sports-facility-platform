@@ -102,7 +102,10 @@ class Court extends Model
      */
     public function images(): HasMany
     {
-        return $this->hasMany(CourtImage::class);
+        return $this->hasMany(CourtImage::class)
+            ->orderByDesc('is_primary')
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     /**

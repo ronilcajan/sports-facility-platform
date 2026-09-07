@@ -66,4 +66,5 @@ export type PublicCourt = {
     slot_prices?: Record<string, string | number> | null;
     slot_duration_minutes: number;
     primary_image_url?: string | null;
+    images?: string[];
 };
