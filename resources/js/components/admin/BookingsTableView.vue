@@ -365,13 +365,13 @@ const grandTotals = computed(() => {
 
         <!-- Table View Grid Matrix -->
         <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm overflow-x-auto">
-            <table class="w-full text-left border-collapse min-w-[900px]">
+            <table class="w-full text-left border-collapse min-w-[950px]">
                 <thead>
                     <tr class="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/60 text-neutral-500">
                         <!-- First Column: Time Slots Header -->
-                        <th class="sticky left-0 z-20 bg-neutral-100 dark:bg-neutral-800 py-3.5 px-4 text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-700 min-w-[130px]">
-                            <div class="flex items-center gap-1.5">
-                                <Clock class="size-4 text-emerald-600" />
+                        <th class="sticky left-0 z-20 bg-neutral-100 dark:bg-neutral-800 py-3.5 px-5 text-sm font-black uppercase tracking-wider text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-700 min-w-[160px]">
+                            <div class="flex items-center gap-2">
+                                <Clock class="size-5 text-emerald-600 shrink-0" />
                                 <span>Time Slot</span>
                             </div>
                         </th>
@@ -400,7 +400,7 @@ const grandTotals = computed(() => {
                 <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800 text-xs">
                     <tr v-for="slot in timeSlots" :key="slot" class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
                         <!-- Sticky Time Slot Column -->
-                        <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-3 px-4 font-mono font-bold text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-800 whitespace-nowrap">
+                        <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-3.5 px-5 font-mono text-sm font-bold text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-800 whitespace-nowrap">
                             {{ slot }}
                         </td>
 
@@ -505,10 +505,10 @@ const grandTotals = computed(() => {
 
             <!-- Summary Table Matrix -->
             <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[900px]">
+                <table class="w-full text-left border-collapse min-w-[950px]">
                     <thead>
                         <tr class="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100/70 dark:bg-neutral-800/80 text-neutral-500">
-                            <th class="sticky left-0 z-20 bg-neutral-100 dark:bg-neutral-800 py-3 px-4 text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-700 min-w-[130px]">
+                            <th class="sticky left-0 z-20 bg-neutral-100 dark:bg-neutral-800 py-3 px-5 text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-700 min-w-[160px]">
                                 Summary Metric
                             </th>
                             <th
@@ -529,7 +529,7 @@ const grandTotals = computed(() => {
                     <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800 text-xs font-semibold">
                         <!-- Confirmed Row -->
                         <tr class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
-                            <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-2.5 px-4 text-emerald-700 dark:text-emerald-400 font-bold border-r border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
+                            <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-2.5 px-5 text-emerald-700 dark:text-emerald-400 font-bold border-r border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
                                 <span class="size-2.5 rounded-full bg-emerald-500" />
                                 Confirmed
                             </td>
@@ -542,7 +542,7 @@ const grandTotals = computed(() => {
 
                         <!-- Pending Row -->
                         <tr class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
-                            <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-2.5 px-4 text-amber-700 dark:text-amber-400 font-bold border-r border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
+                            <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-2.5 px-5 text-amber-700 dark:text-amber-400 font-bold border-r border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
                                 <span class="size-2.5 rounded-full bg-amber-500" />
                                 Pending
                             </td>
@@ -555,7 +555,7 @@ const grandTotals = computed(() => {
 
                         <!-- Rejected Row -->
                         <tr class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
-                            <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-2.5 px-4 text-rose-700 dark:text-rose-400 font-bold border-r border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
+                            <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-2.5 px-5 text-rose-700 dark:text-rose-400 font-bold border-r border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
                                 <span class="size-2.5 rounded-full bg-rose-500" />
                                 Rejected
                             </td>
@@ -568,7 +568,7 @@ const grandTotals = computed(() => {
 
                         <!-- Total Bookings Row -->
                         <tr class="bg-neutral-100/60 dark:bg-neutral-800/60 font-black">
-                            <td class="sticky left-0 z-10 bg-neutral-100 dark:bg-neutral-800 py-2.5 px-4 text-neutral-900 dark:text-white uppercase tracking-wider text-[11px] border-r border-neutral-200 dark:border-neutral-700">
+                            <td class="sticky left-0 z-10 bg-neutral-100 dark:bg-neutral-800 py-2.5 px-5 text-neutral-900 dark:text-white uppercase tracking-wider text-[11px] border-r border-neutral-200 dark:border-neutral-700">
                                 Total Bookings
                             </td>
                             <td v-for="d in tableDates" :key="`tot-${d.dateStr}`" class="py-2.5 px-3 text-center border-r border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white font-extrabold text-xs">
@@ -578,7 +578,7 @@ const grandTotals = computed(() => {
 
                         <!-- Daily Total Hours Row -->
                         <tr class="bg-sky-50/70 dark:bg-sky-950/30 font-black border-t-2 border-sky-500/20">
-                            <td class="sticky left-0 z-10 bg-sky-100/80 dark:bg-sky-950/80 py-3 px-4 text-sky-900 dark:text-sky-300 uppercase tracking-wider text-[11px] border-r border-sky-200 dark:border-sky-800 flex items-center gap-1.5">
+                            <td class="sticky left-0 z-10 bg-sky-100/80 dark:bg-sky-950/80 py-3 px-5 text-sky-900 dark:text-sky-300 uppercase tracking-wider text-[11px] border-r border-sky-200 dark:border-sky-800 flex items-center gap-1.5">
                                 <Clock class="size-3.5 text-sky-600" />
                                 Daily Total Hours
                             </td>
@@ -591,7 +591,7 @@ const grandTotals = computed(() => {
 
                         <!-- Total Daily Price / Revenue Row -->
                         <tr class="bg-emerald-50/70 dark:bg-emerald-950/30 font-black border-t-2 border-emerald-500/20">
-                            <td class="sticky left-0 z-10 bg-emerald-100/80 dark:bg-emerald-950/80 py-3 px-4 text-emerald-900 dark:text-emerald-300 uppercase tracking-wider text-[11px] border-r border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
+                            <td class="sticky left-0 z-10 bg-emerald-100/80 dark:bg-emerald-950/80 py-3 px-5 text-emerald-900 dark:text-emerald-300 uppercase tracking-wider text-[11px] border-r border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
                                 <DollarSign class="size-3.5 text-emerald-600" />
                                 Total Revenue (₱)
                             </td>
