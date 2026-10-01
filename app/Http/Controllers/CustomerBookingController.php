@@ -19,13 +19,14 @@ class CustomerBookingController extends Controller
     {
         return Inertia::render('customer/Bookings', [
             'bookings' => self::bookingsFor($request->user()),
-            'courts' => Court::where('is_active', true)->get(['id', 'name', 'sport_type', 'base_price', 'slot_prices'])->map(function (Court $court) {
+            'courts' => Court::where('is_active', true)->get(['id', 'name', 'sport_type', 'base_price', 'slot_prices', 'slot_duration_minutes'])->map(function (Court $court) {
                 return [
                     'id' => $court->id,
                     'name' => $court->name,
                     'sport_type' => $court->sport_type?->label() ?? $court->sport_type,
                     'base_price' => (string) $court->base_price,
                     'slot_prices' => $court->slot_prices,
+                    'slot_duration_minutes' => $court->slot_duration_minutes,
                 ];
             }),
         ]);

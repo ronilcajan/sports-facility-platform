@@ -14,12 +14,12 @@ defineOptions({
 </script>
 
 <template>
-    <Head title="Venue Setting" />
+    <Head title="Location Setting" />
 
     <div class="p-6 space-y-6 w-full">
         <div>
             <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">{{ venue.name }} Settings</h1>
-            <p class="text-xs text-neutral-500">Manage your venue's details, contact info, and payment methods.</p>
+            <p class="text-xs text-neutral-500">Manage your location's details, contact info, and payment methods.</p>
         </div>
 
         <div class="max-w-2xl rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm">

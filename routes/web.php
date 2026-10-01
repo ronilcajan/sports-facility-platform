@@ -10,6 +10,7 @@ use Inertia\Inertia;
 
 Route::get('/', [PageController::class, 'home'])->name('home');
 Route::get('/about', [PageController::class, 'about'])->name('site.about');
+Route::get('/locations', [PageController::class, 'locations'])->name('site.locations');
 Route::get('/courts', [PageController::class, 'courts'])->name('site.courts');
 Route::get('/courts/{court}/gallery', [PageController::class, 'courtGallery'])->name('site.courts.gallery');
 Route::get('/courts/{court:slug}', [PageController::class, 'show'])->name('site.courts.show');

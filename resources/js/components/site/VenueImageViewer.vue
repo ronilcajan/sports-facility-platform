@@ -11,7 +11,7 @@ const props = withDefaults(
     }>(),
     {
         initialIndex: 0,
-        title: 'Venue Image Preview',
+        title: 'Location Image Preview',
     }
 );
 

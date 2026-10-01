@@ -229,7 +229,7 @@ function copyToClipboard(text: string) {
                             Points & Freebies Hub
                         </h1>
                         <p class="text-xs md:text-sm text-neutral-400 mt-1 max-w-xl">
-                            Earn points every time you reserve a court or venue. Repeat bookings at your favorite courts earn exclusive loyalty multiplier bonuses!
+                            Earn points every time you reserve a court or location. Repeat bookings at your favorite courts earn exclusive loyalty multiplier bonuses!
                         </p>
                     </div>
 

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { ArrowRight, Check, Sparkles } from '@lucide/vue';
 import { ref } from 'vue';
-import SiteVenueCard, { type CatalogVenue } from '@/components/site/SiteVenueCard.vue';
-import SiteCourtCard from '@/components/site/SiteCourtCard.vue';
 import BookingModal from '@/components/site/BookingModal.vue';
+import SiteCourtCard from '@/components/site/SiteCourtCard.vue';
+import SiteVenueCard from '@/components/site/SiteVenueCard.vue';
+import type { CatalogVenue } from '@/components/site/SiteVenueCard.vue';
 import { useSite } from '@/composables/useSite';
-import { courts as courtsRoute, about as aboutRoute } from '@/routes/site';
+import { about as aboutRoute, courts as courtsRoute } from '@/routes/site';
 import type { PublicCourt } from '@/types';
 
 interface HomeContent {
@@ -33,721 +35,240 @@ defineProps<{
 }>();
 
 const site = useSite();
-
 const activeCourt = ref<PublicCourt | null>(null);
 const activeVenue = ref<CatalogVenue | null>(null);
 const isBookingOpen = ref(false);
 
-function handleBook(court: PublicCourt) {
+function openBooking(
+    court: PublicCourt | null = null,
+    venue: CatalogVenue | null = null,
+): void {
     activeCourt.value = court;
-    activeVenue.value = null;
-    isBookingOpen.value = true;
-}
-
-function handleBookVenue(venue: CatalogVenue) {
     activeVenue.value = venue;
-    activeCourt.value = venue.courts && venue.courts.length > 0 ? venue.courts[0] : null;
     isBookingOpen.value = true;
 }
 
-function handleViewVenueCourts(venue: CatalogVenue) {
-    router.get('/courts', { venue: venue.id });
+function viewLocation(location: CatalogVenue): void {
+    router.get('/courts', { venue: location.id });
 }
 </script>
 
 <template>
-    <Head :title="site.tagline">
-        <meta name="description" :content="site.description" />
-    </Head>
+    <Head :title="site.tagline"
+        ><meta name="description" :content="site.description"
+    /></Head>
 
-    <!-- 1. Hero Section: Sleek dark-mode sports booking header -->
-    <section
-        class="relative overflow-hidden bg-surface-inverse pt-12 pb-16 text-content-inverse sm:pt-16 sm:pb-24 lg:pt-24 lg:pb-32"
-    >
-        <!-- Ambience and court line graphics -->
-        <div
-            class="pointer-events-none absolute inset-0 opacity-[0.05]"
-            aria-hidden="true"
-        >
+    <main class="min-h-screen overflow-hidden bg-surface text-content">
+        <section class="relative border-b border-line">
+            <img
+                src="/images/hero_pickleball.png"
+                alt=""
+                aria-hidden="true"
+                class="pointer-events-none absolute inset-0 size-full object-cover object-center opacity-45"
+            />
             <div
-                class="absolute inset-8 rounded-[2rem] border border-content-inverse sm:inset-16"
-            ></div>
+                class="pointer-events-none absolute inset-0 bg-gradient-to-b from-surface/88 via-surface/76 to-surface/92"
+            />
             <div
-                class="absolute inset-x-8 top-1/2 h-px -translate-y-1/2 bg-content-inverse sm:inset-x-16"
-            ></div>
+                class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_0%,rgba(47,197,127,0.2),transparent_28%),radial-gradient(circle_at_75%_20%,rgba(183,216,63,0.14),transparent_26%)]"
+            />
             <div
-                class="absolute inset-y-8 left-1/2 w-px -translate-x-1/2 bg-content-inverse sm:inset-y-16"
-            ></div>
-        </div>
-        <div
-            class="pointer-events-none absolute -top-40 -left-40 size-[500px] rounded-full bg-brand/15 blur-[120px]"
-            aria-hidden="true"
-        ></div>
-        <div
-            class="pointer-events-none absolute -right-40 bottom-10 size-[450px] rounded-full bg-highlight/15 blur-[120px]"
-            aria-hidden="true"
-        ></div>
-
-        <div class="relative mx-auto max-w-6xl px-4 sm:px-6">
-            <div class="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-16">
-                <!-- Hero Left: Headlines & CTA -->
-                <div class="reveal flex flex-col justify-center">
-                    <div
-                        class="inline-flex max-w-fit items-center gap-2 rounded-full border border-line bg-surface-elevated/40 px-3.5 py-1.5 text-xs font-bold tracking-widest text-brand uppercase"
-                    >
-                        <span
-                            class="size-2 animate-pulse rounded-full bg-brand"
-                        ></span>
-                        {{ content.hero.eyebrow }}
-                    </div>
-                    <h1
-                        class="mt-5 font-display text-4xl leading-[1.05] font-black tracking-tight text-balance text-content-inverse sm:mt-6 sm:text-5xl lg:text-6xl xl:text-7xl"
-                    >
-                        Play Better.<br />
-                        <span class="text-brand">Live Stronger.</span>
-                    </h1>
-                    <p
-                        class="mt-4 max-w-xl text-base leading-relaxed text-pretty text-content-muted sm:mt-6 sm:text-lg"
-                    >
-                        {{ content.hero.subtitle }}
-                    </p>
-                    <div class="mt-8 flex flex-wrap items-center gap-4">
-                        <Link
-                            :href="courtsRoute()"
-                            class="rounded-full bg-brand px-8 py-4 text-base font-bold text-brand-foreground shadow-lg shadow-brand/25 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-brand/35"
-                        >
-                            Book a Court Now
-                        </Link>
-                        <Link
-                            :href="aboutRoute()"
-                            class="rounded-full border border-line bg-surface-elevated/35 px-8 py-4 text-base font-semibold text-content-inverse transition-all duration-300 hover:-translate-y-0.5 hover:bg-surface-elevated/60"
-                        >
-                            Learn More
-                        </Link>
-                    </div>
-                </div>
-
-                <!-- Hero Right: Dynamic Player Action Visual with Overlay Stats (hidden on mobile to prevent overflow) -->
-                <div class="relative hidden justify-center lg:flex lg:ml-4">
-                    <div
-                        class="relative aspect-[4/5] w-full max-w-[420px] overflow-hidden rounded-[var(--site-radius,1.5rem)] border border-line shadow-2xl"
-                    >
-                        <img
-                            src="/images/hero_pickleball.png"
-                            alt="Pickleball player swing action"
-                            class="h-full w-full object-cover"
-                        />
-                        <!-- Soft gradient overlay -->
-                        <div
-                            class="absolute inset-0 bg-gradient-to-t from-surface-inverse/80 via-transparent to-transparent"
-                        ></div>
-                    </div>
-
-                    <!-- Floating Glassmorphic Stats Card -->
-                    <div
-                        class="reveal absolute -right-4 -bottom-6 max-w-[200px] rounded-2xl border border-line bg-surface-elevated/85 p-6 shadow-xl backdrop-blur-md transition-all duration-300 hover:scale-[1.02] md:right-4"
-                    >
-                        <div
-                            class="text-3xl leading-none font-black text-brand"
-                        >
-                            {{ courtsCount }}
-                        </div>
-                        <div
-                            class="mt-1.5 text-xs font-extrabold tracking-wider text-content-inverse uppercase"
-                        >
-                            {{ courtsCount === 1 ? 'Court' : 'Courts' }} to play on
-                        </div>
-                        <div class="mt-1 text-xs text-content-muted">
-                            Friendly courts for every level
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Accent Features Row directly under the Hero content -->
-            <div
-                class="mt-10 grid gap-2 rounded-2xl border border-line bg-surface-elevated/40 p-2 backdrop-blur-sm sm:mt-16 sm:grid-cols-3 sm:gap-4 lg:mt-20"
+                class="relative mx-auto max-w-5xl px-4 py-20 text-center sm:px-6 sm:py-28"
             >
                 <div
-                    class="flex items-center gap-4 rounded-xl p-5 transition-colors hover:bg-surface-elevated/60"
+                    class="inline-flex items-center gap-2 rounded-md border border-brand/25 bg-brand/10 px-3 py-1 text-[10px] font-bold tracking-[0.16em] text-brand uppercase"
                 >
-                    <div
-                        class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand"
-                    >
-                        <!-- Certified Pros Icon -->
-                        <svg
-                            class="size-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                            />
-                        </svg>
-                    </div>
-                    <div>
-                        <h4 class="text-sm font-bold text-content-inverse">
-                            Everyone Welcome
-                        </h4>
-                        <p class="mt-0.5 text-xs text-content-muted">
-                            All ages and skill levels play here.
-                        </p>
-                    </div>
+                    <Sparkles class="size-3" />{{ content.hero.eyebrow }}
                 </div>
-                <div
-                    class="flex items-center gap-4 rounded-xl p-5 transition-colors hover:bg-surface-elevated/60"
+                <h1
+                    class="mx-auto mt-6 max-w-3xl font-display text-5xl leading-[0.98] font-black tracking-[-0.055em] sm:text-6xl lg:text-7xl"
                 >
-                    <div
-                        class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand"
+                    Book better.<br /><span
+                        class="bg-[linear-gradient(90deg,#2fc57f,#b7d83f,#35b978)] bg-clip-text text-transparent"
+                        >Play more.</span
                     >
-                        <!-- Real-time availability check icon -->
-                        <svg
-                            class="size-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                        </svg>
-                    </div>
-                    <div>
-                        <h4 class="text-sm font-bold text-content-inverse">
-                            Real-Time Booking
-                        </h4>
-                        <p class="mt-0.5 text-xs text-content-muted">
-                            Reserve courts instantly under 60 seconds.
-                        </p>
-                    </div>
-                </div>
-                <div
-                    class="flex items-center gap-4 rounded-xl p-5 transition-colors hover:bg-surface-elevated/60"
+                </h1>
+                <p
+                    class="mx-auto mt-5 max-w-2xl text-sm leading-6 text-content-muted sm:text-base"
                 >
-                    <div
-                        class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand"
+                    {{ content.hero.subtitle }}
+                </p>
+                <button
+                    type="button"
+                    class="mt-7 inline-flex w-full max-w-sm items-center gap-2 rounded-md border border-line bg-surface-elevated px-4 py-3 text-left font-mono text-xs text-content shadow-lg shadow-black/20 hover:border-brand/50"
+                    @click="openBooking()"
+                >
+                    <span class="text-brand">›</span> Find an available
+                    court<span class="ml-auto text-content-muted">⌘ B</span>
+                </button>
+                <div class="mt-5 flex justify-center gap-3">
+                    <Link
+                        :href="courtsRoute()"
+                        class="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2.5 text-sm font-extrabold text-brand-foreground transition-transform hover:-translate-y-0.5"
+                        >{{ content.hero.primary_cta
+                        }}<ArrowRight class="size-4" /></Link
+                    ><Link
+                        :href="aboutRoute()"
+                        class="rounded-md border border-line bg-surface-elevated px-4 py-2.5 text-sm font-bold hover:border-brand/50"
+                        >{{ content.hero.secondary_cta }}</Link
                     >
-                        <!-- Skill Levels Icon -->
-                        <svg
-                            class="size-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M13 10V3L4 14h7v7l9-11h-7z"
-                            />
-                        </svg>
-                    </div>
-                    <div>
-                        <h4 class="text-sm font-bold text-content-inverse">
-                            All Skill Levels
-                        </h4>
-                        <p class="mt-0.5 text-xs text-content-muted">
-                            Beginners and regulars share friendly courts.
-                        </p>
-                    </div>
                 </div>
+                <p class="mt-5 text-xs text-content-muted">
+                    <span class="text-brand">✓</span> No membership required
+                    <span class="mx-2">•</span
+                    ><span class="text-brand">✓</span> Live availability
+                </p>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- 2. "Where Passion Meets Performance" / Features Section -->
-    <section
-        class="border-b border-line bg-surface py-20 text-content sm:py-24"
-    >
-        <div class="mx-auto max-w-6xl px-4 sm:px-6">
-            <!-- Headline block -->
+        <section class="mx-auto max-w-5xl px-4 pt-14 pb-20 sm:px-6 sm:pt-16">
+            <div class="flex flex-col gap-3 text-center">
+                <p
+                    class="text-[11px] font-bold tracking-[0.16em] text-brand uppercase"
+                >
+                    Our Venues
+                </p>
+                <h2 class="font-display text-3xl font-black sm:text-4xl">
+                    Choose where you play.
+                </h2>
+                <p class="text-sm text-content-muted">
+                    Explore courts, schedules, and live availability by
+                    location.
+                </p>
+            </div>
             <div
-                class="grid items-start gap-4 border-b border-line pb-10 md:grid-cols-[0.9fr_1.1fr] md:gap-6 md:pb-12"
+                v-if="venues?.length"
+                class="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3"
             >
-                <div>
-                    <span
-                        class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
-                        >WHY WE PLAY</span
-                    >
-                    <h2
-                        class="mt-3 font-display text-3xl leading-tight font-black tracking-tight text-content sm:text-4xl lg:text-5xl"
-                    >
-                        More than a game — it's a community
-                    </h2>
-                </div>
-                <div>
-                    <p
-                        class="text-lg leading-relaxed text-pretty text-content-muted"
-                    >
-                        We believe pickleball is best when it's fun and
-                        welcoming. Our goal is simple: give Oroquieta City a
-                        friendly place where players of every level can book a
-                        court, meet good people, and just enjoy the game.
-                    </p>
-                </div>
-            </div>
-
-            <!-- Features Card Grid -->
-            <div class="mt-10 grid gap-6 sm:mt-16 sm:grid-cols-3 sm:gap-8">
-                <!-- Card 1: Booking -->
-                <div
-                    class="group flex flex-col rounded-2xl border border-line bg-surface-elevated p-8 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg"
-                >
-                    <span
-                        class="inline-block w-max rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand"
-                        >Book Online</span
-                    >
-                    <h3
-                        class="mt-6 font-display text-xl font-extrabold text-content"
-                    >
-                        Book in Seconds
-                    </h3>
-                    <p class="mt-3 text-sm leading-relaxed text-content-muted">
-                        Reserve a court instantly. Check real-time availability,
-                        pick your time, and get your booking details right away.
-                    </p>
-                </div>
-                <!-- Card 2: Schedule -->
-                <div
-                    class="group flex flex-col rounded-2xl border border-line bg-surface-elevated p-8 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg"
-                >
-                    <span
-                        class="inline-block w-max rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand"
-                        >Schedule Play</span
-                    >
-                    <h3
-                        class="mt-6 font-display text-xl font-extrabold text-content"
-                    >
-                        Play Better
-                    </h3>
-                    <p class="mt-3 text-sm leading-relaxed text-content-muted">
-                        Improve your game in structured sessions. Easily manage
-                        court assignments, view calendar updates, and enroll in
-                        clinics or round-robins.
-                    </p>
-                </div>
-                <!-- Card 3: Payments -->
-                <div
-                    class="group flex flex-col rounded-2xl border border-line bg-surface-elevated p-8 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg"
-                >
-                    <span
-                        class="inline-block w-max rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand"
-                        >Seamless Pay</span
-                    >
-                    <h3
-                        class="mt-6 font-display text-xl font-extrabold text-content"
-                    >
-                        Live Stronger
-                    </h3>
-                    <p class="mt-3 text-sm leading-relaxed text-content-muted">
-                        Enjoy effortless payment processing. Speed through
-                        checkout, view your full historical play ledger, and
-                        easily manage reservations.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 3. Venue Showcase Section: Display Venues First -->
-    <section
-        class="border-b border-line bg-surface py-20 text-content sm:py-24"
-    >
-        <div class="mx-auto max-w-6xl px-4 sm:px-6">
-            <div
-                class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between"
-            >
-                <div>
-                    <span
-                        class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
-                        >OUR VENUES</span
-                    >
-                    <h2
-                        class="mt-3 font-display text-3xl font-black tracking-tight text-content sm:text-4xl"
-                    >
-                        Explore Sports Facility Venues
-                    </h2>
-                    <p class="mt-3 max-w-xl text-base text-content-muted">
-                        Select a venue to view its courts and available reservation slots.
-                    </p>
-                </div>
-                <Link
-                    :href="courtsRoute()"
-                    class="group inline-flex shrink-0 items-center gap-2 text-sm font-bold text-brand transition-colors hover:text-content"
-                >
-                    See all venues & courts
-                    <svg
-                        class="size-4 transition-transform group-hover:translate-x-1"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2.5"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M9 5l7 7-7 7"
-                        />
-                    </svg>
-                </Link>
-            </div>
-
-            <!-- Venue Cards Showcase Grid -->
-            <div v-if="venues && venues.length > 0" class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
                 <SiteVenueCard
-                    v-for="venue in venues"
-                    :key="venue.id"
-                    :venue="venue"
-                    @book-now="handleBookVenue"
-                    @view-courts="handleViewVenueCourts"
+                    v-for="location in venues"
+                    :key="location.id"
+                    :venue="location"
+                    @book-now="openBooking(null, location)"
+                    @view-courts="viewLocation"
                 />
             </div>
-            <div v-else class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div v-else class="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <SiteCourtCard
                     v-for="court in featuredCourts"
                     :key="court.id"
                     :court="court"
-                    @book="handleBook"
+                    @book="openBooking(court)"
                 />
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- 4. "Programs Designed for You" Section -->
-    <section
-        class="border-b border-line bg-surface-inverse py-20 text-content-inverse sm:py-24"
-    >
-        <div class="mx-auto max-w-6xl px-4 sm:px-6">
-            <div class="flex flex-col gap-4 pb-8 sm:flex-row sm:items-end sm:justify-between sm:pb-12">
-                <div>
-                    <span
-                        class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
-                        >WAYS TO PLAY</span
+        <section
+            class="border-y border-line bg-surface-inverse py-20 text-content-inverse"
+        >
+            <div class="mx-auto max-w-5xl px-4 sm:px-6">
+                <div class="text-center">
+                    <p
+                        class="text-[11px] font-bold tracking-[0.16em] text-brand uppercase"
                     >
+                        Everything you need
+                    </p>
                     <h2
-                        class="mt-2 font-display text-2xl font-black tracking-tight text-content-inverse sm:mt-3 sm:text-3xl lg:text-4xl"
+                        class="mt-2 font-display text-3xl font-black sm:text-4xl"
                     >
-                        However you like to play
+                        A smoother way to get on court.
+                    </h2>
+                    <p
+                        class="mx-auto mt-3 max-w-xl text-sm text-content-inverse/70"
+                    >
+                        Every part of the experience is designed around finding
+                        a court and playing without friction.
+                    </p>
+                </div>
+                <div class="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <article
+                        v-for="item in content.facilities.items"
+                        :key="item.title"
+                        class="rounded-lg border border-line bg-surface-elevated p-5 text-content transition-colors hover:border-brand/50"
+                    >
+                        <span
+                            class="flex size-8 items-center justify-center rounded-md bg-brand/10 text-brand"
+                            ><Check class="size-4"
+                        /></span>
+                        <h3 class="mt-4 text-sm font-black">
+                            {{ item.title }}
+                        </h3>
+                        <p class="mt-2 text-xs leading-5 text-content-muted">
+                            {{ item.body }}
+                        </p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section
+            class="border-y border-line bg-surface-inverse py-20 text-content-inverse"
+        >
+            <div class="mx-auto max-w-3xl px-4 sm:px-6">
+                <div class="text-center">
+                    <p
+                        class="text-[11px] font-bold tracking-[0.16em] text-brand uppercase"
+                    >
+                        How it works
+                    </p>
+                    <h2 class="mt-2 font-display text-3xl font-black">
+                        From search to serve.
                     </h2>
                 </div>
-                <!-- Nav Arrows (Reference Visual) -->
-                <div class="hidden gap-2 sm:flex">
-                    <button
-                        class="flex size-10 items-center justify-center rounded-full border border-line bg-surface-elevated/20 text-content-inverse transition-colors hover:bg-surface-elevated/40"
-                        aria-label="Previous"
+                <ol class="mt-10 space-y-3">
+                    <li
+                        v-for="(step, index) in [
+                            'Choose a location and a court.',
+                            'Pick an open date and time slot.',
+                            'Confirm your booking and play.',
+                        ]"
+                        :key="step"
+                        class="rounded-lg border border-line bg-surface-elevated p-5 text-content"
                     >
-                        <svg
-                            class="size-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M15 19l-7-7 7-7"
-                            />
-                        </svg>
-                    </button>
-                    <button
-                        class="flex size-10 items-center justify-center rounded-full border border-line bg-surface-elevated/20 text-content-inverse transition-colors hover:bg-surface-elevated/40"
-                        aria-label="Next"
-                    >
-                        <svg
-                            class="size-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M9 5l7 7-7 7"
-                            />
-                        </svg>
-                    </button>
-                </div>
+                        <div class="flex items-start gap-4">
+                            <span
+                                class="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-black text-brand-foreground"
+                                >{{ index + 1 }}</span
+                            >
+                            <div>
+                                <p class="text-sm font-bold">{{ step }}</p>
+                                <p class="mt-1 text-xs text-content-muted">
+                                    Simple, clear choices with real-time
+                                    availability at every step.
+                                </p>
+                            </div>
+                        </div>
+                    </li>
+                </ol>
             </div>
+        </section>
 
-            <!-- Programs Card Row -->
-            <div class="grid gap-6 grid-cols-1 sm:grid-cols-3">
-                <!-- Program 1 -->
-                <div
-                    class="group flex flex-col overflow-hidden rounded-[var(--site-radius,1.25rem)] border border-line bg-surface-elevated/40 shadow-md backdrop-blur-sm transition-all duration-300 hover:border-brand/40 hover:shadow-lg"
+        <section
+            class="border-t border-line bg-[radial-gradient(circle_at_30%_100%,rgba(47,197,127,0.2),transparent_35%),radial-gradient(circle_at_70%_100%,rgba(183,216,63,0.14),transparent_35%)] py-24"
+        >
+            <div class="mx-auto max-w-3xl px-4 text-center sm:px-6">
+                <p
+                    class="text-[11px] font-bold tracking-[0.16em] text-brand uppercase"
                 >
-                    <div class="relative aspect-[16/10] overflow-hidden">
-                        <img
-                            src="/images/court_pickleball.png"
-                            alt="Open play session"
-                            class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div
-                            class="absolute inset-0 bg-gradient-to-t from-surface-inverse/80 via-transparent to-transparent"
-                        ></div>
-                    </div>
-                    <div class="flex flex-1 flex-col p-6">
-                        <h3
-                            class="font-display text-lg font-extrabold text-content-inverse"
-                        >
-                            Open Play Rotations
-                        </h3>
-                        <p
-                            class="mt-2 text-xs font-semibold tracking-wider text-content-muted uppercase"
-                        >
-                            Drop-in • All Skill Levels
-                        </p>
-                        <p
-                            class="mt-3 flex-1 text-sm leading-relaxed text-content-muted"
-                        >
-                            Join an open-play rotation, meet other players in
-                            Oroquieta City, and just have fun — everyone's
-                            welcome.
-                        </p>
-                        <div
-                            class="mt-6 flex items-center justify-between border-t border-line/50 pt-4"
-                        >
-                            <span class="text-xs font-bold text-brand"
-                                >Learn More →</span
-                            >
-                            <span
-                                class="flex size-7 items-center justify-center rounded-full bg-brand text-xs font-black text-brand-foreground shadow transition-transform group-hover:translate-x-1"
-                                >→</span
-                            >
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Program 2 -->
-                <div
-                    class="group flex flex-col overflow-hidden rounded-[var(--site-radius,1.25rem)] border border-line bg-surface-elevated/40 shadow-md backdrop-blur-sm transition-all duration-300 hover:border-brand/40 hover:shadow-lg"
-                >
-                    <div class="relative aspect-[16/10] overflow-hidden">
-                        <img
-                            src="/images/hero_pickleball.png"
-                            alt="Play with friends"
-                            class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div
-                            class="absolute inset-0 bg-gradient-to-t from-surface-inverse/80 via-transparent to-transparent"
-                        ></div>
-                    </div>
-                    <div class="flex flex-1 flex-col p-6">
-                        <h3
-                            class="font-display text-lg font-extrabold text-content-inverse"
-                        >
-                            Play With Friends
-                        </h3>
-                        <p
-                            class="mt-2 text-xs font-semibold tracking-wider text-content-muted uppercase"
-                        >
-                            Up to 4 Players • Same Price
-                        </p>
-                        <p
-                            class="mt-3 flex-1 text-sm leading-relaxed text-content-muted"
-                        >
-                            Grab a court for you and your crew — book in seconds
-                            and enjoy a casual game together, any day of the week.
-                        </p>
-                        <div
-                            class="mt-6 flex items-center justify-between border-t border-line/50 pt-4"
-                        >
-                            <span class="text-xs font-bold text-brand"
-                                >Learn More →</span
-                            >
-                            <span
-                                class="flex size-7 items-center justify-center rounded-full bg-brand text-xs font-black text-brand-foreground shadow transition-transform group-hover:translate-x-1"
-                                >→</span
-                            >
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Program 3 -->
-                <div
-                    class="group flex flex-col overflow-hidden rounded-[var(--site-radius,1.25rem)] border border-line bg-surface-elevated/40 shadow-md backdrop-blur-sm transition-all duration-300 hover:border-brand/40 hover:shadow-lg"
-                >
-                    <div class="relative aspect-[16/10] overflow-hidden">
-                        <img
-                            src="/images/cta_pickleball.png"
-                            alt="Leagues & Tournaments"
-                            class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div
-                            class="absolute inset-0 bg-gradient-to-t from-surface-inverse/80 via-transparent to-transparent"
-                        ></div>
-                    </div>
-                    <div class="flex flex-1 flex-col p-6">
-                        <h3
-                            class="font-display text-lg font-extrabold text-content-inverse"
-                        >
-                            On Your Schedule
-                        </h3>
-                        <p
-                            class="mt-2 text-xs font-semibold tracking-wider text-content-muted uppercase"
-                        >
-                            Open Daily • Morning to Midnight
-                        </p>
-                        <p
-                            class="mt-3 flex-1 text-sm leading-relaxed text-content-muted"
-                        >
-                            Early riser or night owl? Book any open slot that
-                            fits your day — we're open from morning all the way
-                            to midnight.
-                        </p>
-                        <div
-                            class="mt-6 flex items-center justify-between border-t border-line/50 pt-4"
-                        >
-                            <span class="text-xs font-bold text-brand"
-                                >Learn More →</span
-                            >
-                            <span
-                                class="flex size-7 items-center justify-center rounded-full bg-brand text-xs font-black text-brand-foreground shadow transition-transform group-hover:translate-x-1"
-                                >→</span
-                            >
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 5. "How It Works" Section -->
-    <section
-        class="border-b border-line bg-surface py-20 text-content sm:py-24"
-    >
-        <div class="mx-auto max-w-6xl px-4 sm:px-6">
-            <div class="mx-auto max-w-2xl text-center">
-                <span
-                    class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
-                    >EASY BOOKING PROCESS</span
-                >
-                <h2
-                    class="mt-3 font-display text-3xl font-black tracking-tight text-content sm:text-4xl"
-                >
-                    How It Works
-                </h2>
-                <p class="mt-3 text-base text-content-muted">
-                    Getting on the court is quick and effortless. Follow these
-                    simple steps.
+                    Ready when you are
                 </p>
-            </div>
-
-            <!-- Stepper Grid Layout -->
-            <div class="relative mt-16 grid gap-8 md:grid-cols-3">
-                <!-- Step 1 -->
-                <div
-                    class="relative flex flex-col items-center rounded-2xl border border-line bg-surface-elevated p-6 text-center"
-                >
-                    <div
-                        class="flex size-14 items-center justify-center rounded-full bg-brand text-xl font-black text-brand-foreground shadow-md shadow-brand/20"
-                    >
-                        1
-                    </div>
-                    <h3
-                        class="mt-6 font-display text-lg font-bold text-content"
-                    >
-                        Choose a Court
-                    </h3>
-                    <p class="mt-2 text-sm leading-relaxed text-content-muted">
-                        Browse our outdoor courts, review location details, and
-                        choose your favorite.
-                    </p>
-                </div>
-                <!-- Step 2 -->
-                <div
-                    class="relative flex flex-col items-center rounded-2xl border border-line bg-surface-elevated p-6 text-center"
-                >
-                    <div
-                        class="flex size-14 items-center justify-center rounded-full bg-brand text-xl font-black text-brand-foreground shadow-md shadow-brand/20"
-                    >
-                        2
-                    </div>
-                    <h3
-                        class="mt-6 font-display text-lg font-bold text-content"
-                    >
-                        Select Date & Time
-                    </h3>
-                    <p class="mt-2 text-sm leading-relaxed text-content-muted">
-                        Check real-time availability on our interactive calendar
-                        charts, and select an open time slot.
-                    </p>
-                </div>
-                <!-- Step 3 -->
-                <div
-                    class="relative flex flex-col items-center rounded-2xl border border-line bg-surface-elevated p-6 text-center"
-                >
-                    <div
-                        class="flex size-14 items-center justify-center rounded-full bg-brand text-xl font-black text-brand-foreground shadow-md shadow-brand/20"
-                    >
-                        3
-                    </div>
-                    <h3
-                        class="mt-6 font-display text-lg font-bold text-content"
-                    >
-                        Confirm Booking
-                    </h3>
-                    <p class="mt-2 text-sm leading-relaxed text-content-muted">
-                        Complete check out, receive instant confirmation, and
-                        access courts with a simple check-in QR code.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 6. Call to Action: Dramatic background overlay banner -->
-    <section
-        class="relative overflow-hidden bg-surface-inverse py-28 text-content-inverse sm:py-32"
-    >
-        <!-- Visual Background Image -->
-        <div class="absolute inset-0 z-0">
-            <img
-                src="/images/cta_pickleball.png"
-                alt="Pickleball courts at sunset"
-                class="h-full w-full object-cover opacity-35"
-            />
-            <!-- Dark Gradient overlay -->
-            <div
-                class="absolute inset-0 bg-gradient-to-r from-surface-inverse via-surface-inverse/85 to-transparent"
-            ></div>
-        </div>
-
-        <div class="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
-            <div class="max-w-2xl">
-                <span
-                    class="text-xs font-bold tracking-[0.2em] text-brand uppercase"
-                    >GET ON THE COURT</span
-                >
-                <h2
-                    class="mt-4 font-display text-3xl leading-tight font-black tracking-tight text-content-inverse sm:text-4xl lg:text-5xl"
-                >
+                <h2 class="mt-3 font-display text-4xl font-black sm:text-5xl">
                     {{ content.cta.title }}
                 </h2>
-                <p class="mt-4 text-lg leading-relaxed text-content-muted">
+                <p
+                    class="mx-auto mt-4 max-w-xl text-sm leading-6 text-content-muted"
+                >
                     {{ content.cta.body }}
                 </p>
-                <div class="mt-8">
-                    <Link
-                        :href="courtsRoute()"
-                        class="inline-flex rounded-full bg-brand px-8 py-4 text-base font-bold text-brand-foreground shadow-lg shadow-brand/25 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-brand/35"
-                    >
-                        {{ content.cta.button }}
-                    </Link>
-                </div>
+                <Link
+                    :href="courtsRoute()"
+                    class="mt-7 inline-flex items-center gap-2 rounded-md bg-brand px-5 py-3 text-sm font-extrabold text-brand-foreground"
+                    >{{ content.cta.button }}<ArrowRight class="size-4"
+                /></Link>
             </div>
-        </div>
-    </section>
+        </section>
+    </main>
 
-    <!-- Booking Modal Component overlay -->
     <BookingModal
         :court="activeCourt"
         :venue="activeVenue"

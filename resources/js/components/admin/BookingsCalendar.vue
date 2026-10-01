@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
-import { ChevronLeft, ChevronRight, CalendarCheck, FileText, X, CheckCircle, XCircle, Trash2, Dumbbell, Clock } from '@lucide/vue';
-import { calculateBookingHours, formatHours } from '@/utils/timeSlots';
+import { ChevronLeft, ChevronRight, CalendarCheck, FileText, X, CheckCircle, XCircle, Trash2, Dumbbell } from '@lucide/vue';
 
 import BookingDetailModal, { type BookingDetail } from '@/components/admin/BookingDetailModal.vue';
 
 interface CourtRef {
     id: number;
     name: string;
+    slot_duration_minutes?: number | null;
 }
 
 interface BoardBooking {
@@ -18,12 +18,12 @@ interface BoardBooking {
     phone: string;
     date: string;
     time_slots: string[];
-    total_hours?: number;
     total_price: string;
     status: string;
     receipt_url?: string | null;
     receipt_path?: string | null;
     notes?: string | null;
+    admin_notes?: string | null;
     court: CourtRef | null;
 }
 
@@ -135,15 +135,19 @@ function dayTotalAmount(day: Day): number {
         .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
 }
 
+/**
+ * Hours reserved on a day, measured by each court's slot length rather than by
+ * counting slots, since a slot is not always an hour.
+ */
 function dayTotalHours(day: Day): number {
     return day.bookings
         .filter((b) => confirmedStatuses.includes(b.status))
-        .reduce((sum, b) => {
-            if (b.total_hours !== undefined && b.total_hours !== null && !isNaN(Number(b.total_hours))) {
-                return sum + Number(b.total_hours);
-            }
-            return sum + calculateBookingHours(b.time_slots);
-        }, 0);
+        .reduce((sum, b) => sum + (b.time_slots?.length || 0) * ((b.court?.slot_duration_minutes || 60) / 60), 0);
+}
+
+function formatHours(val: number): string {
+    const rounded = Math.round(val * 100) / 100;
+    return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}h`;
 }
 
 function statusClasses(s: string): string {
@@ -186,6 +190,7 @@ const selectedBookingDetail = computed<BookingDetail | null>(() => {
         receipt_url: selected.value.receipt_url || (selected.value.receipt_path ? `/storage/${selected.value.receipt_path}` : null),
         status: selected.value.status,
         notes: selected.value.notes,
+        admin_notes: selected.value.admin_notes,
         court_name: selected.value.court?.name || 'Assigned Court',
     };
 });
@@ -220,7 +225,7 @@ function deleteBooking() {
                     @change="navigate()"
                     class="rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-3 py-2 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
                 >
-                    <option value="">All Venues</option>
+                    <option value="">All Locations</option>
                     <option v-for="v in venues || []" :key="v.id" :value="v.id">{{ v.name }}</option>
                 </select>
 
@@ -289,8 +294,8 @@ function deleteBooking() {
                 <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">{{ day.weekday }}</span>
                 <span class="text-base font-black text-neutral-900 dark:text-white">{{ day.dayNum }}</span>
                 <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">₱{{ dayTotalAmount(day).toLocaleString('en-US', { minimumFractionDigits: 0 }) }}</span>
-                <span class="text-[9px] font-semibold text-sky-600 dark:text-sky-400">{{ formatHours(dayTotalHours(day)) }}</span>
                 <span class="text-[9px] font-medium text-neutral-400">{{ dayTotalCount(day) }} {{ dayTotalCount(day) === 1 ? 'booking' : 'bkgs' }}</span>
+                <span class="text-[9px] font-bold text-sky-600 dark:text-sky-400">{{ formatHours(dayTotalHours(day)) }}</span>
                 <span v-if="day.isToday" class="mt-0.5 h-1 w-1 rounded-full bg-emerald-500"></span>
             </button>
         </div>
@@ -316,15 +321,15 @@ function deleteBooking() {
                         <div class="text-lg font-black text-neutral-900 dark:text-white leading-none">
                             {{ day.dayNum }} <span class="text-xs font-semibold text-neutral-400">{{ day.month }}</span>
                         </div>
-                        <div class="flex items-center gap-1.5 text-xs flex-wrap">
+                        <div class="flex items-center gap-1 text-xs">
                             <span class="font-bold text-emerald-600 dark:text-emerald-400">
                                 ₱{{ dayTotalAmount(day).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
                             </span>
-                            <span class="text-[11px] font-bold text-sky-600 dark:text-sky-400">
-                                • {{ formatHours(dayTotalHours(day)) }}
-                            </span>
                             <span class="text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
                                 ({{ dayTotalCount(day) }})
+                            </span>
+                            <span class="font-bold text-sky-600 dark:text-sky-400">
+                                {{ formatHours(dayTotalHours(day)) }}
                             </span>
                         </div>
                     </div>
@@ -335,8 +340,8 @@ function deleteBooking() {
                     <div class="flex items-baseline gap-2 flex-wrap">
                         <span class="text-base font-black text-neutral-900 dark:text-white">{{ day.weekday }}, {{ day.month }} {{ day.dayNum }}</span>
                         <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">₱{{ dayTotalAmount(day).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
-                        <span class="text-xs font-bold text-sky-600 dark:text-sky-400">• {{ formatHours(dayTotalHours(day)) }}</span>
                         <span class="text-[10px] font-medium text-neutral-500">({{ dayTotalCount(day) }} {{ dayTotalCount(day) === 1 ? 'booking' : 'bookings' }})</span>
+                        <span class="text-xs font-bold text-sky-600 dark:text-sky-400">{{ formatHours(dayTotalHours(day)) }}</span>
                     </div>
                     <span v-if="day.isToday" class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">Today</span>
                 </div>

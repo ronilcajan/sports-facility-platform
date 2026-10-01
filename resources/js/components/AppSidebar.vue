@@ -72,7 +72,7 @@ const navGroups = computed<NavGroup[]>(() => {
                             icon: CalendarDays,
                         },
                         {
-                            title: 'Venues',
+                            title: 'Locations',
                             href: '/admin/venues',
                             icon: Building,
                         },

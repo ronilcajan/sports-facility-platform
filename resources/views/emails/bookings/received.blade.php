@@ -11,7 +11,7 @@ Hi {{ $customerName }}, we've received your booking request. Here are the detail
 | &nbsp; | &nbsp; |
 | :--- | :--- |
 | **Reference** | {{ $reference }} |
-| **Venue** | {{ $venueName }} |
+| **Location** | {{ $venueName }} |
 | **Court** | {{ $courtName }} |
 | **Date** | {{ $date }} |
 | **Time** | {{ $timeSlots }} |

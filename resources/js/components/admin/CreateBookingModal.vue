@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { getMergedTimeSlots, formatSlotRange } from '@/utils/timeSlots';
+import { formatSlotRange, getMergedTimeSlots } from '@/utils/timeSlots';
 import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
 interface CourtOption {
@@ -9,6 +9,7 @@ interface CourtOption {
     name: string;
     base_price?: string | number | null;
     slot_prices?: Record<string, string | number> | null;
+    slot_duration_minutes?: number | null;
 }
 
 const props = defineProps<{
@@ -87,11 +88,7 @@ const monthYearLabel = computed(() => {
     return `${monthName(first)} – ${monthName(last)} ${last.getFullYear()}`;
 });
 
-function isPastDate(d: Date) {
-    return toDateKey(d) < todayDateString.value;
-}
 function selectDay(d: Date) {
-    if (isPastDate(d)) return;
     form.date = toDateKey(d);
 }
 function isSelectedDay(d: Date) {
@@ -205,12 +202,8 @@ watch(
             localErrors.value = {};
             form.reset();
             form.clearErrors();
-            form.court_id = props.initialCourtId ?? sortedCourts.value[0]?.id ?? null;
-            let initialDateStr = props.initialDate ?? todayDateString.value;
-            if (initialDateStr < todayDateString.value) {
-                initialDateStr = todayDateString.value;
-            }
-            form.date = initialDateStr;
+            form.court_id = props.initialCourtId ?? null;
+            form.date = props.initialDate ?? todayDateString.value;
 
             if (form.date) {
                 const targetDate = new Date(form.date);
@@ -237,11 +230,7 @@ watch(
 function validateStep1(): boolean {
     const e: typeof localErrors.value = {};
     if (!form.court_id) e.court = 'Please select a court.';
-    if (!form.date) {
-        e.date = 'Booking date is required.';
-    } else if (form.date < todayDateString.value) {
-        e.date = 'Booking date cannot be in the past.';
-    }
+    if (!form.date) e.date = 'Booking date is required.';
     if (form.time_slots.length === 0) e.time = 'Select at least one time slot.';
     localErrors.value = e;
     return Object.keys(e).length === 0;
@@ -367,10 +356,9 @@ function submit() {
                                         v-for="d in visibleDays"
                                         :key="toDateKey(d)"
                                         type="button"
-                                        :disabled="isPastDate(d)"
                                         @click="selectDay(d)"
-                                        class="group flex flex-col items-center gap-1.5 rounded-xl border py-2 transition-all"
-                                        :class="isPastDate(d) ? 'opacity-30 cursor-not-allowed border-transparent' : isSelectedDay(d) ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 cursor-pointer' : 'border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer'"
+                                        class="group flex flex-col items-center gap-1.5 rounded-xl border py-2 transition-all cursor-pointer"
+                                        :class="isSelectedDay(d) ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40' : 'border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'"
                                     >
                                         <span class="text-[10px] font-bold uppercase tracking-wide" :class="isSelectedDay(d) ? 'text-emerald-600' : 'text-neutral-500 dark:text-neutral-400'">{{ dayLabels[d.getDay()] }}</span>
                                         <span class="flex size-9 items-center justify-center rounded-full text-sm font-bold transition-all" :class="isSelectedDay(d) ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20' : 'bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white group-hover:bg-neutral-100 dark:group-hover:bg-neutral-800'">{{ d.getDate() }}</span>
@@ -410,10 +398,10 @@ function submit() {
                                 <p v-if="localErrors.court" class="mt-1 text-xs font-semibold text-rose-600">{{ localErrors.court }}</p>
                             </div>
 
-                            <!-- Time slots -->
-                            <div>
+                            <!-- Time slots — hidden until a court is chosen, so the slots shown always belong to a known court -->
+                            <div v-if="selectedCourt">
                                 <div class="mb-1.5 flex items-center justify-between">
-                                    <label class="block text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Select Time Slots</label>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Select Time Slots — {{ selectedCourt.name }}</label>
                                     <span v-if="isLoadingAvailability" class="text-[10px] font-bold text-emerald-600 animate-pulse">Checking availability...</span>
                                 </div>
                                 <div class="space-y-3">
@@ -439,7 +427,7 @@ function submit() {
                                                     :disabled="isSlotBooked(slot)"
                                                     class="sr-only"
                                                 />
-                                                <span class="text-[11px] sm:text-xs font-bold tracking-tight whitespace-nowrap" :class="{ 'line-through text-neutral-400': isSlotBooked(slot) }">{{ formatSlotRange(slot) }}</span>
+                                                <span class="text-xs font-bold" :class="{ 'line-through text-neutral-400': isSlotBooked(slot) }">{{ formatSlotRange(slot, selectedCourt?.slot_duration_minutes || 60) }}</span>
                                                 <span class="mt-0.5 text-[9px] font-extrabold" :class="isSlotBooked(slot) ? 'text-neutral-400' : 'text-emerald-600 dark:text-emerald-400'">
                                                     ₱{{ getSlotPriceForCourt(slot) }}
                                                 </span>
@@ -461,6 +449,14 @@ function submit() {
                                     </div>
                                 </div>
                                 <p v-if="localErrors.time" class="mt-1 text-xs font-semibold text-rose-600">{{ localErrors.time }}</p>
+                            </div>
+                            <div
+                                v-else
+                                class="rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/40 px-4 py-6 text-center"
+                            >
+                                <p class="text-sm font-bold text-neutral-900 dark:text-white">Choose a court to see available times</p>
+                                <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Time slots and pricing differ per court, so pick one above to continue.</p>
+                                <p v-if="localErrors.time" class="mt-2 text-xs font-semibold text-rose-600">{{ localErrors.time }}</p>
                             </div>
                         </div>
 

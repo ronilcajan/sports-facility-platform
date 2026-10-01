@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import {
     MapPin,
@@ -19,6 +19,8 @@ import VenueImageViewer from '@/components/site/VenueImageViewer.vue';
 import VenueAvailabilitySchedule from '@/components/site/VenueAvailabilitySchedule.vue';
 import type { CatalogVenue } from '@/components/site/SiteVenueCard.vue';
 import type { PublicCourt } from '@/types';
+import { formatDuration } from '@/utils/timeSlots';
+import { show as showCourt } from '@/routes/site/courts';
 
 const props = defineProps<{
     venue: CatalogVenue & { images?: string[] };
@@ -37,18 +39,21 @@ const courtImages = computed(() => {
     return props.venue.images || [];
 });
 
-// Court-specific gallery state
-const isCourtGalleryOpen = ref(false);
-const courtGalleryImages = ref<string[]>([]);
-const courtGalleryTitle = ref('');
-
-function openBookingForCourt(court?: PublicCourt, date?: string, slot?: string) {
+function openBookingForCourt(
+    court?: PublicCourt,
+    date?: string,
+    slot?: string,
+) {
     selectedCourtForBooking.value = court || null;
     if (date) {
         selectedBookingDate.value = date;
     }
     selectedBookingSlot.value = slot || null;
     isBookingModalOpen.value = true;
+}
+
+function openCourt(court: PublicCourt): void {
+    router.visit(showCourt.url(court.slug));
 }
 
 function handleScheduleDateChange(date: string) {
@@ -59,26 +64,16 @@ function openImageViewer(index = 0) {
     previewImageIndex.value = index;
     isImageViewerOpen.value = true;
 }
-
-function openCourtGallery(court: PublicCourt) {
-    const images = (court as PublicCourt & { images?: string[] }).images || [];
-    if (images.length > 0) {
-        courtGalleryImages.value = images;
-    } else if (court.primary_image_url) {
-        courtGalleryImages.value = [court.primary_image_url];
-    } else {
-        courtGalleryImages.value = ['/images/court_pickleball.png'];
-    }
-    courtGalleryTitle.value = court.name;
-    isCourtGalleryOpen.value = true;
-}
 </script>
 
 <template>
-    <Head :title="`${venue.name} - Venue Details`">
+    <Head :title="`${venue.name} - Location Details`">
         <meta
             name="description"
-            :content="venue.description || `Explore courts and book a game at ${venue.name}.`"
+            :content="
+                venue.description ||
+                `Explore courts and book a game at ${venue.name}.`
+            "
         />
     </Head>
 
@@ -86,23 +81,32 @@ function openCourtGallery(court: PublicCourt) {
         <!-- Hero Header -->
         <section class="relative overflow-hidden bg-surface-inverse text-white">
             <!-- Cover Background Photo with Overlay Gradient -->
-            <div v-if="venue.cover_image_url || venue.image_url" class="absolute inset-0">
+            <div
+                v-if="venue.cover_image_url || venue.image_url"
+                class="absolute inset-0"
+            >
                 <img
                     :src="venue.image_url || venue.cover_image_url || ''"
                     :alt="venue.name"
                     class="h-full w-full object-cover opacity-35"
                 />
-                <div class="absolute inset-0 bg-gradient-to-t from-surface-inverse via-surface-inverse/80 to-transparent" />
+                <div
+                    class="absolute inset-0 bg-gradient-to-t from-surface-inverse via-surface-inverse/80 to-transparent"
+                />
             </div>
 
-            <div class="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-24">
-                <div class="flex flex-wrap items-center justify-between gap-3 mb-6 sm:mb-8">
+            <div
+                class="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-24"
+            >
+                <div
+                    class="mb-6 flex flex-wrap items-center justify-between gap-3 sm:mb-8"
+                >
                     <Link
                         href="/courts"
                         class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white backdrop-blur-md transition-colors hover:bg-white/20"
                     >
                         <ChevronLeft class="size-4" />
-                        <span>Back to All Venues</span>
+                        <span>Back to All Locations</span>
                     </Link>
 
                     <!-- Preview Venue Image Button -->
@@ -110,46 +114,76 @@ function openCourtGallery(court: PublicCourt) {
                         v-if="courtImages.length > 0"
                         type="button"
                         @click="openImageViewer(0)"
-                        class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white backdrop-blur-md transition-all hover:bg-white/20 hover:scale-105 cursor-pointer"
+                        class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-white/20"
                     >
                         <ZoomIn class="size-4 text-brand" />
-                        <span>Preview Venue Photo</span>
+                        <span>Preview Location Photo</span>
                     </button>
                 </div>
 
                 <div class="grid gap-8 lg:grid-cols-12 lg:items-center">
                     <div class="space-y-6 lg:col-span-8">
                         <div class="flex flex-wrap items-center gap-3">
-                            <span class="inline-flex items-center gap-1.5 rounded-full bg-brand px-3.5 py-1 text-xs font-bold text-brand-foreground shadow">
+                            <span
+                                class="inline-flex items-center gap-1.5 rounded-full bg-brand px-3.5 py-1 text-xs font-bold text-brand-foreground shadow"
+                            >
                                 <Dumbbell class="size-3.5" />
-                                <span>{{ venue.courts_count }} {{ venue.courts_count === 1 ? 'Court' : 'Courts' }} Available</span>
+                                <span
+                                    >{{ venue.courts_count }}
+                                    {{
+                                        venue.courts_count === 1
+                                            ? 'Court'
+                                            : 'Courts'
+                                    }}
+                                    Available</span
+                                >
                             </span>
-                            <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-3.5 py-1 text-xs font-bold text-emerald-400 border border-emerald-500/30">
-                                <span class="size-2 animate-ping rounded-full bg-emerald-400" />
+                            <span
+                                class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/20 px-3.5 py-1 text-xs font-bold text-emerald-400"
+                            >
+                                <span
+                                    class="size-2 animate-ping rounded-full bg-emerald-400"
+                                />
                                 <span>Active Facility</span>
                             </span>
                         </div>
 
-                        <h1 class="font-display text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
+                        <h1
+                            class="font-display text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl"
+                        >
                             {{ venue.name }}
                         </h1>
 
-                        <p v-if="venue.description" class="text-lg leading-relaxed text-slate-300 max-w-3xl">
+                        <p
+                            v-if="venue.description"
+                            class="max-w-3xl text-lg leading-relaxed text-slate-300"
+                        >
                             {{ venue.description }}
                         </p>
 
                         <!-- Contact & Location Pill Bar -->
-                        <div class="flex flex-wrap items-center gap-4 text-sm text-slate-300 border-t border-white/10 pt-5 sm:gap-6 sm:pt-6">
-                            <div v-if="venue.address" class="flex items-center gap-2">
-                                <MapPin class="size-4 text-brand shrink-0" />
+                        <div
+                            class="flex flex-wrap items-center gap-4 border-t border-white/10 pt-5 text-sm text-slate-300 sm:gap-6 sm:pt-6"
+                        >
+                            <div
+                                v-if="venue.address"
+                                class="flex items-center gap-2"
+                            >
+                                <MapPin class="size-4 shrink-0 text-brand" />
                                 <span>{{ venue.address }}</span>
                             </div>
-                            <div v-if="venue.phone" class="flex items-center gap-2">
-                                <Phone class="size-4 text-brand shrink-0" />
+                            <div
+                                v-if="venue.phone"
+                                class="flex items-center gap-2"
+                            >
+                                <Phone class="size-4 shrink-0 text-brand" />
                                 <span>{{ venue.phone }}</span>
                             </div>
-                            <div v-if="venue.email" class="flex items-center gap-2">
-                                <Mail class="size-4 text-brand shrink-0" />
+                            <div
+                                v-if="venue.email"
+                                class="flex items-center gap-2"
+                            >
+                                <Mail class="size-4 shrink-0 text-brand" />
                                 <span>{{ venue.email }}</span>
                             </div>
                         </div>
@@ -157,28 +191,41 @@ function openCourtGallery(court: PublicCourt) {
 
                     <!-- Hero Quick Action Box -->
                     <div class="lg:col-span-4">
-                        <div class="rounded-2xl border border-white/15 bg-white/10 p-6 backdrop-blur-xl shadow-2xl space-y-4">
-                            <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                        <div
+                            class="space-y-4 rounded-2xl border border-white/15 bg-white/10 p-6 shadow-2xl backdrop-blur-xl"
+                        >
+                            <div
+                                class="flex items-center justify-between border-b border-white/10 pb-4"
+                            >
                                 <div>
-                                    <span class="text-xs font-bold tracking-wider text-slate-300 uppercase">Operating Status</span>
-                                    <h4 class="text-lg font-black text-white">Open Daily</h4>
+                                    <span
+                                        class="text-xs font-bold tracking-wider text-slate-300 uppercase"
+                                        >Operating Status</span
+                                    >
+                                    <h4 class="text-lg font-black text-white">
+                                        Open Daily
+                                    </h4>
                                 </div>
-                                <span class="rounded-full bg-brand/20 p-2.5 text-brand">
+                                <span
+                                    class="rounded-full bg-brand/20 p-2.5 text-brand"
+                                >
                                     <Clock class="size-6" />
                                 </span>
                             </div>
 
                             <p class="text-xs leading-relaxed text-slate-300">
-                                Reserve your preferred court at {{ venue.name }} with instant real-time availability confirmation.
+                                Reserve your preferred court at
+                                {{ venue.name }} with instant real-time
+                                availability confirmation.
                             </p>
 
                             <button
                                 type="button"
                                 @click="openBookingForCourt()"
-                                class="w-full flex items-center justify-center gap-2 rounded-full bg-brand py-3.5 px-6 text-sm font-black text-brand-foreground shadow-lg shadow-brand/25 transition-all duration-300 hover:scale-102 hover:bg-brand/95 cursor-pointer"
+                                class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-brand px-6 py-3.5 text-sm font-black text-brand-foreground shadow-lg shadow-brand/25 transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand/95"
                             >
                                 <CalendarCheck class="size-5" />
-                                <span>Book Court at this Venue</span>
+                                <span>Book Court at this Location</span>
                             </button>
                         </div>
                     </div>
@@ -195,8 +242,14 @@ function openCourtGallery(court: PublicCourt) {
                             <ShieldCheck class="size-5" />
                         </div>
                         <div>
-                            <h5 class="text-xs font-black text-content uppercase tracking-wider">Great Courts</h5>
-                            <p class="text-[11px] text-content-muted">Well-kept &amp; welcoming</p>
+                            <h5
+                                class="text-xs font-black tracking-wider text-content uppercase"
+                            >
+                                Great Courts
+                            </h5>
+                            <p class="text-[11px] text-content-muted">
+                                Well-kept &amp; welcoming
+                            </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
@@ -204,8 +257,14 @@ function openCourtGallery(court: PublicCourt) {
                             <Sparkles class="size-5" />
                         </div>
                         <div>
-                            <h5 class="text-xs font-black text-content uppercase tracking-wider">LED Floodlighting</h5>
-                            <p class="text-[11px] text-content-muted">Optimal night play</p>
+                            <h5
+                                class="text-xs font-black tracking-wider text-content uppercase"
+                            >
+                                LED Floodlighting
+                            </h5>
+                            <p class="text-[11px] text-content-muted">
+                                Optimal night play
+                            </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
@@ -213,8 +272,14 @@ function openCourtGallery(court: PublicCourt) {
                             <Clock class="size-5" />
                         </div>
                         <div>
-                            <h5 class="text-xs font-black text-content uppercase tracking-wider">Hourly Slots</h5>
-                            <p class="text-[11px] text-content-muted">Flexible booking times</p>
+                            <h5
+                                class="text-xs font-black tracking-wider text-content uppercase"
+                            >
+                                Hourly Slots
+                            </h5>
+                            <p class="text-[11px] text-content-muted">
+                                Flexible booking times
+                            </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
@@ -222,8 +287,14 @@ function openCourtGallery(court: PublicCourt) {
                             <CheckCircle class="size-5" />
                         </div>
                         <div>
-                            <h5 class="text-xs font-black text-content uppercase tracking-wider">Lounge & Amenities</h5>
-                            <p class="text-[11px] text-content-muted">Clean equipment & gear</p>
+                            <h5
+                                class="text-xs font-black tracking-wider text-content uppercase"
+                            >
+                                Lounge & Amenities
+                            </h5>
+                            <p class="text-[11px] text-content-muted">
+                                Clean equipment & gear
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -239,14 +310,20 @@ function openCourtGallery(court: PublicCourt) {
 
         <!-- Courts Listing Section under this Venue -->
         <section class="py-16 sm:py-24">
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
+            <div class="mx-auto max-w-7xl space-y-12 px-4 sm:px-6 lg:px-8">
                 <div>
-                    <span class="text-xs font-extrabold tracking-widest text-brand uppercase">Available Courts</span>
-                    <h2 class="mt-1 font-display text-3xl font-black tracking-tight text-content sm:text-4xl">
+                    <span
+                        class="text-xs font-extrabold tracking-widest text-brand uppercase"
+                        >Available Courts</span
+                    >
+                    <h2
+                        class="mt-1 font-display text-3xl font-black tracking-tight text-content sm:text-4xl"
+                    >
                         Courts at {{ venue.name }}
                     </h2>
-                    <p class="mt-2 text-sm text-content-muted max-w-2xl">
-                        Choose your preferred court below to check schedule availability and complete your instant booking.
+                    <p class="mt-2 max-w-2xl text-sm text-content-muted">
+                        Choose your preferred court below to check schedule
+                        availability and complete your instant booking.
                     </p>
                 </div>
 
@@ -254,56 +331,84 @@ function openCourtGallery(court: PublicCourt) {
                     <article
                         v-for="c in venue.courts"
                         :key="c.id"
-                        class="group flex flex-col overflow-hidden rounded-[var(--site-radius,1.25rem)] border border-line bg-surface-elevated shadow-md transition-all duration-300 hover:-translate-y-2 hover:border-brand/50 hover:shadow-2xl"
+                        class="group flex cursor-pointer flex-col overflow-hidden rounded-[var(--site-radius,1.25rem)] border border-line bg-surface-elevated shadow-md hover:border-brand/50 hover:shadow-2xl"
+                        role="link"
+                        tabindex="0"
+                        @click="openCourt(c)"
+                        @keydown.enter="openCourt(c)"
+                        @keydown.space.prevent="openCourt(c)"
                     >
-                        <!-- Court Cover Image (Clickable for court gallery preview) -->
+                        <!-- Court Cover Image -->
                         <div
-                            @click="openCourtGallery(c)"
-                            class="relative aspect-[16/10] overflow-hidden bg-surface-inverse cursor-pointer"
+                            class="relative aspect-[16/10] overflow-hidden bg-surface-inverse"
                         >
                             <img
-                                :src="c.primary_image_url || '/images/court_pickleball.png'"
+                                :src="
+                                    c.primary_image_url ||
+                                    '/images/court_pickleball.png'
+                                "
                                 :alt="c.name"
-                                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                class="h-full w-full object-cover"
                             />
-                            <div class="absolute inset-0 bg-gradient-to-t from-surface-inverse/80 via-transparent to-transparent" />
+                            <div
+                                class="absolute inset-0 bg-gradient-to-t from-surface-inverse/80 via-transparent to-transparent"
+                            />
 
-                            <span class="absolute top-4 left-4 rounded-full bg-surface/85 backdrop-blur-md px-3 py-1 text-xs font-bold text-content uppercase tracking-wider border border-line">
+                            <span
+                                class="absolute top-4 left-4 rounded-full border border-line bg-surface/85 px-3 py-1 text-xs font-bold tracking-wider text-content uppercase backdrop-blur-md"
+                            >
                                 {{ c.sport_type }}
                             </span>
 
-                            <div class="absolute right-4 bottom-4 left-4 flex items-center justify-between">
-                                <h3 class="font-display text-2xl font-black text-white">
+                            <div
+                                class="absolute right-4 bottom-4 left-4 flex items-center justify-between"
+                            >
+                                <h3
+                                    class="font-display text-2xl font-black text-white"
+                                >
                                     {{ c.name }}
                                 </h3>
-                                <div class="rounded-full bg-black/50 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100 backdrop-blur-sm">
-                                    <ZoomIn class="size-4" />
-                                </div>
                             </div>
                         </div>
 
                         <!-- Court Card Details -->
                         <div class="flex flex-1 flex-col justify-between p-6">
                             <div>
-                                <p v-if="c.description" class="line-clamp-2 text-sm text-content-muted leading-relaxed">
+                                <p
+                                    v-if="c.description"
+                                    class="line-clamp-2 text-sm leading-relaxed text-content-muted"
+                                >
                                     {{ c.description }}
                                 </p>
-                                <p v-else class="text-sm text-content-muted italic">
-                                    A friendly, well-kept court with good netting and evening lighting.
+                                <p
+                                    v-else
+                                    class="text-sm text-content-muted italic"
+                                >
+                                    A friendly, well-kept court with good
+                                    netting and evening lighting.
                                 </p>
                             </div>
 
-                            <div class="mt-6 flex items-center justify-between border-t border-line pt-4">
+                            <div
+                                class="mt-6 flex items-center justify-between border-t border-line pt-4"
+                            >
                                 <div>
-                                    <span class="block text-[10px] font-bold text-content-muted uppercase tracking-wider">Rate</span>
-                                    <span class="text-xl font-black text-brand">₱{{ c.base_price }}</span>
-                                    <span class="text-xs text-content-muted">/{{ c.slot_duration_minutes }}m</span>
+                                    <span class="text-xl font-black text-brand"
+                                        >₱{{ c.base_price }}</span
+                                    >
+                                    <span class="text-xs text-content-muted"
+                                        >/{{
+                                            formatDuration(
+                                                c.slot_duration_minutes,
+                                            )
+                                        }}</span
+                                    >
                                 </div>
 
                                 <button
                                     type="button"
-                                    @click="openBookingForCourt(c)"
-                                    class="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-xs font-bold text-brand-foreground shadow-md shadow-brand/10 transition-all hover:bg-brand/95 cursor-pointer"
+                                    @click.stop="openBookingForCourt(c)"
+                                    class="inline-flex cursor-pointer items-center gap-2 rounded-md bg-brand px-4 py-2.5 text-xs font-bold text-brand-foreground shadow-md shadow-brand/10 transition-all hover:bg-brand/95"
                                 >
                                     <CalendarCheck class="size-4" />
                                     <span>Book Court</span>
@@ -316,32 +421,50 @@ function openCourtGallery(court: PublicCourt) {
         </section>
 
         <!-- Court Images & Facility Gallery Section -->
-        <section v-if="courtImages && courtImages.length > 0" class="border-t border-line bg-surface-elevated/20 py-16 sm:py-24">
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <section
+            v-if="courtImages && courtImages.length > 0"
+            class="border-t border-line bg-surface-elevated/20 py-16 sm:py-24"
+        >
+            <div class="mx-auto max-w-7xl space-y-8 px-4 sm:px-6 lg:px-8">
+                <div
+                    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                >
                     <div>
-                        <span class="text-xs font-extrabold tracking-widest text-brand uppercase">Facility Gallery</span>
-                        <h2 class="mt-1 font-display text-2xl font-black tracking-tight text-content sm:text-3xl lg:text-4xl">
+                        <span
+                            class="text-xs font-extrabold tracking-widest text-brand uppercase"
+                            >Facility Gallery</span
+                        >
+                        <h2
+                            class="mt-1 font-display text-2xl font-black tracking-tight text-content sm:text-3xl lg:text-4xl"
+                        >
                             Court Areas &amp; Photos
                         </h2>
                     </div>
-                    <p class="text-xs font-bold text-content-muted">Click any photo to open full-screen preview</p>
+                    <p class="text-xs font-bold text-content-muted">
+                        Click any photo to open full-screen preview
+                    </p>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                <div
+                    class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4"
+                >
                     <div
                         v-for="(imgUrl, idx) in courtImages"
                         :key="idx"
                         @click="openImageViewer(idx)"
-                        class="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-surface-inverse shadow cursor-pointer"
+                        class="group relative aspect-[4/3] cursor-pointer overflow-hidden rounded-2xl border border-line bg-surface-inverse shadow"
                     >
                         <img
                             :src="imgUrl"
                             :alt="`${venue.name} Court Photo ${idx + 1}`"
                             class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                         />
-                        <div class="absolute inset-0 bg-surface-inverse/0 transition-colors group-hover:bg-surface-inverse/40 flex items-center justify-center">
-                            <div class="rounded-full bg-black/60 p-3 text-white opacity-0 transition-opacity group-hover:opacity-100 backdrop-blur-sm shadow-lg">
+                        <div
+                            class="absolute inset-0 flex items-center justify-center bg-surface-inverse/0 transition-colors group-hover:bg-surface-inverse/40"
+                        >
+                            <div
+                                class="rounded-full bg-black/60 p-3 text-white opacity-0 shadow-lg backdrop-blur-sm transition-opacity group-hover:opacity-100"
+                            >
                                 <ZoomIn class="size-5" />
                             </div>
                         </div>
@@ -357,15 +480,6 @@ function openCourtGallery(court: PublicCourt) {
             :initial-index="previewImageIndex"
             :title="venue.name"
             @close="isImageViewerOpen = false"
-        />
-
-        <!-- Fullscreen Court Gallery Preview Modal -->
-        <VenueImageViewer
-            :is-open="isCourtGalleryOpen"
-            :images="courtGalleryImages"
-            :initial-index="0"
-            :title="courtGalleryTitle"
-            @close="isCourtGalleryOpen = false"
         />
 
         <!-- Booking Modal Window -->

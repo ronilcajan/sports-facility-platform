@@ -292,7 +292,7 @@ const statusBadgeClass = computed(() => {
             <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm space-y-4">
                 <div class="flex items-center justify-between">
                     <h3 class="text-sm font-bold text-neutral-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                        <Building class="w-4 h-4 text-emerald-600" /> Assigned Venue
+                        <Building class="w-4 h-4 text-emerald-600" /> Assigned Location
                     </h3>
                     <span class="rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
                         Facility
@@ -323,7 +323,7 @@ const statusBadgeClass = computed(() => {
                 </div>
 
                 <div v-else class="py-4 text-xs text-neutral-400 italic">
-                    No venue assigned to this court yet.
+                    No location assigned to this court yet.
                 </div>
             </div>
 

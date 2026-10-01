@@ -146,7 +146,7 @@ const topCourt = computed(() => props.loyalty?.court_loyalty?.[0]);
                     </div>
                     <div class="text-left overflow-hidden">
                         <div class="flex items-center gap-1.5">
-                            <span class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Favorite Venue</span>
+                            <span class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Favorite Location</span>
                             <span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-extrabold">{{ topCourt.loyalty_level }}</span>
                         </div>
                         <p class="text-xs font-bold text-white truncate">{{ topCourt.court_name }}</p>

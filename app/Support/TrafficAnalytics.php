@@ -28,7 +28,7 @@ class TrafficAnalytics
         'home' => ['name' => 'Home / Facilities Directory', 'category' => 'Main Directory'],
         'site.courts' => ['name' => 'Courts Listing', 'category' => 'Directory'],
         'site.courts.show' => ['name' => 'Court Profile & Hourly Rates', 'category' => 'Court Detail'],
-        'site.venues.show' => ['name' => 'Venue Profile & Courts', 'category' => 'Venue Profile'],
+        'site.venues.show' => ['name' => 'Location Profile & Courts', 'category' => 'Location Profile'],
         'site.about' => ['name' => 'About', 'category' => 'Informational'],
         'site.gallery' => ['name' => 'Gallery', 'category' => 'Informational'],
         'site.privacy' => ['name' => 'Privacy Policy', 'category' => 'Legal'],

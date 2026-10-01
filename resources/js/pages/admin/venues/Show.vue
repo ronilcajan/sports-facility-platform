@@ -95,8 +95,8 @@ const showVenueImageModal = ref(false);
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Venues', href: '/admin/venues' },
-            { title: 'Venue Profile' },
+            { title: 'Locations', href: '/admin/venues' },
+            { title: 'Location Profile' },
         ],
     },
 });
@@ -185,7 +185,7 @@ const totalBookings = computed(() => props.bookings.data.length);
     <div class="p-6 space-y-8 w-full">
         <!-- Back link -->
         <Link href="/admin/venues" class="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-emerald-600 transition-colors">
-            <ArrowLeft class="w-3.5 h-3.5" /> Back to Venues
+            <ArrowLeft class="w-3.5 h-3.5" /> Back to Locations
         </Link>
 
         <!-- Venue Header Card -->
@@ -282,7 +282,7 @@ const totalBookings = computed(() => props.bookings.data.length);
         <section class="space-y-4">
             <div>
                 <h2 class="text-lg font-bold text-neutral-900 dark:text-white">Courts</h2>
-                <p class="text-xs text-neutral-500">All courts registered under this venue.</p>
+                <p class="text-xs text-neutral-500">All courts registered under this location.</p>
             </div>
 
             <div
@@ -337,7 +337,7 @@ const totalBookings = computed(() => props.bookings.data.length);
                 v-else
                 class="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 py-12 text-center text-sm text-neutral-500"
             >
-                No courts have been added to this venue yet.
+                No courts have been added to this location yet.
             </div>
         </section>
 
@@ -512,7 +512,7 @@ const totalBookings = computed(() => props.bookings.data.length);
                         </tr>
 
                         <tr v-if="bookings.data.length === 0">
-                            <td colspan="9" class="py-8 text-center text-xs text-neutral-400">No bookings found for this venue.</td>
+                            <td colspan="9" class="py-8 text-center text-xs text-neutral-400">No bookings found for this location.</td>
                         </tr>
                     </tbody>
                 </table>

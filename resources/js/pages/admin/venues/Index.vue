@@ -37,7 +37,7 @@ const props = defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Venues', href: '/admin/venues' },
+            { title: 'Locations', href: '/admin/venues' },
         ],
     },
 });
@@ -201,20 +201,20 @@ function destroy(venue: Venue): void {
 </script>
 
 <template>
-    <Head title="Venues Management" />
+    <Head title="Locations Management" />
 
     <div class="p-6 space-y-6 w-full">
         <!-- Header -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Venues</h1>
-                <p class="text-xs text-neutral-500">Manage your sports facility venues.</p>
+                <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Locations</h1>
+                <p class="text-xs text-neutral-500">Manage your sports facility locations.</p>
             </div>
             <button
                 @click="openCreateModal"
                 class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow transition-colors hover:bg-emerald-700"
             >
-                <Plus class="w-4 h-4" /> Add Venue
+                <Plus class="w-4 h-4" /> Add Location
             </button>
         </div>
 
@@ -226,7 +226,7 @@ function destroy(venue: Venue): void {
                     v-model="search"
                     @keyup.enter="applyFilters"
                     type="text"
-                    placeholder="Search venue name or address..."
+                    placeholder="Search location name or address..."
                     class="w-full pl-9 pr-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
                 />
             </div>
@@ -284,7 +284,7 @@ function destroy(venue: Venue): void {
                         <button
                             @click.prevent.stop="openEditModal(venue)"
                             class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-emerald-600 dark:hover:bg-neutral-800 dark:hover:text-emerald-400"
-                            title="Edit venue"
+                            title="Edit location"
                         >
                             <Pencil class="h-3.5 w-3.5" />
                         </button>
@@ -292,7 +292,7 @@ function destroy(venue: Venue): void {
                             v-if="canDelete"
                             @click.prevent.stop="destroy(venue)"
                             class="rounded-lg p-2 text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
-                            title="Delete venue"
+                            title="Delete location"
                         >
                             <Trash2 class="h-3.5 w-3.5" />
                         </button>
@@ -305,7 +305,7 @@ function destroy(venue: Venue): void {
             v-else
             class="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 py-16 text-center text-sm text-neutral-500"
         >
-            No venues yet. Add your first venue to get started.
+            No locations yet. Add your first location to get started.
         </div>
     </div>
 
@@ -319,8 +319,8 @@ function destroy(venue: Venue): void {
             <div class="w-full max-w-lg rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-5">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Add New Venue</h2>
-                        <p class="text-xs text-neutral-500">Create a new sports facility venue location.</p>
+                        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Add New Location</h2>
+                        <p class="text-xs text-neutral-500">Create a new sports facility location location.</p>
                     </div>
                     <button @click="showCreateModal = false" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
                         <X class="h-5 w-5" />
@@ -329,7 +329,7 @@ function destroy(venue: Venue): void {
 
                 <form @submit.prevent="submitCreate" class="space-y-4">
                     <div class="space-y-2">
-                        <Label for="create-venue-name">Venue Name *</Label>
+                        <Label for="create-venue-name">Location Name *</Label>
                         <Input id="create-venue-name" v-model="createForm.name" type="text" placeholder="e.g. Metro Sports Center" required />
                         <InputError :message="createForm.errors.name" />
                     </div>
@@ -360,14 +360,14 @@ function destroy(venue: Venue): void {
                         </div>
                         <div class="space-y-2">
                             <Label for="create-venue-email">Email</Label>
-                            <Input id="create-venue-email" v-model="createForm.email" type="email" placeholder="contact@venue.com" />
+                            <Input id="create-venue-email" v-model="createForm.email" type="email" placeholder="contact@location.com" />
                             <InputError :message="createForm.errors.email" />
                         </div>
                     </div>
 
                     <!-- Venue Cover Photo Upload -->
                     <div class="space-y-3 rounded-xl border border-input p-3">
-                        <Label class="text-xs font-semibold">Venue Cover Photo</Label>
+                        <Label class="text-xs font-semibold">Location Cover Photo</Label>
                         <div class="flex items-center gap-3">
                             <div v-if="createImagePreview" class="relative">
                                 <img :src="createImagePreview" alt="Preview" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
@@ -387,7 +387,7 @@ function destroy(venue: Venue): void {
                             type="checkbox"
                             class="rounded border-input text-primary focus:ring-primary"
                         />
-                        <Label for="create-venue-active" class="cursor-pointer">Venue is active and open for booking</Label>
+                        <Label for="create-venue-active" class="cursor-pointer">Location is active and open for booking</Label>
                     </div>
 
                     <div class="flex justify-end gap-3 pt-3">
@@ -411,8 +411,8 @@ function destroy(venue: Venue): void {
             <div class="w-full max-w-lg rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-5">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Edit Venue</h2>
-                        <p class="text-xs text-neutral-500">Update venue location and contact information.</p>
+                        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">Edit Location</h2>
+                        <p class="text-xs text-neutral-500">Update location location and contact information.</p>
                     </div>
                     <button @click="showEditModal = false" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
                         <X class="h-5 w-5" />
@@ -421,7 +421,7 @@ function destroy(venue: Venue): void {
 
                 <form @submit.prevent="submitEdit" class="space-y-4">
                     <div class="space-y-2">
-                        <Label for="edit-venue-name">Venue Name *</Label>
+                        <Label for="edit-venue-name">Location Name *</Label>
                         <Input id="edit-venue-name" v-model="editForm.name" type="text" required />
                         <InputError :message="editForm.errors.name" />
                     </div>
@@ -458,7 +458,7 @@ function destroy(venue: Venue): void {
 
                     <!-- Venue Cover Photo Upload -->
                     <div class="space-y-3 rounded-xl border border-input p-3">
-                        <Label class="text-xs font-semibold">Venue Cover Photo</Label>
+                        <Label class="text-xs font-semibold">Location Cover Photo</Label>
                         <div class="flex items-center gap-3">
                             <div v-if="editImagePreview" class="relative">
                                 <img :src="editImagePreview" alt="Preview" class="h-16 w-24 rounded-lg object-cover border border-input shadow-sm" />
@@ -497,7 +497,7 @@ function destroy(venue: Venue): void {
                             type="checkbox"
                             class="rounded border-input text-primary focus:ring-primary"
                         />
-                        <Label for="edit-venue-active" class="cursor-pointer">Venue is active and open for booking</Label>
+                        <Label for="edit-venue-active" class="cursor-pointer">Location is active and open for booking</Label>
                     </div>
 
                     <div class="flex justify-end gap-3 pt-3">

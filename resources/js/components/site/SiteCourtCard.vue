@@ -1,34 +1,37 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { ZoomIn } from '@lucide/vue';
+import { Link, router } from '@inertiajs/vue3';
 import { show as showCourt } from '@/routes/site/courts';
 import type { PublicCourt } from '@/types';
+import { formatDuration } from '@/utils/timeSlots';
 
-defineProps<{ court: PublicCourt }>();
+const props = defineProps<{ court: PublicCourt }>();
 defineEmits<{
     (e: 'book', court: PublicCourt): void;
-    (e: 'gallery', court: PublicCourt): void;
 }>();
+
+function openCourt(): void {
+    router.visit(showCourt.url(props.court.slug));
+}
 </script>
 
 <template>
     <article
-        class="group flex flex-col overflow-hidden rounded-[var(--site-radius,1rem)] border border-line bg-surface-elevated shadow-md transition-all duration-300 hover:-translate-y-2 hover:border-brand/40 hover:shadow-xl"
+        class="group flex cursor-pointer flex-col overflow-hidden rounded-[var(--site-radius,1rem)] border border-line bg-surface-elevated shadow-md hover:border-brand/40 hover:shadow-xl"
+        role="link"
+        tabindex="0"
+        @click="openCourt"
+        @keydown.enter="openCourt"
+        @keydown.space.prevent="openCourt"
     >
         <!-- Court Visual Container -->
         <div class="relative aspect-[16/10] overflow-hidden bg-surface-inverse">
-            <!-- Court Image (Clickable for gallery) -->
-            <div
-                class="absolute inset-0 cursor-pointer"
-                @click.stop="$emit('gallery', court)"
-            >
-                <img
-                    :src="court.primary_image_url || '/images/court_pickleball.png'"
-                    :alt="court.name"
-                    class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy"
-                />
-            </div>
+            <!-- Court Image -->
+            <img
+                :src="court.primary_image_url || '/images/court_pickleball.png'"
+                :alt="court.name"
+                class="h-full w-full object-cover"
+                loading="lazy"
+            />
             <!-- Dark Overlay for visual hierarchy -->
             <div
                 class="absolute inset-0 bg-gradient-to-t from-surface-inverse/85 via-surface-inverse/20 to-transparent"
@@ -45,14 +48,14 @@ defineEmits<{
             <span
                 class="absolute top-4 right-4 flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-bold text-white shadow backdrop-blur-md"
             >
-                <span class="size-2 animate-ping rounded-full bg-white"></span>
+                <span class="size-2 rounded-full bg-white"></span>
                 <span>Active</span>
             </span>
 
             <!-- Bottom Floating Title -->
             <div class="absolute right-4 bottom-4 left-4">
                 <p
-                    class="text-xs font-bold tracking-wider text-brand uppercase truncate"
+                    class="truncate text-xs font-bold tracking-wider text-brand uppercase"
                 >
                     {{ court.venue ? court.venue.name : 'Main Facility' }}
                 </p>
@@ -61,19 +64,11 @@ defineEmits<{
                 >
                     <Link
                         :href="showCourt.url(court.slug)"
-                        class="transition-colors hover:text-brand"
+                        class="hover:text-brand"
                     >
                         {{ court.name }}
                     </Link>
                 </h3>
-            </div>
-
-            <!-- Gallery preview icon -->
-            <div
-                class="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100 backdrop-blur-sm cursor-pointer z-10"
-                @click.stop="$emit('gallery', court)"
-            >
-                <ZoomIn class="size-4" />
             </div>
         </div>
 
@@ -93,23 +88,22 @@ defineEmits<{
                 class="mt-6 flex items-center justify-between border-t border-line pt-4"
             >
                 <div>
-                    <span
-                        class="block text-sm text-[10px] font-semibold tracking-wider text-content-muted uppercase"
-                        >Hourly Rate</span
-                    >
                     <div class="flex items-baseline gap-1">
                         <span class="text-2xl font-black text-content"
                             >₱{{ court.base_price }}</span
                         >
                         <span class="text-xs text-content-muted"
-                            >/ {{ court.slot_duration_minutes }} min</span
+                            >/
+                            {{
+                                formatDuration(court.slot_duration_minutes)
+                            }}</span
                         >
                     </div>
                 </div>
                 <button
                     type="button"
-                    @click="$emit('book', court)"
-                    class="inline-flex items-center justify-center rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-md shadow-brand/10 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:bg-brand/95 group-hover:shadow-brand/20"
+                    @click.stop="$emit('book', court)"
+                    class="inline-flex items-center justify-center rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-brand-foreground shadow-md shadow-brand/10 hover:bg-brand/95 hover:shadow-brand/20"
                 >
                     Book Now
                 </button>

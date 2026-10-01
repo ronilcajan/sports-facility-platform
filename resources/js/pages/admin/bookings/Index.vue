@@ -19,6 +19,7 @@ interface Booking {
     receipt_url?: string | null;
     status: string;
     notes?: string;
+    admin_notes?: string | null;
     court?: { id: number; name: string };
     user?: { id: number; name: string };
 }
@@ -83,6 +84,7 @@ function openBookingDetails(booking: any) {
         receipt_url: booking.receipt_url || (booking.receipt_path ? `/storage/${booking.receipt_path}` : null),
         status: booking.status,
         notes: booking.notes,
+        admin_notes: booking.admin_notes,
         court_name: booking.court?.name || 'Assigned Court',
     };
     selectedBookingForModal.value = detail;
@@ -225,7 +227,7 @@ function deleteBooking(bookingId: number) {
                     </div>
 
                     <select v-if="showVenueFilter" v-model="venue_id" @change="applyFilters" class="w-full px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
-                        <option value="">All Venues</option>
+                        <option value="">All Locations</option>
                         <option v-for="v in venues || []" :key="v.id" :value="v.id">{{ v.name }}</option>
                     </select>
 

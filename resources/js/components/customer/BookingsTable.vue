@@ -2,7 +2,7 @@
 import { Link, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import { FileText, Dumbbell, Edit2, AlertCircle, Calendar } from '@lucide/vue';
-import { getMergedTimeSlots } from '@/utils/timeSlots';
+import { formatSlotRange, getMergedTimeSlots } from '@/utils/timeSlots';
 import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
 export interface CourtItem {
@@ -10,6 +10,7 @@ export interface CourtItem {
     name: string;
     sport_type: string;
     base_price?: string | number;
+    slot_duration_minutes?: number | null;
 }
 
 export interface BookingItem {
@@ -98,7 +99,7 @@ async function fetchAvailability() {
 
 function openEditModal(booking: BookingItem) {
     selectedBooking.value = booking;
-    editForm.court_id = booking.court?.id || (props.courts?.[0]?.id ?? null);
+    editForm.court_id = booking.court?.id ?? null;
     editForm.name = booking.name;
     editForm.email = booking.email;
     editForm.phone = booking.phone;
@@ -411,7 +412,7 @@ function cancelBooking(bookingId: number) {
                                         'bg-white text-neutral-700 border-neutral-200 hover:border-emerald-500 dark:bg-neutral-800 dark:text-neutral-200 dark:border-neutral-700': !isSlotBooked(slot) && !editForm.time.includes(slot)
                                     }"
                                 >
-                                    <span>{{ slot }}</span>
+                                    <span>{{ formatSlotRange(slot, selectedCourt?.slot_duration_minutes || 60) }}</span>
                                     <span v-if="isSlotBooked(slot)" class="text-[8px] no-underline uppercase tracking-tight text-rose-500">Booked</span>
                                     <span v-else-if="editForm.time.includes(slot)" class="text-[8px] uppercase tracking-tight text-emerald-200">Selected</span>
                                 </button>

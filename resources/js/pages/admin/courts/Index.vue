@@ -274,7 +274,7 @@ function destroy(court: Court): void {
                     <input
                         v-model="searchQuery"
                         type="text"
-                        placeholder="Search by court name or assigned venue..."
+                        placeholder="Search by court name or assigned location..."
                         class="w-full pl-9 pr-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     />
                 </div>
@@ -453,7 +453,7 @@ function destroy(court: Court): void {
                     </div>
 
                     <div v-if="venues && venues.length > 0" class="space-y-2">
-                        <Label for="create-court-venue">Assigned Venue *</Label>
+                        <Label for="create-court-venue">Assigned Location *</Label>
                         <select
                             id="create-court-venue"
                             v-model="createForm.venue_id"
@@ -464,7 +464,7 @@ function destroy(court: Court): void {
                                 {{ v.name }}
                             </option>
                         </select>
-                        <p class="text-xs text-muted-foreground">Courts only appear on the public website through their venue.</p>
+                        <p class="text-xs text-muted-foreground">Courts only appear on the public website through their location.</p>
                         <InputError :message="createForm.errors.venue_id" />
                     </div>
 

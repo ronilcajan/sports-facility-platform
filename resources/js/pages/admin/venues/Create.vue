@@ -11,8 +11,8 @@ import { Input } from '@/components/ui/input';
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Venues', href: '/admin/venues' },
-            { title: 'Add Venue', href: '/admin/venues/create' },
+            { title: 'Locations', href: '/admin/venues' },
+            { title: 'Add Location', href: '/admin/venues/create' },
         ],
     },
 });
@@ -67,18 +67,18 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Head title="Add Venue" />
+    <Head title="Add Location" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
             variant="small"
-            title="Add Venue"
+            title="Add Location"
             description="Create a new sports facility venue."
         />
 
         <form @submit.prevent="submit" class="max-w-2xl space-y-6">
             <div class="space-y-2">
-                <Label for="name">Venue Name *</Label>
+                <Label for="name">Location Name *</Label>
                 <Input id="name" v-model="form.name" type="text" required />
                 <InputError :message="form.errors.name" />
             </div>
@@ -116,8 +116,8 @@ onUnmounted(() => {
             <!-- Venue Cover Photo Upload -->
             <div class="space-y-3 rounded-xl border border-input p-4">
                 <div>
-                    <h3 class="text-sm font-semibold">Venue Cover Photo</h3>
-                    <p class="text-xs text-muted-foreground">Upload a hero cover photo for this venue (JPG, PNG, WEBP max 5MB).</p>
+                    <h3 class="text-sm font-semibold">Location Cover Photo</h3>
+                    <p class="text-xs text-muted-foreground">Upload a hero cover photo for this location (JPG, PNG, WEBP max 5MB).</p>
                 </div>
 
                 <div class="flex items-center gap-4 flex-wrap">

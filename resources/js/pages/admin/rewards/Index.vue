@@ -328,7 +328,7 @@ function executeDelete() {
                             <th class="py-3.5 px-4">Category</th>
                             <th class="py-3.5 px-4">Points Cost</th>
                             <th class="py-3.5 px-4">Stock</th>
-                            <th class="py-3.5 px-4">Target Venue</th>
+                            <th class="py-3.5 px-4">Target Location</th>
                             <th class="py-3.5 px-4">Claimed</th>
                             <th class="py-3.5 px-4">Status</th>
                             <th class="py-3.5 px-4 text-right">Actions</th>
@@ -378,7 +378,7 @@ function executeDelete() {
                                 <span v-if="reward.venue" class="flex items-center gap-1">
                                     <Building class="w-3.5 h-3.5" /> {{ reward.venue.name }}
                                 </span>
-                                <span v-else class="text-neutral-400 font-semibold">Universal (All Venues)</span>
+                                <span v-else class="text-neutral-400 font-semibold">Universal (All Locations)</span>
                             </td>
 
                             <td class="py-3.5 px-4 font-bold text-neutral-900 dark:text-white">
@@ -534,13 +534,13 @@ function executeDelete() {
 
                     <!-- Venue Scope -->
                     <div v-if="venues.length > 1" class="space-y-1.5">
-                        <Label for="create-venue">Target Venue Scope</Label>
+                        <Label for="create-venue">Target Location Scope</Label>
                         <select
                             id="create-venue"
                             v-model="createForm.venue_id"
                             class="w-full text-xs rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 px-3.5 py-2 text-neutral-900 dark:text-white focus:outline-none"
                         >
-                            <option :value="null">Universal (All Venues)</option>
+                            <option :value="null">Universal (All Locations)</option>
                             <option v-for="v in venues" :key="v.id" :value="v.id">{{ v.name }}</option>
                         </select>
                     </div>
@@ -658,13 +658,13 @@ function executeDelete() {
 
                     <!-- Venue Scope -->
                     <div v-if="venues.length > 1" class="space-y-1.5">
-                        <Label for="edit-venue">Target Venue Scope</Label>
+                        <Label for="edit-venue">Target Location Scope</Label>
                         <select
                             id="edit-venue"
                             v-model="editForm.venue_id"
                             class="w-full text-xs rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 px-3.5 py-2 text-neutral-900 dark:text-white focus:outline-none"
                         >
-                            <option :value="null">Universal (All Venues)</option>
+                            <option :value="null">Universal (All Locations)</option>
                             <option v-for="v in venues" :key="v.id" :value="v.id">{{ v.name }}</option>
                         </select>
                     </div>

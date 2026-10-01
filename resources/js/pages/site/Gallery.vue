@@ -63,7 +63,7 @@ const lightboxUrl = ref<string | null>(null);
         >
             <p class="text-lg font-bold text-content">No photos yet</p>
             <p class="mt-1 text-sm text-content-muted">
-                Court photos will appear here as venues add them.
+                Court photos will appear here as locations add them.
             </p>
         </div>
     </div>

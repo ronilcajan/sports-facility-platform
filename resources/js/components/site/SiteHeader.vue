@@ -12,6 +12,25 @@ const isAuthed = computed(() => Boolean(page.props.auth?.user));
 
 const open = ref(false);
 
+function isCurrentPage(href: string): boolean {
+    const currentPath = page.url.split('?')[0];
+
+    if (href === '/') {
+        return currentPath === '/';
+    }
+
+    if (
+        href === '/locations' &&
+        (currentPath === '/courts' ||
+            currentPath.startsWith('/courts/') ||
+            currentPath.startsWith('/venues/'))
+    ) {
+        return true;
+    }
+
+    return currentPath === href || currentPath.startsWith(`${href}/`);
+}
+
 // ── Site visitor dark-mode toggle ──────────────────────────────────────────
 // Separate from the dashboard's "appearance" preference. Stored in localStorage
 // as 'site-dark-mode' and reflected as the .site-dark class on <html>.
@@ -30,25 +49,30 @@ function toggleSiteDark() {
 
 <template>
     <header
-        class="sticky top-0 z-50 border-b border-line bg-surface/90 text-content backdrop-blur-md transition-all duration-300"
+        class="sticky top-0 z-50 border-b border-line bg-surface/92 text-content backdrop-blur-xl transition-all duration-300"
     >
         <div
-            class="mx-auto flex h-20 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6"
+            class="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6"
         >
             <!-- Logo Section -->
             <Link
                 :href="'/'"
-                class="shrink-0 transition-opacity hover:opacity-90"
+                class="shrink-0 origin-left scale-90 transition-opacity hover:opacity-90"
                 aria-label="Home"
             >
                 <SiteWordmark />
             </Link>
 
             <!-- Desktop Navigation Section -->
-            <nav class="hidden items-center gap-8 md:flex" aria-label="Primary">
+            <nav class="hidden items-center gap-1 md:flex" aria-label="Primary">
                 <Link
                     :href="'/'"
-                    class="text-sm font-semibold text-content-muted transition-colors hover:text-brand"
+                    class="rounded-md px-3 py-1.5 text-xs font-bold transition-all"
+                    :class="
+                        isCurrentPage('/')
+                            ? 'bg-brand text-brand-foreground shadow-sm'
+                            : 'text-content-muted hover:bg-brand/10 hover:text-content'
+                    "
                 >
                     Home
                 </Link>
@@ -56,18 +80,23 @@ function toggleSiteDark() {
                     v-for="item in site.nav"
                     :key="item.href"
                     :href="item.href"
-                    class="text-sm font-semibold text-content-muted transition-colors hover:text-brand"
+                    class="rounded-md px-3 py-1.5 text-xs font-bold transition-all"
+                    :class="
+                        isCurrentPage(item.href)
+                            ? 'bg-brand text-brand-foreground shadow-sm'
+                            : 'text-content-muted hover:bg-brand/10 hover:text-content'
+                    "
                 >
                     {{ item.label }}
                 </Link>
             </nav>
 
             <!-- Desktop Right Actions -->
-            <div class="hidden items-center gap-6 md:flex">
+            <div class="hidden items-center gap-3 md:flex">
                 <template v-if="isAuthed">
                     <Link
                         :href="'/dashboard'"
-                        class="text-sm font-semibold text-content transition-colors hover:text-brand"
+                        class="text-xs font-semibold text-content transition-colors hover:text-brand"
                     >
                         Dashboard
                     </Link>
@@ -75,14 +104,14 @@ function toggleSiteDark() {
                 <template v-else>
                     <Link
                         :href="login()"
-                        class="text-sm font-semibold text-content-muted transition-colors hover:text-brand"
+                        class="text-xs font-semibold text-content-muted transition-colors hover:text-brand"
                     >
                         Log In
                     </Link>
-                    <span class="h-4 w-px bg-line"></span>
+                    <span class="h-3 w-px bg-line"></span>
                     <Link
                         :href="register()"
-                        class="text-sm font-semibold text-content-muted transition-colors hover:text-brand"
+                        class="text-xs font-semibold text-content-muted transition-colors hover:text-brand"
                     >
                         Register
                     </Link>
@@ -91,25 +120,57 @@ function toggleSiteDark() {
                 <!-- Dark Mode Toggle -->
                 <button
                     type="button"
-                    :title="siteDark ? 'Switch to light mode' : 'Switch to dark mode'"
-                    :aria-label="siteDark ? 'Switch to light mode' : 'Switch to dark mode'"
-                    class="inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface-elevated/60 text-content-muted transition-all duration-200 hover:bg-surface-elevated hover:text-content hover:scale-110"
+                    :title="
+                        siteDark
+                            ? 'Switch to dark mode'
+                            : 'Switch to light mode'
+                    "
+                    :aria-label="
+                        siteDark
+                            ? 'Switch to dark mode'
+                            : 'Switch to light mode'
+                    "
+                    class="inline-flex size-8 items-center justify-center rounded-md border border-line bg-white/4 text-content-muted transition-all duration-200 hover:bg-white/8 hover:text-content"
                     @click="toggleSiteDark"
                 >
                     <!-- Sun icon (shown in dark mode — click to go light) -->
-                    <svg v-if="siteDark" xmlns="http://www.w3.org/2000/svg" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="5"/>
-                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    <svg
+                        v-if="siteDark"
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="size-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <circle cx="12" cy="12" r="5" />
+                        <path
+                            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+                        />
                     </svg>
                     <!-- Moon icon (shown in light mode — click to go dark) -->
-                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    <svg
+                        v-else
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="size-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path
+                            d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                        />
                     </svg>
                 </button>
 
                 <Link
                     :href="courts()"
-                    class="relative inline-flex items-center justify-center rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground shadow-lg shadow-brand/20 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-brand/35"
+                    class="relative inline-flex items-center justify-center rounded-md bg-brand px-3.5 py-2 text-xs font-extrabold text-brand-foreground shadow-lg shadow-brand/15 transition-all duration-300 hover:-translate-y-0.5"
                 >
                     Book a Court Now
                 </Link>
@@ -154,7 +215,12 @@ function toggleSiteDark() {
                 <nav class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6">
                     <Link
                         :href="'/'"
-                        class="rounded-xl px-4 py-3 text-base font-semibold text-content-muted transition-colors hover:bg-brand/10 hover:text-brand"
+                        class="rounded-xl px-4 py-3 text-base font-bold transition-colors"
+                        :class="
+                            isCurrentPage('/')
+                                ? 'bg-surface-inverse text-content-inverse'
+                                : 'text-content-muted hover:bg-brand/10 hover:text-brand'
+                        "
                         @click="open = false"
                     >
                         Home
@@ -163,7 +229,12 @@ function toggleSiteDark() {
                         v-for="item in site.nav"
                         :key="item.href"
                         :href="item.href"
-                        class="rounded-xl px-4 py-3 text-base font-semibold text-content-muted transition-colors hover:bg-brand/10 hover:text-brand"
+                        class="rounded-xl px-4 py-3 text-base font-bold transition-colors"
+                        :class="
+                            isCurrentPage(item.href)
+                                ? 'bg-surface-inverse text-content-inverse'
+                                : 'text-content-muted hover:bg-brand/10 hover:text-brand'
+                        "
                         @click="open = false"
                     >
                         {{ item.label }}
@@ -177,12 +248,36 @@ function toggleSiteDark() {
                         class="flex items-center gap-3 rounded-xl px-4 py-3 text-base font-semibold text-content-muted transition-colors hover:bg-brand/10 hover:text-brand"
                         @click="toggleSiteDark"
                     >
-                        <svg v-if="siteDark" xmlns="http://www.w3.org/2000/svg" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="5"/>
-                            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                        <svg
+                            v-if="siteDark"
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="size-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <circle cx="12" cy="12" r="5" />
+                            <path
+                                d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+                            />
                         </svg>
-                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        <svg
+                            v-else
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="size-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path
+                                d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                            />
                         </svg>
                         {{ siteDark ? 'Light Mode' : 'Dark Mode' }}
                     </button>
@@ -217,7 +312,7 @@ function toggleSiteDark() {
                         </template>
                         <Link
                             :href="courts()"
-                            class="rounded-full bg-brand py-3.5 text-center text-base font-bold text-brand-foreground shadow-lg shadow-brand/15 transition-colors hover:bg-brand/90"
+                            class="rounded-md bg-brand py-3 text-center text-sm font-bold text-brand-foreground shadow-lg shadow-brand/15 transition-colors hover:bg-brand/90"
                             @click="open = false"
                         >
                             Book a Court Now

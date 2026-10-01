@@ -220,13 +220,13 @@ function getExistingImageUrl(): string | null {
                         </div>
 
                         <div v-if="venues && venues.length > 0" class="space-y-2">
-                            <Label for="edit-court-modal-venue">Assigned Facility / Venue</Label>
+                            <Label for="edit-court-modal-venue">Assigned Facility / Location</Label>
                             <select
                                 id="edit-court-modal-venue"
                                 v-model="editForm.venue_id"
                                 class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-3 py-2 text-xs font-bold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                             >
-                                <option value="">No Venue Assigned</option>
+                                <option value="">No Location Assigned</option>
                                 <option v-for="v in venues" :key="v.id" :value="v.id">
                                     {{ v.name }}
                                 </option>

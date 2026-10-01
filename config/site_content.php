@@ -14,7 +14,7 @@
 return [
     'home' => [
         'hero' => [
-            'eyebrow' => 'Oroquieta City · Open play daily',
+            'eyebrow' => 'Oroquieta City',
             'title' => 'Find your court. Play your game.',
             'subtitle' => 'Welcoming pickleball courts, easy real-time booking, and open play from morning to midnight. Whether it\'s your first game or your five-hundredth, come have fun — no membership needed.',
             'primary_cta' => 'Book a court',
@@ -99,7 +99,7 @@ return [
 
     'gallery' => [
         'title' => 'A look around our courts',
-        'lede' => 'Snapshots of our venues and courts — come see where you\'ll play.',
+        'lede' => 'Snapshots of our locations and courts — come see where you\'ll play.',
         'items' => [
             ['label' => 'Center court', 'tone' => 'court'],
             ['label' => 'Evening lights', 'tone' => 'ink'],

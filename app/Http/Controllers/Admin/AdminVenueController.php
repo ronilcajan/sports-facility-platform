@@ -186,7 +186,7 @@ class AdminVenueController extends Controller
         Venue::create($validated);
 
         return redirect()->route('admin.venues.index')
-            ->with('success', 'Venue created successfully.');
+            ->with('success', 'Location created successfully.');
     }
 
     /**
@@ -255,7 +255,7 @@ class AdminVenueController extends Controller
         $venue->update($validated);
 
         return redirect()->route('admin.venues.index')
-            ->with('success', 'Venue updated successfully.');
+            ->with('success', 'Location updated successfully.');
     }
 
     /**
@@ -271,7 +271,7 @@ class AdminVenueController extends Controller
 
         $venue->forceFill(['image_path' => null])->save();
 
-        return back()->with('success', 'Venue cover photo removed successfully.');
+        return back()->with('success', 'Location cover photo removed successfully.');
     }
 
     /**
@@ -307,6 +307,6 @@ class AdminVenueController extends Controller
         $venue->delete();
 
         return redirect()->route('admin.venues.index')
-            ->with('success', 'Venue deleted successfully.');
+            ->with('success', 'Location deleted successfully.');
     }
 }

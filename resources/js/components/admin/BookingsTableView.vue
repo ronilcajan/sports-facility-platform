@@ -17,7 +17,7 @@ import {
     BarChart2,
     DollarSign,
 } from '@lucide/vue';
-import { getMergedTimeSlots, calculateBookingHours, formatHours } from '@/utils/timeSlots';
+import { formatSlotRange, getMergedTimeSlots } from '@/utils/timeSlots';
 
 interface CourtOption {
     id: number;
@@ -46,12 +46,11 @@ export interface TableBookingItem {
     phone: string;
     date: string;
     time_slots: string[];
-    total_hours?: number;
     total_price: string;
     status: string;
     receipt_url?: string | null;
     notes?: string | null;
-    court?: { id: number; name: string; sport_type?: string } | null;
+    court?: { id: number; name: string; sport_type?: string; slot_duration_minutes?: number | null } | null;
     user?: { id: number; name: string } | null;
 }
 
@@ -145,19 +144,6 @@ function isReleased(statusStr: string): boolean {
     return releasedStatuses.includes(statusStr);
 }
 
-function toDateKey(d: Date): string {
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-}
-
-const todayDateString = computed(() => toDateKey(new Date()));
-
-function isPastDate(dateStr: string): boolean {
-    return dateStr < todayDateString.value;
-}
-
 /** A slot stays bookable unless something in it still holds the hour. */
 function cellIsOpen(dateStr: string, slot: string): boolean {
     return !bookingsForCell(dateStr, slot).some((b) => !isReleased(b.status));
@@ -215,16 +201,19 @@ function getTotalPriceForDate(dateStr: string): number {
         .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
 }
 
+/**
+ * Hours actually reserved on a date. A slot is not always an hour, so each booking
+ * is measured by its court's slot length rather than by counting slots.
+ */
 function getTotalHoursForDate(dateStr: string): number {
-    const list = getBookingsForDate(dateStr);
-    return list
-        .filter((b) => b.status === 'approved' || b.status === 'confirmed' || b.status === 'completed')
-        .reduce((sum, b) => {
-            if (b.total_hours !== undefined && b.total_hours !== null && !isNaN(Number(b.total_hours))) {
-                return sum + Number(b.total_hours);
-            }
-            return sum + calculateBookingHours(b.time_slots);
-        }, 0);
+    return getBookingsForDate(dateStr)
+        .filter((b) => b.status === 'approved' || b.status === 'confirmed')
+        .reduce((sum, b) => sum + (b.time_slots?.length || 0) * ((b.court?.slot_duration_minutes || 60) / 60), 0);
+}
+
+function formatHours(val: number): string {
+    const rounded = Math.round(val * 100) / 100;
+    return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}h`;
 }
 
 function formatPrice(val: number): string {
@@ -307,7 +296,7 @@ const grandTotals = computed(() => {
                         @change="applyFilters"
                         class="px-3 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-semibold text-neutral-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
                     >
-                        <option value="">All Venues</option>
+                        <option value="">All Locations</option>
                         <option v-for="v in venues" :key="v.id" :value="v.id">{{ v.name }}</option>
                     </select>
 
@@ -365,13 +354,13 @@ const grandTotals = computed(() => {
 
         <!-- Table View Grid Matrix -->
         <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm overflow-x-auto">
-            <table class="w-full text-left border-collapse min-w-[950px]">
+            <table class="w-full text-left border-collapse min-w-[900px]">
                 <thead>
                     <tr class="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/60 text-neutral-500">
                         <!-- First Column: Time Slots Header -->
-                        <th class="sticky left-0 z-20 bg-neutral-100 dark:bg-neutral-800 py-3.5 px-5 text-sm font-black uppercase tracking-wider text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-700 min-w-[160px]">
-                            <div class="flex items-center gap-2">
-                                <Clock class="size-5 text-emerald-600 shrink-0" />
+                        <th class="sticky left-0 z-20 bg-neutral-100 dark:bg-neutral-800 py-3.5 px-4 text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-700 min-w-[130px]">
+                            <div class="flex items-center gap-1.5">
+                                <Clock class="size-4 text-emerald-600" />
                                 <span>Time Slot</span>
                             </div>
                         </th>
@@ -400,8 +389,8 @@ const grandTotals = computed(() => {
                 <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800 text-xs">
                     <tr v-for="slot in timeSlots" :key="slot" class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
                         <!-- Sticky Time Slot Column -->
-                        <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-3.5 px-5 font-mono text-sm font-bold text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-800 whitespace-nowrap">
-                            {{ slot }}
+                        <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-3 px-4 font-mono font-bold text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-800 whitespace-nowrap">
+                            {{ formatSlotRange(slot, 60) }}
                         </td>
 
                         <!-- Cells for each date column -->
@@ -433,9 +422,9 @@ const grandTotals = computed(() => {
                                     </div>
                                 </div>
 
-                                <!-- Still bookable when nothing here holds the hour and date is not in the past -->
+                                <!-- Still bookable when nothing here holds the hour -->
                                 <div
-                                    v-if="cellIsOpen(d.dateStr, slot) && !isPastDate(d.dateStr)"
+                                    v-if="cellIsOpen(d.dateStr, slot)"
                                     @click="emit('create-booking', { date: d.dateStr, slot })"
                                     class="group w-full rounded-xl border border-dashed border-emerald-300/40 dark:border-emerald-800/40 bg-emerald-50/20 dark:bg-emerald-950/10 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 flex flex-col items-center justify-center cursor-pointer transition-all duration-150"
                                     :class="bookingsForCell(d.dateStr, slot).length ? 'py-1.5' : 'flex-1 p-2'"
@@ -445,17 +434,6 @@ const grandTotals = computed(() => {
                                     </span>
                                     <span class="hidden group-hover:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
                                         <Plus class="size-3" /> Book
-                                    </span>
-                                </div>
-                                <!-- Vacant slot on past dates: non-clickable, viewing past history only -->
-                                <div
-                                    v-else-if="cellIsOpen(d.dateStr, slot) && isPastDate(d.dateStr)"
-                                    class="w-full rounded-xl border border-dashed border-neutral-200/50 dark:border-neutral-800/40 bg-neutral-100/30 dark:bg-neutral-900/20 flex flex-col items-center justify-center select-none"
-                                    :class="bookingsForCell(d.dateStr, slot).length ? 'py-1.5' : 'flex-1 p-2'"
-                                    title="Past date: vacant slot not bookable"
-                                >
-                                    <span class="text-[9px] font-bold text-neutral-400 dark:text-neutral-500">
-                                        —
                                     </span>
                                 </div>
                             </div>
@@ -475,7 +453,7 @@ const grandTotals = computed(() => {
                         <span>Booking Status &amp; Daily Revenue Summary</span>
                     </h3>
                     <p class="text-xs text-neutral-500 mt-0.5">
-                        Breakdown of booking totals, statuses, daily total hours, and daily total revenue for each date in view.
+                        Breakdown of booking totals, statuses, and daily total revenue for each date in view.
                     </p>
                 </div>
 
@@ -493,22 +471,22 @@ const grandTotals = computed(() => {
                         <span class="size-2 rounded-full bg-rose-500" />
                         <span>Rejected: {{ grandTotals.rejected }}</span>
                     </div>
-                    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-sky-300 dark:border-sky-800 bg-sky-100/70 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 text-xs font-extrabold shadow-2xs">
-                        <Clock class="size-3.5 text-sky-600" />
-                        <span>Total Hours: {{ formatHours(grandTotals.hours) }}</span>
-                    </div>
                     <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-teal-300 dark:border-teal-800 bg-teal-100/70 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 text-xs font-extrabold shadow-2xs">
                         <span>Revenue: {{ formatPrice(grandTotals.revenue) }}</span>
+                    </div>
+                    <div class="inline-flex items-center gap-1.5 rounded-full bg-sky-100 dark:bg-sky-950/50 px-3 py-1 text-[11px] font-bold text-sky-700 dark:text-sky-300">
+                        <Clock class="size-3.5" />
+                        <span>Hours Booked: {{ formatHours(grandTotals.hours) }}</span>
                     </div>
                 </div>
             </div>
 
             <!-- Summary Table Matrix -->
             <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[950px]">
+                <table class="w-full text-left border-collapse min-w-[900px]">
                     <thead>
                         <tr class="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100/70 dark:bg-neutral-800/80 text-neutral-500">
-                            <th class="sticky left-0 z-20 bg-neutral-100 dark:bg-neutral-800 py-3 px-5 text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-700 min-w-[160px]">
+                            <th class="sticky left-0 z-20 bg-neutral-100 dark:bg-neutral-800 py-3 px-4 text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-700 min-w-[130px]">
                                 Summary Metric
                             </th>
                             <th
@@ -529,7 +507,7 @@ const grandTotals = computed(() => {
                     <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800 text-xs font-semibold">
                         <!-- Confirmed Row -->
                         <tr class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
-                            <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-2.5 px-5 text-emerald-700 dark:text-emerald-400 font-bold border-r border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
+                            <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-2.5 px-4 text-emerald-700 dark:text-emerald-400 font-bold border-r border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
                                 <span class="size-2.5 rounded-full bg-emerald-500" />
                                 Confirmed
                             </td>
@@ -542,7 +520,7 @@ const grandTotals = computed(() => {
 
                         <!-- Pending Row -->
                         <tr class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
-                            <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-2.5 px-5 text-amber-700 dark:text-amber-400 font-bold border-r border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
+                            <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-2.5 px-4 text-amber-700 dark:text-amber-400 font-bold border-r border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
                                 <span class="size-2.5 rounded-full bg-amber-500" />
                                 Pending
                             </td>
@@ -555,7 +533,7 @@ const grandTotals = computed(() => {
 
                         <!-- Rejected Row -->
                         <tr class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
-                            <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-2.5 px-5 text-rose-700 dark:text-rose-400 font-bold border-r border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
+                            <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-2.5 px-4 text-rose-700 dark:text-rose-400 font-bold border-r border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
                                 <span class="size-2.5 rounded-full bg-rose-500" />
                                 Rejected
                             </td>
@@ -568,7 +546,7 @@ const grandTotals = computed(() => {
 
                         <!-- Total Bookings Row -->
                         <tr class="bg-neutral-100/60 dark:bg-neutral-800/60 font-black">
-                            <td class="sticky left-0 z-10 bg-neutral-100 dark:bg-neutral-800 py-2.5 px-5 text-neutral-900 dark:text-white uppercase tracking-wider text-[11px] border-r border-neutral-200 dark:border-neutral-700">
+                            <td class="sticky left-0 z-10 bg-neutral-100 dark:bg-neutral-800 py-2.5 px-4 text-neutral-900 dark:text-white uppercase tracking-wider text-[11px] border-r border-neutral-200 dark:border-neutral-700">
                                 Total Bookings
                             </td>
                             <td v-for="d in tableDates" :key="`tot-${d.dateStr}`" class="py-2.5 px-3 text-center border-r border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white font-extrabold text-xs">
@@ -576,22 +554,20 @@ const grandTotals = computed(() => {
                             </td>
                         </tr>
 
-                        <!-- Daily Total Hours Row -->
-                        <tr class="bg-sky-50/70 dark:bg-sky-950/30 font-black border-t-2 border-sky-500/20">
-                            <td class="sticky left-0 z-10 bg-sky-100/80 dark:bg-sky-950/80 py-3 px-5 text-sky-900 dark:text-sky-300 uppercase tracking-wider text-[11px] border-r border-sky-200 dark:border-sky-800 flex items-center gap-1.5">
+                        <!-- Hours Booked Per Day Row -->
+                        <tr class="bg-sky-50/70 dark:bg-sky-950/30 font-black">
+                            <td class="sticky left-0 z-10 bg-sky-100/80 dark:bg-sky-950/80 py-2.5 px-4 text-sky-900 dark:text-sky-300 uppercase tracking-wider text-[11px] border-r border-sky-200 dark:border-sky-800 flex items-center gap-1.5">
                                 <Clock class="size-3.5 text-sky-600" />
-                                Daily Total Hours
+                                Hours Booked
                             </td>
-                            <td v-for="d in tableDates" :key="`hours-${d.dateStr}`" class="py-3 px-3 text-center border-r border-sky-200/60 dark:border-sky-900/40 text-sky-700 dark:text-sky-300 font-black text-xs">
-                                <span :class="getTotalHoursForDate(d.dateStr) > 0 ? 'text-sky-700 dark:text-sky-300 bg-sky-100 dark:bg-sky-900/60 px-2 py-0.5 rounded-full text-xs font-black' : 'text-neutral-400 font-semibold'">
-                                    {{ formatHours(getTotalHoursForDate(d.dateStr)) }}
-                                </span>
+                            <td v-for="d in tableDates" :key="`hours-${d.dateStr}`" class="py-2.5 px-3 text-center border-r border-sky-200/60 dark:border-sky-900/40 text-sky-700 dark:text-sky-300 font-black text-xs">
+                                {{ formatHours(getTotalHoursForDate(d.dateStr)) }}
                             </td>
                         </tr>
 
                         <!-- Total Daily Price / Revenue Row -->
                         <tr class="bg-emerald-50/70 dark:bg-emerald-950/30 font-black border-t-2 border-emerald-500/20">
-                            <td class="sticky left-0 z-10 bg-emerald-100/80 dark:bg-emerald-950/80 py-3 px-5 text-emerald-900 dark:text-emerald-300 uppercase tracking-wider text-[11px] border-r border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
+                            <td class="sticky left-0 z-10 bg-emerald-100/80 dark:bg-emerald-950/80 py-3 px-4 text-emerald-900 dark:text-emerald-300 uppercase tracking-wider text-[11px] border-r border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
                                 <DollarSign class="size-3.5 text-emerald-600" />
                                 Total Revenue (₱)
                             </td>

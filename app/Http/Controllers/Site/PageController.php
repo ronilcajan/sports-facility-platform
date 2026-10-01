@@ -59,6 +59,14 @@ class PageController extends Controller
     }
 
     /**
+     * Public location listing, kept separate from court detail URLs.
+     */
+    public function locations(Request $request): Response
+    {
+        return $this->courts($request);
+    }
+
+    /**
      * Show a detailed page for a specific court including its Venue information.
      */
     public function show(Court $court): Response

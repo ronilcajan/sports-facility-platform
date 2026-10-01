@@ -154,7 +154,7 @@ function formatNumber(num: number): string {
                         Website Traffic &amp; Visitor Analytics
                     </h2>
                     <p class="mt-1 text-sm text-emerald-100/80 max-w-2xl">
-                        Real-time visitor traffic monitoring, venue page engagements, device breakdown, and customer acquisition channels across the platform.
+                        Real-time visitor traffic monitoring, location page engagements, device breakdown, and customer acquisition channels across the platform.
                     </p>
                 </div>
 

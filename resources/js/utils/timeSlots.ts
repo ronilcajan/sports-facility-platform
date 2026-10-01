@@ -57,6 +57,20 @@ export function formatTimeSlot(hours: number, minutes: number = 0): string {
 }
 
 /**
+ * Format a booking duration for customer-facing labels.
+ */
+export function formatDuration(minutes: number | null | undefined): string {
+    const duration = Number(minutes) || 0;
+
+    if (duration > 0 && duration % 60 === 0) {
+        const hours = duration / 60;
+        return `${hours} ${hours === 1 ? 'hr' : 'hrs'}`;
+    }
+
+    return `${duration} min`;
+}
+
+/**
  * Sort a list of time slot strings chronologically.
  */
 export function sortTimeSlots(slots: string[]): string[] {
@@ -68,11 +82,16 @@ export function sortTimeSlots(slots: string[]): string[] {
  * Get all active time slots for a court or venue by merging DEFAULT_TIME_SLOTS
  * with any custom slots defined in slot_prices or custom_slots.
  */
-export function getMergedTimeSlots(customSlotsFromPrices?: Record<string, any> | string[] | null): string[] {
+export function getMergedTimeSlots(
+    customSlotsFromPrices?: Record<string, any> | string[] | null,
+): string[] {
     let extra: string[] = [];
     if (Array.isArray(customSlotsFromPrices)) {
         extra = customSlotsFromPrices;
-    } else if (customSlotsFromPrices && typeof customSlotsFromPrices === 'object') {
+    } else if (
+        customSlotsFromPrices &&
+        typeof customSlotsFromPrices === 'object'
+    ) {
         extra = Object.keys(customSlotsFromPrices);
     }
     const combined = [...DEFAULT_TIME_SLOTS, ...extra];
@@ -87,108 +106,36 @@ export function isDefaultTimeSlot(slot: string): boolean {
 }
 
 /**
- * Format a slot string (e.g., "07:00 AM", "7:00 AM") into a 1-hour time range
- * or specified duration range (e.g., "7:00 AM – 8:00 AM").
+ * Render a slot as the full span it actually occupies, e.g. "07:00-07:59 AM".
+ *
+ * A booking covers its whole slot, so a chip labelled only "07:00 AM" reads as an
+ * instant rather than an hour. People selecting 07:00 through 10:00 assume three
+ * hours when the system books four (07:00-10:59), so the end time is spelled out.
+ * The period is printed once when both ends share it, and twice when they differ
+ * (e.g. a 90 minute slot running "11:00 AM-12:29 PM").
  */
-export function formatSlotRange(slot: string, durationMinutes: number = 60): string {
-    const match = slot.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-    if (!match) return slot;
-
-    let h = parseInt(match[1], 10);
-    const m = parseInt(match[2], 10);
-    const period = match[3].toUpperCase();
-
-    let start24 = h;
-    if (period === 'PM' && h !== 12) start24 += 12;
-    if (period === 'AM' && h === 12) start24 = 0;
-
-    const safeDuration = durationMinutes > 0 ? durationMinutes : 60;
-    const startTotalMinutes = start24 * 60 + m;
-    const endTotalMinutes = (startTotalMinutes + safeDuration) % (24 * 60);
-
-    const endH24 = Math.floor(endTotalMinutes / 60);
-    const endM = endTotalMinutes % 60;
-
-    const format12h = (hour24: number, minute: number): string => {
-        const p = hour24 >= 12 && hour24 < 24 ? 'PM' : 'AM';
-        let h12 = hour24 % 12;
-        if (h12 === 0) h12 = 12;
-        const mm = String(minute).padStart(2, '0');
-        return `${h12}:${mm} ${p}`;
-    };
-
-    return `${format12h(start24, m)} \u2013 ${format12h(endH24, endM)}`;
-}
-
-/**
- * Parse a standard 12-hour clock string (e.g. "07:00 AM", "7:00 AM", "12:00 PM")
- * into regular minutes from midnight (0 to 1439).
- */
-export function standardClockMinutes(timeStr: string): number | null {
-    const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-    if (!match) return null;
-    let h = parseInt(match[1], 10);
-    const m = parseInt(match[2], 10);
-    const period = match[3].toUpperCase();
-
-    if (period === 'PM' && h !== 12) h += 12;
-    if (period === 'AM' && h === 12) h = 0;
-
-    return h * 60 + m;
-}
-
-/**
- * Parse a slot duration in minutes. Handles both single start times (e.g. "07:00 AM")
- * and range strings (e.g. "7:00 AM \u2013 8:00 AM", "9:00 AM \u2013 11:00 AM", "07:00 AM - 08:00 AM").
- */
-export function parseSlotDurationMinutes(slot: string, fallbackMinutes: number = 60): number {
-    if (!slot || typeof slot !== 'string') return 0;
-
-    const parts = slot.split(/\s*(?:–|-|\bto\b)\s*/i);
-    if (parts.length === 2) {
-        const startMin = standardClockMinutes(parts[0]);
-        const endMin = standardClockMinutes(parts[1]);
-        if (startMin !== null && endMin !== null) {
-            let diff = endMin - startMin;
-            if (diff < 0) {
-                diff += 24 * 60;
-            }
-            if (diff > 0) {
-                return diff;
-            }
-        }
+export function formatSlotRange(
+    slot: string,
+    durationMinutes: number = 60,
+): string {
+    const startMinutes = timeToMinutes(slot);
+    if (startMinutes === 9999) {
+        return slot;
     }
 
-    return fallbackMinutes > 0 ? fallbackMinutes : 60;
-}
+    const duration = durationMinutes > 0 ? durationMinutes : 60;
+    const endMinutes = startMinutes + duration - 1;
 
-/**
- * Calculate total hours for a booking from its time_slots array.
- * Examples:
- * - ["07:00 AM"] -> 1
- * - ["7:00 AM \u2013 8:00 AM"] -> 1
- * - ["9:00 AM \u2013 11:00 AM"] -> 2
- * - ["09:00 AM", "10:00 AM"] -> 2
- */
-export function calculateBookingHours(timeSlots?: string[] | null, fallbackSlotMinutes: number = 60): number {
-    if (!timeSlots || !Array.isArray(timeSlots) || timeSlots.length === 0) {
-        return 0;
-    }
+    const start = formatTimeSlot(
+        Math.floor((startMinutes % 1440) / 60),
+        startMinutes % 60,
+    );
+    const end = formatTimeSlot(
+        Math.floor((endMinutes % 1440) / 60),
+        endMinutes % 60,
+    );
 
-    let totalMinutes = 0;
-    for (const slot of timeSlots) {
-        totalMinutes += parseSlotDurationMinutes(slot, fallbackSlotMinutes);
-    }
-
-    return totalMinutes / 60;
-}
-
-/**
- * Formats hours into human-readable label (e.g. "1 hour", "3 hours", "1.5 hours", "0 hours").
- */
-export function formatHours(hours: number): string {
-    const formatted = Number.isInteger(hours)
-        ? String(hours)
-        : hours.toFixed(1).replace(/\.0$/, '');
-    return `${formatted} ${hours === 1 ? 'hour' : 'hours'}`;
+    return start.slice(-2) === end.slice(-2)
+        ? `${start.slice(0, 5)}-${end.slice(0, 5)} ${end.slice(-2)}`
+        : `${start}-${end}`;
 }

@@ -3,9 +3,11 @@ import { Head, Link } from '@inertiajs/vue3';
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import SiteCourtCard from '@/components/site/SiteCourtCard.vue';
 import BookingModal from '@/components/site/BookingModal.vue';
-import VenueImageViewer from '@/components/site/VenueImageViewer.vue';
+import VenueAvailabilitySchedule from '@/components/site/VenueAvailabilitySchedule.vue';
+import type { CatalogVenue } from '@/components/site/SiteVenueCard.vue';
 import { courts as courtsRoute } from '@/routes/site';
 import type { PublicCourt } from '@/types';
+import { formatDuration } from '@/utils/timeSlots';
 
 const props = defineProps<{
     court: PublicCourt & { images?: string[] };
@@ -14,6 +16,18 @@ const props = defineProps<{
 
 const activeCourt = ref<PublicCourt | null>(null);
 const isBookingOpen = ref(false);
+const selectedBookingDate = ref<string | null>(null);
+const selectedBookingSlot = ref<string | null>(null);
+
+const scheduleVenue = computed<CatalogVenue | null>(() => {
+    if (!props.court.venue) return null;
+
+    return {
+        ...props.court.venue,
+        courts_count: 1,
+        courts: [props.court],
+    };
+});
 
 const activeImageIndex = ref(0);
 const isLightboxOpen = ref(false);
@@ -53,6 +67,19 @@ const activeImage = computed(() => {
 
 function handleBook(court: PublicCourt) {
     activeCourt.value = court;
+    selectedBookingDate.value = null;
+    selectedBookingSlot.value = null;
+    isBookingOpen.value = true;
+}
+
+function handleScheduleBooking(
+    court: PublicCourt,
+    date?: string,
+    slot?: string,
+): void {
+    activeCourt.value = court;
+    selectedBookingDate.value = date || null;
+    selectedBookingSlot.value = slot || null;
     isBookingOpen.value = true;
 }
 
@@ -105,24 +132,6 @@ onMounted(() => {
 onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown);
 });
-
-// Related court gallery state
-const isRelatedCourtGalleryOpen = ref(false);
-const relatedCourtGalleryImages = ref<string[]>([]);
-const relatedCourtGalleryTitle = ref('');
-
-function handleRelatedCourtGallery(court: PublicCourt) {
-    const images = (court as PublicCourt & { images?: string[] }).images || [];
-    if (images.length > 0) {
-        relatedCourtGalleryImages.value = images;
-    } else if (court.primary_image_url) {
-        relatedCourtGalleryImages.value = [court.primary_image_url];
-    } else {
-        relatedCourtGalleryImages.value = ['/images/court_pickleball.png'];
-    }
-    relatedCourtGalleryTitle.value = court.name;
-    isRelatedCourtGalleryOpen.value = true;
-}
 </script>
 
 <template>
@@ -130,8 +139,7 @@ function handleRelatedCourtGallery(court: PublicCourt) {
         <meta
             name="description"
             :content="
-                court.description ||
-                'Pickleball court reservation details.'
+                court.description || 'Pickleball court reservation details.'
             "
         />
     </Head>
@@ -182,9 +190,11 @@ function handleRelatedCourtGallery(court: PublicCourt) {
             </div>
         </div>
 
-        <div class="mx-auto max-w-6xl px-4 pt-8 sm:pt-10 sm:px-6">
+        <div class="mx-auto max-w-6xl px-4 pt-8 sm:px-6 sm:pt-10">
             <!-- 2. Main Page Grid Layout: stacks on mobile, side-by-side on lg -->
-            <div class="grid items-start gap-8 lg:grid-cols-[1.3fr_0.7fr] lg:gap-12">
+            <div
+                class="grid items-start gap-8 lg:grid-cols-[1.3fr_0.7fr] lg:gap-12"
+            >
                 <!-- Left Column: Image and Details -->
                 <div class="space-y-8 lg:space-y-10">
                     <!-- Court Image Showcase -->
@@ -279,7 +289,14 @@ function handleRelatedCourtGallery(court: PublicCourt) {
                             <p
                                 class="mt-2 text-xs font-semibold tracking-wider text-content-muted uppercase"
                             >
-                                {{ court.venue ? court.venue.name + (court.venue.address ? ' • ' + court.venue.address : '') : 'Our Courts' }}
+                                {{
+                                    court.venue
+                                        ? court.venue.name +
+                                          (court.venue.address
+                                              ? ' • ' + court.venue.address
+                                              : '')
+                                        : 'Our Courts'
+                                }}
                             </p>
                         </div>
 
@@ -291,10 +308,10 @@ function handleRelatedCourtGallery(court: PublicCourt) {
                                 {{ court.description }}
                             </p>
                             <p v-else>
-                                A friendly, well-kept court that's ready whenever
-                                you are. Bring your paddle and up to three
-                                friends, book your time in seconds, and enjoy a
-                                great game — whatever your skill level.
+                                A friendly, well-kept court that's ready
+                                whenever you are. Bring your paddle and up to
+                                three friends, book your time in seconds, and
+                                enjoy a great game — whatever your skill level.
                             </p>
                         </div>
 
@@ -440,17 +457,17 @@ function handleRelatedCourtGallery(court: PublicCourt) {
                         class="space-y-6 rounded-2xl border border-line bg-surface-elevated p-5 shadow-md sm:p-6"
                     >
                         <div>
-                            <span
-                                class="block text-xs font-bold tracking-wider text-content-muted uppercase"
-                                >Hourly Rate</span
-                            >
                             <div class="mt-1 flex items-baseline gap-1">
                                 <span class="text-4xl font-black text-content"
                                     >₱{{ court.base_price }}</span
                                 >
                                 <span class="text-sm text-content-muted"
                                     >/
-                                    {{ court.slot_duration_minutes }} min</span
+                                    {{
+                                        formatDuration(
+                                            court.slot_duration_minutes,
+                                        )
+                                    }}</span
                                 >
                             </div>
                         </div>
@@ -490,7 +507,7 @@ function handleRelatedCourtGallery(court: PublicCourt) {
 
                         <button
                             type="button"
-                            class="w-full rounded-full bg-brand py-4 text-base font-bold text-brand-foreground shadow-lg shadow-brand/20 transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand/95 hover:shadow-brand/35"
+                            class="w-full rounded-md bg-brand py-3.5 text-base font-bold text-brand-foreground shadow-lg shadow-brand/20 transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand/95 hover:shadow-brand/35"
                             @click="handleBook(court)"
                         >
                             Book this Court Now
@@ -498,6 +515,12 @@ function handleRelatedCourtGallery(court: PublicCourt) {
                     </div>
                 </div>
             </div>
+
+            <VenueAvailabilitySchedule
+                v-if="scheduleVenue"
+                :venue="scheduleVenue"
+                @book-court="handleScheduleBooking"
+            />
 
             <!-- 3. Related Courts Showcase -->
             <div class="mt-24 border-t border-line pt-12">
@@ -529,7 +552,6 @@ function handleRelatedCourtGallery(court: PublicCourt) {
                         :key="rc.id"
                         :court="rc"
                         @book="handleBook"
-                        @gallery="handleRelatedCourtGallery"
                     />
                 </div>
             </div>
@@ -539,17 +561,10 @@ function handleRelatedCourtGallery(court: PublicCourt) {
     <!-- Booking Modal Component overlay -->
     <BookingModal
         :court="activeCourt"
+        :initial-date="selectedBookingDate"
+        :initial-slots="selectedBookingSlot ? [selectedBookingSlot] : []"
         :is-open="isBookingOpen"
         @close="isBookingOpen = false"
-    />
-
-    <!-- Related Court Gallery Viewer -->
-    <VenueImageViewer
-        :is-open="isRelatedCourtGalleryOpen"
-        :images="relatedCourtGalleryImages"
-        :initial-index="0"
-        :title="relatedCourtGalleryTitle"
-        @close="isRelatedCourtGalleryOpen = false"
     />
 
     <!-- Lightbox Modal overlay -->

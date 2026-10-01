@@ -28,7 +28,7 @@ class BookingCalendar
         $today = CarbonImmutable::now()->toDateString();
 
         $rows = (clone $bookings)
-            ->with('court:id,name')
+            ->with('court:id,name,slot_duration_minutes')
             ->whereBetween('date', [$startDate->toDateString(), $end->toDateString()])
             ->get()
             ->map(fn (Booking $booking): array => [
@@ -42,7 +42,9 @@ class BookingCalendar
                 'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
                 'status' => $booking->status,
                 'receipt_url' => $booking->receipt_url,
-                'court' => $booking->court ? ['id' => $booking->court->id, 'name' => $booking->court->name] : null,
+                'notes' => $booking->notes,
+                'admin_notes' => $booking->admin_notes,
+                'court' => $booking->court ? ['id' => $booking->court->id, 'name' => $booking->court->name, 'slot_duration_minutes' => $booking->court->slot_duration_minutes] : null,
             ]);
 
         $days = [];

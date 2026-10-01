@@ -126,9 +126,9 @@ onUnmounted(() => {
                 <div>
                     <h3 class="font-black text-lg text-neutral-900 dark:text-white tracking-tight flex items-center gap-2">
                         <ImageIcon class="w-5 h-5 text-emerald-600" />
-                        Venue Photo Gallery: {{ venue?.name }}
+                        Location Photo Gallery: {{ venue?.name }}
                     </h3>
-                    <p class="text-xs text-neutral-500">Add as many venue photos as you like. The primary photo is used as the venue's hero image.</p>
+                    <p class="text-xs text-neutral-500">Add as many location photos as you like. The primary photo is used as the location's hero image.</p>
                 </div>
                 <button
                     @click="emit('close')"
@@ -210,7 +210,7 @@ onUnmounted(() => {
 
                 <!-- Existing Gallery -->
                 <div class="space-y-3">
-                    <h4 class="text-xs font-bold uppercase tracking-wider text-neutral-400">Current Venue Photos</h4>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-neutral-400">Current Location Photos</h4>
 
                     <div v-if="venue?.images && venue.images.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div
@@ -253,7 +253,7 @@ onUnmounted(() => {
                     </div>
 
                     <div v-else class="p-8 text-center text-xs text-neutral-400 border border-dashed rounded-2xl">
-                        No photos uploaded for this venue yet. Upload your first venue photo above.
+                        No photos uploaded for this location yet. Upload your first location photo above.
                     </div>
                 </div>
             </div>

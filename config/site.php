@@ -38,7 +38,7 @@ return [
      */
     'nav' => [
         ['label' => 'About', 'route' => 'site.about'],
-        ['label' => 'Venue', 'route' => 'site.courts'],
+        ['label' => 'Locations', 'route' => 'site.locations'],
         ['label' => 'Gallery', 'route' => 'site.gallery'],
     ],
 

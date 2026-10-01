@@ -206,37 +206,38 @@
 
 /* ============================================================
    Site theme: NAVY
-   Default (light variant) — clean white + brand emerald
-   .site-dark — deep onyx, original dark palette
+   Default public-site theme — a dark product workspace with crisp panels,
+   high-contrast text, and an electric lime action color.
    ============================================================ */
 [data-theme='navy'] {
-    --site-surface: #f8fafc;
-    --site-surface-elevated: #ffffff;
-    --site-surface-inverse: #090d16;
-    --site-content: #0f172a;
-    --site-content-muted: #475569;
-    --site-content-inverse: #f8fafc;
-    --site-brand: #059669;
-    --site-brand-foreground: #ffffff;
-    --site-highlight: #065f46;
-    --site-line: rgba(15, 23, 42, 0.1);
+    --site-surface: #080d0c;
+    --site-surface-elevated: #111918;
+    --site-surface-inverse: #030605;
+    --site-content: #f2f7f4;
+    --site-content-muted: #9aaba5;
+    --site-content-inverse: #f2f7f4;
+    --site-brand: #2fc57f;
+    --site-brand-foreground: #080d0c;
+    --site-highlight: #d6e5df;
+    --site-line: rgba(242, 247, 244, 0.12);
     --site-radius: 0.9rem;
-    --site-shadow-card: 0 20px 45px -20px rgba(15, 23, 42, 0.18);
-    --site-font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --site-shadow-card: 0 22px 48px -28px rgba(0, 0, 0, 0.7);
+    --site-font-display:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
 [data-theme='navy'].site-dark {
-    --site-surface: #090d16;
-    --site-surface-elevated: #131b2e;
-    --site-surface-inverse: #030712;
-    --site-content: #f8fafc;
-    --site-content-muted: #94a3b8;
-    --site-content-inverse: #f8fafc;
-    --site-brand: #10b981;
-    --site-brand-foreground: #052e16;
-    --site-highlight: #34d399;
-    --site-line: rgba(16, 185, 129, 0.15);
-    --site-shadow-card: 0 20px 45px -20px rgba(0, 0, 0, 0.65);
+    --site-surface: #f5f7fb;
+    --site-surface-elevated: #ffffff;
+    --site-surface-inverse: #101827;
+    --site-content: #111827;
+    --site-content-muted: #5d6878;
+    --site-content-inverse: #f5f7fb;
+    --site-brand: #078f5d;
+    --site-brand-foreground: #ffffff;
+    --site-highlight: #35b978;
+    --site-line: rgba(17, 24, 39, 0.12);
+    --site-shadow-card: 0 20px 45px -24px rgba(17, 24, 39, 0.2);
 }
 
 /* ============================================================
@@ -257,7 +258,8 @@
     --site-line: rgba(15, 23, 42, 0.1);
     --site-radius: 1.25rem;
     --site-shadow-card: 0 24px 50px -28px rgba(15, 23, 42, 0.25);
-    --site-font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --site-font-display:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
 [data-theme='fairway'].site-dark {
@@ -292,7 +294,8 @@
     --site-line: rgba(28, 33, 40, 0.1);
     --site-radius: 0.8rem;
     --site-shadow-card: 0 22px 48px -22px rgba(0, 0, 0, 0.15);
-    --site-font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --site-font-display:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
 [data-theme='electric'].site-dark {

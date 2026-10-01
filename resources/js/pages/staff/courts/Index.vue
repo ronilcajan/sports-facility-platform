@@ -322,13 +322,13 @@ function submitEdit() {
                     </div>
 
                     <div v-if="venues && venues.length > 0" class="space-y-2">
-                        <Label for="create-court-venue">Assigned Venue</Label>
+                        <Label for="create-court-venue">Assigned Location</Label>
                         <select
                             id="create-court-venue"
                             v-model="createForm.venue_id"
                             class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         >
-                            <option value="">No Venue Assigned</option>
+                            <option value="">No Location Assigned</option>
                             <option v-for="v in venues" :key="v.id" :value="v.id">
                                 {{ v.name }}
                             </option>
@@ -462,13 +462,13 @@ function submitEdit() {
                     </div>
 
                     <div v-if="venues && venues.length > 0" class="space-y-2">
-                        <Label for="edit-court-venue">Assigned Venue</Label>
+                        <Label for="edit-court-venue">Assigned Location</Label>
                         <select
                             id="edit-court-venue"
                             v-model="editForm.venue_id"
                             class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         >
-                            <option value="">No Venue Assigned</option>
+                            <option value="">No Location Assigned</option>
                             <option v-for="v in venues" :key="v.id" :value="v.id">
                                 {{ v.name }}
                             </option>

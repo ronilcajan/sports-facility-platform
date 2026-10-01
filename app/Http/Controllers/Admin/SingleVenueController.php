@@ -96,7 +96,7 @@ class SingleVenueController extends Controller
         $venue->update($validated);
 
         return redirect()->route('admin.settings.edit')
-            ->with('success', 'Venue settings updated successfully.');
+            ->with('success', 'Location settings updated successfully.');
     }
 
     /**

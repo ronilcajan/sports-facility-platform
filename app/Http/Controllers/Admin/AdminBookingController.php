@@ -48,7 +48,7 @@ class AdminBookingController extends Controller
             ->visibleTo($user)
             ->when($request->filled('venue_id'), fn ($courtQuery) => $courtQuery->where('venue_id', $request->input('venue_id')))
             ->orderBy('name')
-            ->get(['id', 'name', 'sport_type', 'base_price']);
+            ->get(['id', 'name', 'sport_type', 'base_price', 'slot_duration_minutes']);
 
         $venues = $user->isSuperAdmin()
             ? Venue::orderBy('name')->get(['id', 'name'])
@@ -117,7 +117,6 @@ class AdminBookingController extends Controller
                 'phone' => $booking->phone,
                 'date' => $booking->date->toDateString(),
                 'time_slots' => $booking->time_slots,
-                'total_hours' => $booking->total_hours,
                 'total_price' => number_format((float) $booking->total_price, 2, '.', ''),
                 'receipt_url' => $booking->receipt_url,
                 'status' => $booking->status,
@@ -127,6 +126,7 @@ class AdminBookingController extends Controller
                     'id' => $booking->court->id,
                     'name' => $booking->court->name,
                     'sport_type' => $booking->court->sport_type?->label() ?? $booking->court->sport_type,
+                    'slot_duration_minutes' => $booking->court->slot_duration_minutes,
                 ] : null,
             ]);
 
@@ -182,7 +182,7 @@ class AdminBookingController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
-            'date' => ['required', 'date', 'after_or_equal:today'],
+            'date' => ['required', 'date'],
             'time_slots' => ['required', 'array', 'min:1'],
             'time_slots.*' => ['string'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -226,12 +226,12 @@ class AdminBookingController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
-            'date' => ['sometimes', 'required', 'date', 'after_or_equal:today'],
+            'date' => ['sometimes', 'required', 'date'],
             'time_slots' => ['sometimes', 'required', 'array', 'min:1'],
             'time_slots.*' => ['required', 'string'],
             'status' => ['sometimes', 'required', 'string', Rule::in(['pending', 'approved', 'confirmed', 'rejected', 'cancelled', 'completed'])],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'admin_notes' => ['nullable', 'string', 'max:1000'],
+            'admin_notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $courtId = $validated['court_id'] ?? $booking->court_id;
@@ -272,8 +272,9 @@ class AdminBookingController extends Controller
             'date' => $date,
             'time_slots' => $requestedSlots,
             'status' => $validated['status'] ?? $booking->status,
-            'notes' => $validated['notes'] ?? $booking->notes,
-            'admin_notes' => $validated['admin_notes'] ?? $booking->admin_notes,
+            'notes' => $validated['notes'] ?? null,
+            // Absent from the payload means "leave as is" — status-only edits must not wipe staff notes.
+            'admin_notes' => array_key_exists('admin_notes', $validated) ? $validated['admin_notes'] : $booking->admin_notes,
             'total_price' => $totalPrice,
         ]);
 
@@ -308,27 +309,13 @@ class AdminBookingController extends Controller
 
         $validated = $request->validate([
             'status' => ['required', 'string', Rule::in(['pending', 'approved', 'confirmed', 'rejected', 'cancelled', 'completed'])],
-            'notes' => ['nullable', 'string', 'max:1000'],
-            'admin_notes' => [
-                Rule::requiredIf(fn () => $request->input('status') === 'rejected'),
-                'nullable',
-                'string',
-                'max:1000',
-            ],
-        ], [
-            'admin_notes.required' => 'A reason or note is required when rejecting a booking.',
+            'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $adminNote = $request->has('admin_notes')
-            ? $validated['admin_notes']
-            : ($validated['notes'] ?? null);
-
-        $updateData = ['status' => $validated['status']];
-        if ($adminNote !== null || $request->has('admin_notes')) {
-            $updateData['admin_notes'] = $adminNote;
-        }
-
-        $booking->update($updateData);
+        $booking->update([
+            'status' => $validated['status'],
+            'notes' => $validated['notes'] ?? $booking->notes,
+        ]);
 
         Inertia::flash('toast', [
             'type' => 'success',

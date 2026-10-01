@@ -10,8 +10,8 @@ const props = defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Venues', href: '/admin/venues' },
-            { title: 'Edit Venue' },
+            { title: 'Locations', href: '/admin/venues' },
+            { title: 'Edit Location' },
         ],
     },
 });
@@ -23,7 +23,7 @@ defineOptions({
     <div class="p-6 space-y-6 w-full">
         <div>
             <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Edit {{ venue.name }}</h1>
-            <p class="text-xs text-neutral-500">Update this venue's information.</p>
+            <p class="text-xs text-neutral-500">Update this location's information.</p>
         </div>
 
         <div class="max-w-2xl rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm">

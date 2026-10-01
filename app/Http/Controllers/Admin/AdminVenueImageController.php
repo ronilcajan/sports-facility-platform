@@ -40,7 +40,7 @@ class AdminVenueImageController extends Controller
             'sort_order' => $maxSortOrder + 1,
         ]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Venue photo uploaded.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Location photo uploaded.')]);
 
         return back();
     }
@@ -59,7 +59,7 @@ class AdminVenueImageController extends Controller
         $venue->images()->update(['is_primary' => false]);
         $image->update(['is_primary' => true]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Primary venue photo updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Primary location photo updated.')]);
 
         return back();
     }
@@ -91,7 +91,7 @@ class AdminVenueImageController extends Controller
             }
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Venue photo removed.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Location photo removed.')]);
 
         return back();
     }
