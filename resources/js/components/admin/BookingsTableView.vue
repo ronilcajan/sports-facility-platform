@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import {
     Calendar,
@@ -16,12 +16,16 @@ import {
     Dumbbell,
     BarChart2,
     DollarSign,
+    RotateCcw,
 } from '@lucide/vue';
 import { formatSlotRange, getMergedTimeSlots } from '@/utils/timeSlots';
 
 interface CourtOption {
     id: number;
     name: string;
+    sport_type?: string;
+    base_price?: string | number;
+    slot_duration_minutes?: number | null;
 }
 
 interface VenueOption {
@@ -194,30 +198,274 @@ function getTotalCountForDate(dateStr: string): number {
     return getBookingsForDate(dateStr).length;
 }
 
-function getTotalPriceForDate(dateStr: string): number {
-    const list = getBookingsForDate(dateStr);
-    return list
-        .filter((b) => b.status === 'approved' || b.status === 'confirmed')
-        .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
-}
-
 /**
  * Hours actually reserved on a date. A slot is not always an hour, so each booking
  * is measured by its court's slot length rather than by counting slots.
  */
 function getTotalHoursForDate(dateStr: string): number {
     return getBookingsForDate(dateStr)
-        .filter((b) => b.status === 'approved' || b.status === 'confirmed')
+        .filter((b) => b.status === 'approved' || b.status === 'confirmed' || b.status === 'completed')
         .reduce((sum, b) => sum + (b.time_slots?.length || 0) * ((b.court?.slot_duration_minutes || 60) / 60), 0);
 }
 
-function formatHours(val: number): string {
-    const rounded = Math.round(val * 100) / 100;
-    return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}h`;
+export interface DurationMetric {
+    hours: number | string;
+    minutes: number | string;
+    seconds: number | string;
+}
+
+const DURATION_STORAGE_KEY = 'admin_manual_duration_booked';
+
+function loadStoredDurations(): Record<string, DurationMetric> {
+    try {
+        const stored = localStorage.getItem(DURATION_STORAGE_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+        const prev = localStorage.getItem('admin_manual_hours_booked');
+        if (prev) {
+            const parsed = JSON.parse(prev);
+            const migrated: Record<string, DurationMetric> = {};
+            for (const [k, v] of Object.entries(parsed)) {
+                const totalSec = Math.round((parseFloat(String(v)) || 0) * 3600);
+                migrated[k] = {
+                    hours: Math.floor(totalSec / 3600),
+                    minutes: Math.floor((totalSec % 3600) / 60),
+                    seconds: totalSec % 60,
+                };
+            }
+            return migrated;
+        }
+    } catch {
+        // fallback
+    }
+    return {};
+}
+
+const manualDurations = ref<Record<string, DurationMetric>>(loadStoredDurations());
+
+function getDuration(dateStr: string): DurationMetric {
+    if (!manualDurations.value[dateStr]) {
+        const calcHours = getTotalHoursForDate(dateStr);
+        const totalSec = Math.round(calcHours * 3600);
+        manualDurations.value[dateStr] = {
+            hours: Math.floor(totalSec / 3600),
+            minutes: Math.floor((totalSec % 3600) / 60),
+            seconds: totalSec % 60,
+        };
+    }
+    return manualDurations.value[dateStr];
+}
+
+watch(
+    manualDurations,
+    (newVal) => {
+        try {
+            localStorage.setItem(DURATION_STORAGE_KEY, JSON.stringify(newVal));
+        } catch {
+            // fallback
+        }
+    },
+    { deep: true }
+);
+
+function getTotalSecondsForDate(dateStr: string): number {
+    const dur = manualDurations.value[dateStr];
+    if (!dur) {
+        return Math.round(getTotalHoursForDate(dateStr) * 3600);
+    }
+    const h = Math.max(0, parseInt(String(dur.hours), 10) || 0);
+    const m = Math.max(0, parseInt(String(dur.minutes), 10) || 0);
+    const s = Math.max(0, parseInt(String(dur.seconds), 10) || 0);
+    return h * 3600 + m * 60 + s;
+}
+
+function isDurationModified(dateStr: string): boolean {
+    const dur = manualDurations.value[dateStr];
+    if (!dur) return false;
+    const currentSec = getTotalSecondsForDate(dateStr);
+    const autoSec = Math.round(getTotalHoursForDate(dateStr) * 3600);
+    return currentSec !== autoSec;
+}
+
+function resetDuration(dateStr: string): void {
+    const calcHours = getTotalHoursForDate(dateStr);
+    const totalSec = Math.round(calcHours * 3600);
+    manualDurations.value[dateStr] = {
+        hours: Math.floor(totalSec / 3600),
+        minutes: Math.floor((totalSec % 3600) / 60),
+        seconds: totalSec % 60,
+    };
+    // Sync revenue back to auto-calculated for this date based on the reset hours
+    manualRevenue.value[dateStr] = getComputedPriceForDate(dateStr);
+}
+
+function getHourlyRateForDate(dateStr: string): number {
+    const list = getBookingsForDate(dateStr).filter(
+        (b) => b.status === 'approved' || b.status === 'confirmed' || b.status === 'completed'
+    );
+    const autoHours = list.reduce(
+        (sum, b) => sum + (b.time_slots?.length || 0) * ((b.court?.slot_duration_minutes || 60) / 60),
+        0
+    );
+    const autoPrice = list.reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
+
+    if (autoHours > 0 && autoPrice > 0) {
+        return autoPrice / autoHours;
+    }
+
+    const pendingList = getBookingsForDate(dateStr).filter((b) => b.status === 'pending');
+    const pendingHours = pendingList.reduce(
+        (sum, b) => sum + (b.time_slots?.length || 0) * ((b.court?.slot_duration_minutes || 60) / 60),
+        0
+    );
+    const pendingPrice = pendingList.reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
+    if (pendingHours > 0 && pendingPrice > 0) {
+        return pendingPrice / pendingHours;
+    }
+
+    if (court_id.value) {
+        const court = props.courts.find((c) => String(c.id) === String(court_id.value));
+        if (court && court.base_price) {
+            const p = parseFloat(String(court.base_price));
+            if (!isNaN(p) && p > 0) return p;
+        }
+    }
+
+    const allConfirmed = props.tableBookings.filter(
+        (b) => ['approved', 'confirmed', 'completed', 'pending'].includes(b.status)
+    );
+    const allHours = allConfirmed.reduce(
+        (sum, b) => sum + (b.time_slots?.length || 0) * ((b.court?.slot_duration_minutes || 60) / 60),
+        0
+    );
+    const allPrice = allConfirmed.reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
+    if (allHours > 0 && allPrice > 0) {
+        return allPrice / allHours;
+    }
+
+    if (props.courts && props.courts.length > 0) {
+        for (const c of props.courts) {
+            const p = parseFloat(String(c.base_price));
+            if (!isNaN(p) && p > 0) return p;
+        }
+    }
+
+    return 25.0;
+}
+
+function getComputedPriceForDate(dateStr: string): number {
+    const rate = getHourlyRateForDate(dateStr);
+    const hours = getTotalSecondsForDate(dateStr) / 3600;
+    return Math.round(hours * rate * 100) / 100;
+}
+
+const REVENUE_STORAGE_KEY = 'admin_manual_revenue_booked';
+
+function loadStoredRevenue(): Record<string, number | string> {
+    try {
+        const stored = localStorage.getItem(REVENUE_STORAGE_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch {
+        // fallback
+    }
+    return {};
+}
+
+const manualRevenue = ref<Record<string, number | string>>(loadStoredRevenue());
+
+function getTotalPriceForDate(dateStr: string): number {
+    const val = manualRevenue.value[dateStr];
+    if (val !== undefined && val !== null && val !== '') {
+        const num = parseFloat(String(val));
+        if (!isNaN(num)) return Math.max(0, num);
+    }
+    return getComputedPriceForDate(dateStr);
+}
+
+function isRevenueModified(dateStr: string): boolean {
+    if (manualRevenue.value[dateStr] === undefined || manualRevenue.value[dateStr] === null || manualRevenue.value[dateStr] === '') {
+        return false;
+    }
+    const current = Number(manualRevenue.value[dateStr]);
+    const computedPrice = getComputedPriceForDate(dateStr);
+    return Math.abs(current - computedPrice) > 0.01;
+}
+
+function resetRevenue(dateStr: string): void {
+    manualRevenue.value[dateStr] = getComputedPriceForDate(dateStr);
+}
+
+function onDurationChange(dateStr: string): void {
+    // Whenever hours, minutes, or seconds are typed or changed,
+    // recalculate the daily revenue based on the new total hours
+    manualRevenue.value[dateStr] = getComputedPriceForDate(dateStr);
+}
+
+function getDurationSummary(dateStr: string): string {
+    return formatDurationTotal(getTotalSecondsForDate(dateStr));
+}
+
+// When tableBookings or tableDates change, keep unmodified dates synchronized with live data
+watch(
+    () => [props.tableBookings, props.tableDates],
+    () => {
+        if (!props.tableDates) return;
+        props.tableDates.forEach((d) => {
+            const dateStr = d.dateStr;
+            if (!isDurationModified(dateStr)) {
+                const calcHours = getTotalHoursForDate(dateStr);
+                const totalSec = Math.round(calcHours * 3600);
+                manualDurations.value[dateStr] = {
+                    hours: Math.floor(totalSec / 3600),
+                    minutes: Math.floor((totalSec % 3600) / 60),
+                    seconds: totalSec % 60,
+                };
+            }
+            if (!isRevenueModified(dateStr)) {
+                manualRevenue.value[dateStr] = getComputedPriceForDate(dateStr);
+            }
+        });
+    },
+    { deep: true, immediate: true }
+);
+
+watch(
+    manualRevenue,
+    (newVal) => {
+        try {
+            localStorage.setItem(REVENUE_STORAGE_KEY, JSON.stringify(newVal));
+        } catch {
+            // fallback
+        }
+    },
+    { deep: true }
+);
+
+function formatDurationTotal(totalSeconds: number): string {
+    const sec = Math.round(totalSeconds);
+    if (sec <= 0) return '0h';
+
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+
+    const parts: string[] = [];
+    if (h > 0) parts.push(`${h}h`);
+    if (m > 0) parts.push(`${m}m`);
+    if (s > 0) parts.push(`${s}s`);
+
+    return parts.length > 0 ? parts.join(' ') : '0h';
 }
 
 function formatPrice(val: number): string {
     return '₱' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatRawPrice(val: number): string {
+    return val.toFixed(2);
 }
 
 const grandTotals = computed(() => {
@@ -225,20 +473,21 @@ const grandTotals = computed(() => {
     let pending = 0;
     let rejected = 0;
     let revenue = 0;
-    let hours = 0;
+    let totalSeconds = 0;
     props.tableDates.forEach((d) => {
         confirmed += getCountByStatus(d.dateStr, 'confirmed');
         pending += getCountByStatus(d.dateStr, 'pending');
         rejected += getCountByStatus(d.dateStr, 'rejected');
         revenue += getTotalPriceForDate(d.dateStr);
-        hours += getTotalHoursForDate(d.dateStr);
+        totalSeconds += getTotalSecondsForDate(d.dateStr);
     });
     return {
         confirmed,
         pending,
         rejected,
         revenue,
-        hours,
+        totalSeconds,
+        hours: totalSeconds / 3600,
         total: confirmed + pending + rejected,
     };
 });
@@ -476,7 +725,7 @@ const grandTotals = computed(() => {
                     </div>
                     <div class="inline-flex items-center gap-1.5 rounded-full bg-sky-100 dark:bg-sky-950/50 px-3 py-1 text-[11px] font-bold text-sky-700 dark:text-sky-300">
                         <Clock class="size-3.5" />
-                        <span>Hours Booked: {{ formatHours(grandTotals.hours) }}</span>
+                        <span>Hours Booked: {{ formatDurationTotal(grandTotals.totalSeconds) }}</span>
                     </div>
                 </div>
             </div>
@@ -554,25 +803,102 @@ const grandTotals = computed(() => {
                             </td>
                         </tr>
 
-                        <!-- Hours Booked Per Day Row -->
+                        <!-- Hours Booked Per Day Row (Editable hr, min, sec) -->
                         <tr class="bg-sky-50/70 dark:bg-sky-950/30 font-black">
                             <td class="sticky left-0 z-10 bg-sky-100/80 dark:bg-sky-950/80 py-2.5 px-4 text-sky-900 dark:text-sky-300 uppercase tracking-wider text-[11px] border-r border-sky-200 dark:border-sky-800 flex items-center gap-1.5">
                                 <Clock class="size-3.5 text-sky-600" />
                                 Hours Booked
                             </td>
-                            <td v-for="d in tableDates" :key="`hours-${d.dateStr}`" class="py-2.5 px-3 text-center border-r border-sky-200/60 dark:border-sky-900/40 text-sky-700 dark:text-sky-300 font-black text-xs">
-                                {{ formatHours(getTotalHoursForDate(d.dateStr)) }}
+                            <td v-for="d in tableDates" :key="`hours-${d.dateStr}`" class="py-2 px-2 text-center border-r border-sky-200/60 dark:border-sky-900/40">
+                                <div class="inline-flex items-center justify-center gap-1 text-[11px]">
+                                    <!-- Hours -->
+                                    <div class="relative flex items-center">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            v-model.number="getDuration(d.dateStr).hours"
+                                            @input="onDurationChange(d.dateStr)"
+                                            placeholder="0"
+                                            title="Hours"
+                                            class="w-10 rounded-md border border-sky-300/80 dark:border-sky-700/80 bg-white dark:bg-neutral-900 py-1 pl-1 pr-3.5 text-center text-xs font-black text-sky-900 dark:text-sky-200 shadow-2xs transition-all focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        />
+                                        <span class="pointer-events-none absolute right-1 text-[10px] font-extrabold text-sky-600/70 dark:text-sky-400/70">h</span>
+                                    </div>
+
+                                    <!-- Minutes -->
+                                    <div class="relative flex items-center">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="59"
+                                            v-model.number="getDuration(d.dateStr).minutes"
+                                            @input="onDurationChange(d.dateStr)"
+                                            placeholder="0"
+                                            title="Minutes"
+                                            class="w-10 rounded-md border border-sky-300/80 dark:border-sky-700/80 bg-white dark:bg-neutral-900 py-1 pl-1 pr-4 text-center text-xs font-black text-sky-900 dark:text-sky-200 shadow-2xs transition-all focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        />
+                                        <span class="pointer-events-none absolute right-1 text-[10px] font-extrabold text-sky-600/70 dark:text-sky-400/70">m</span>
+                                    </div>
+
+                                    <!-- Seconds -->
+                                    <div class="relative flex items-center">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="59"
+                                            v-model.number="getDuration(d.dateStr).seconds"
+                                            @input="onDurationChange(d.dateStr)"
+                                            placeholder="0"
+                                            title="Seconds"
+                                            class="w-10 rounded-md border border-sky-300/80 dark:border-sky-700/80 bg-white dark:bg-neutral-900 py-1 pl-1 pr-3.5 text-center text-xs font-black text-sky-900 dark:text-sky-200 shadow-2xs transition-all focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        />
+                                        <span class="pointer-events-none absolute right-1 text-[10px] font-extrabold text-sky-600/70 dark:text-sky-400/70">s</span>
+                                    </div>
+
+                                    <!-- Reset to calculated if modified -->
+                                    <button
+                                        v-if="isDurationModified(d.dateStr)"
+                                        type="button"
+                                        @click="resetDuration(d.dateStr)"
+                                        class="p-0.5 rounded text-sky-500 hover:text-sky-700 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors cursor-pointer"
+                                        :title="`Reset to calculated (${formatDurationTotal(Math.round(getTotalHoursForDate(d.dateStr) * 3600))})`"
+                                    >
+                                        <RotateCcw class="size-2.5" />
+                                    </button>
+                                </div>
                             </td>
                         </tr>
 
-                        <!-- Total Daily Price / Revenue Row -->
+                        <!-- Total Daily Price / Revenue Row (Based on total hours, editable) -->
                         <tr class="bg-emerald-50/70 dark:bg-emerald-950/30 font-black border-t-2 border-emerald-500/20">
                             <td class="sticky left-0 z-10 bg-emerald-100/80 dark:bg-emerald-950/80 py-3 px-4 text-emerald-900 dark:text-emerald-300 uppercase tracking-wider text-[11px] border-r border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
                                 <DollarSign class="size-3.5 text-emerald-600" />
                                 Total Revenue (₱)
                             </td>
-                            <td v-for="d in tableDates" :key="`price-${d.dateStr}`" class="py-3 px-3 text-center border-r border-emerald-200/60 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-black text-xs">
-                                {{ formatPrice(getTotalPriceForDate(d.dateStr)) }}
+                            <td v-for="d in tableDates" :key="`price-${d.dateStr}`" class="py-2.5 px-2 text-center border-r border-emerald-200/60 dark:border-emerald-900/40">
+                                <div class="inline-flex items-center justify-center gap-1">
+                                    <div class="relative flex items-center">
+                                        <span class="pointer-events-none absolute left-2 text-xs font-black text-emerald-700/80 dark:text-emerald-400/80">₱</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="any"
+                                            v-model.number="manualRevenue[d.dateStr]"
+                                            :placeholder="formatRawPrice(getComputedPriceForDate(d.dateStr))"
+                                            :title="`Daily Revenue for ${d.formatted} (Based on ${getDurationSummary(d.dateStr)} @ ₱${getHourlyRateForDate(d.dateStr).toFixed(2)}/hr)`"
+                                            class="w-24 rounded-lg border border-emerald-300/80 dark:border-emerald-700/80 bg-white dark:bg-neutral-900 py-1 pl-6 pr-2 text-center text-xs font-black text-emerald-700 dark:text-emerald-300 shadow-2xs transition-all focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        />
+                                    </div>
+                                    <button
+                                        v-if="isRevenueModified(d.dateStr)"
+                                        type="button"
+                                        @click="resetRevenue(d.dateStr)"
+                                        class="p-0.5 rounded text-emerald-500 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors cursor-pointer"
+                                        :title="`Reset to calculated revenue based on total hours (₱${formatRawPrice(getComputedPriceForDate(d.dateStr))})`"
+                                    >
+                                        <RotateCcw class="size-2.5" />
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>

@@ -191,7 +191,7 @@ class AdminBookingController extends Controller
         // Scope the court to what the user may manage (venue admins → own venue).
         $court = Court::visibleTo($user)->findOrFail($validated['court_id']);
 
-        Booking::create([
+        $booking = Booking::create([
             'court_id' => $court->id,
             'user_id' => null,
             'name' => $validated['name'],
@@ -203,6 +203,8 @@ class AdminBookingController extends Controller
             'total_price' => collect($validated['time_slots'])->sum(fn (string $slot) => $court->getSlotPrice($slot)),
             'status' => 'approved',
         ]);
+
+        $booking->sendConfirmationEmail();
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -264,6 +266,9 @@ class AdminBookingController extends Controller
 
         $totalPrice = collect($requestedSlots)->sum(fn (string $slot) => $court->getSlotPrice($slot));
 
+        $previousStatus = $booking->status;
+        $newStatus = $validated['status'] ?? $booking->status;
+
         $booking->update([
             'court_id' => $courtId,
             'name' => $validated['name'],
@@ -271,12 +276,16 @@ class AdminBookingController extends Controller
             'phone' => $validated['phone'],
             'date' => $date,
             'time_slots' => $requestedSlots,
-            'status' => $validated['status'] ?? $booking->status,
+            'status' => $newStatus,
             'notes' => $validated['notes'] ?? null,
             // Absent from the payload means "leave as is" — status-only edits must not wipe staff notes.
             'admin_notes' => array_key_exists('admin_notes', $validated) ? $validated['admin_notes'] : $booking->admin_notes,
             'total_price' => $totalPrice,
         ]);
+
+        if (in_array($newStatus, ['approved', 'confirmed']) && ! in_array($previousStatus, ['approved', 'confirmed'])) {
+            $booking->sendConfirmationEmail();
+        }
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -312,10 +321,16 @@ class AdminBookingController extends Controller
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
+        $previousStatus = $booking->status;
+
         $booking->update([
             'status' => $validated['status'],
             'notes' => $validated['notes'] ?? $booking->notes,
         ]);
+
+        if (in_array($validated['status'], ['approved', 'confirmed']) && ! in_array($previousStatus, ['approved', 'confirmed'])) {
+            $booking->sendConfirmationEmail();
+        }
 
         Inertia::flash('toast', [
             'type' => 'success',

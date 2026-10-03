@@ -1,6 +1,5 @@
 <?php
 
-use App\Mail\BookingReceivedMail;
 use App\Models\Booking;
 use App\Models\Court;
 use Illuminate\Http\UploadedFile;
@@ -11,7 +10,7 @@ beforeEach(function (): void {
     Storage::fake('public');
 });
 
-test('a booking-received confirmation email is sent to the customer', function (): void {
+test('no confirmation email is sent to the customer immediately upon booking submission', function (): void {
     Mail::fake();
     $court = Court::factory()->create();
 
@@ -24,12 +23,7 @@ test('a booking-received confirmation email is sent to the customer', function (
         'time' => ['08:00 AM'],
     ])->assertStatus(201);
 
-    // Sent inline, not queued — this app runs on shared hosting with no queue worker.
-    Mail::assertSent(BookingReceivedMail::class, function (BookingReceivedMail $mail) {
-        return $mail->hasTo('alice@example.com');
-    });
-
-    Mail::assertNothingQueued();
+    Mail::assertNothingSent();
 });
 
 test('a guest can successfully book a court and save it to the database', function (): void {

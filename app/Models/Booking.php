@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Mail\BookingConfirmedMail;
 use Database\Factories\BookingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 /**
  * @property int $id
@@ -195,5 +198,24 @@ class Booking extends Model
     public function scopeHoldingSlots(Builder $query): Builder
     {
         return $query->whereNotIn('status', self::RELEASED_STATUSES);
+    }
+
+    /**
+     * Send booking confirmation email to customer.
+     */
+    public function sendConfirmationEmail(): void
+    {
+        if (empty($this->email)) {
+            return;
+        }
+
+        try {
+            Mail::to($this->email)->send(new BookingConfirmedMail($this));
+        } catch (\Throwable $e) {
+            Log::warning('Booking confirmation email failed to send.', [
+                'booking_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

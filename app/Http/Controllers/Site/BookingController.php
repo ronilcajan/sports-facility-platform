@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Site\StoreBookingRequest;
-use App\Mail\BookingReceivedMail;
 use App\Models\Booking;
 use App\Models\Court;
 use App\Models\CourtUnavailability;
@@ -18,8 +17,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -85,16 +82,6 @@ class BookingController extends Controller
         // Send notification to staff assigned to this court
         foreach ($court->staff as $staffMember) {
             $staffMember->notify(new BookingStatusNotification($booking, 'created'));
-        }
-
-        // Email the customer a booking-received confirmation (never let a mail failure break the booking)
-        try {
-            Mail::to($booking->email)->send(new BookingReceivedMail($booking));
-        } catch (\Throwable $e) {
-            Log::warning('Booking confirmation email failed to send.', [
-                'booking_id' => $booking->id,
-                'error' => $e->getMessage(),
-            ]);
         }
 
         return response()->json([

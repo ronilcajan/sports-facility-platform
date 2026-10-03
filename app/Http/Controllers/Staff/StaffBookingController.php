@@ -180,7 +180,13 @@ class StaffBookingController extends Controller
             $updateData['admin_notes'] = $adminNote;
         }
 
+        $previousStatus = $booking->status;
+
         $booking->update($updateData);
+
+        if (in_array($validated['status'], ['approved', 'confirmed']) && ! in_array($previousStatus, ['approved', 'confirmed'])) {
+            $booking->sendConfirmationEmail();
+        }
 
         Inertia::flash('toast', [
             'type' => 'success',
