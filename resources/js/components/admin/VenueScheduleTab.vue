@@ -138,6 +138,7 @@ const {
     isLoading,
     fetchAvailability: loadAvailability,
     slotsForCourt,
+    customerForSlot,
 } = useCourtAvailability();
 
 async function fetchAvailability() {
@@ -463,7 +464,7 @@ onMounted(fetchAvailability);
                                     v-if="isBooked(court.id, slot)"
                                     class="mt-1.5 inline-flex items-center gap-1 rounded-md bg-rose-100 dark:bg-rose-950/60 px-2 py-0.5 text-[9px] font-bold text-rose-400 dark:text-rose-500"
                                 >
-                                    <XCircle class="size-2.5" /> Taken
+                                    <span class="size-1.5 rounded-full bg-rose-500" /> Booked
                                 </span>
                                 <span
                                     v-else
@@ -471,6 +472,16 @@ onMounted(fetchAvailability);
                                 >
                                     <CheckCircle class="size-2.5" /> Open
                                 </span>
+
+                                <!-- Customer Name for Booked Slots -->
+                                <div
+                                    v-if="isBooked(court.id, slot) && customerForSlot(court.id, slot)"
+                                    class="mt-1.5 w-full max-w-full truncate border-t border-neutral-200 dark:border-neutral-700/60 pt-1 text-center text-[10px]"
+                                    :title="`Customer: ${customerForSlot(court.id, slot)}`"
+                                >
+                                    <span class="text-neutral-500 dark:text-neutral-400">Customer: </span>
+                                    <strong class="font-bold text-neutral-800 dark:text-neutral-200">{{ customerForSlot(court.id, slot) }}</strong>
+                                </div>
                             </div>
                         </div>
                     </div>

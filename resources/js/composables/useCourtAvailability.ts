@@ -6,6 +6,9 @@ import { availability } from '@/routes/site/bookings';
 /** Booked/blacked-out slot times, keyed by court id. */
 export type BookedSlotsByCourt = Record<string, string[]>;
 
+/** Customer names keyed by court id and slot time. */
+export type BookedSlotCustomersByCourt = Record<string, Record<string, string>>;
+
 export type FetchAvailabilityParams = {
     date: string;
     courtId?: number | string | null;
@@ -14,9 +17,11 @@ export type FetchAvailabilityParams = {
 
 export type UseCourtAvailabilityReturn = {
     bookedSlotsByCourt: Ref<BookedSlotsByCourt>;
+    bookedSlotCustomersByCourt: Ref<BookedSlotCustomersByCourt>;
     isLoading: Ref<boolean>;
     fetchAvailability: (params: FetchAvailabilityParams) => Promise<void>;
     slotsForCourt: (courtId: number | string) => string[];
+    customerForSlot: (courtId: number | string, slot: string) => string | null;
 };
 
 /**
@@ -29,6 +34,7 @@ export const useCourtAvailability = (): UseCourtAvailabilityReturn => {
     const http = useHttp();
 
     const bookedSlotsByCourt = ref<BookedSlotsByCourt>({});
+    const bookedSlotCustomersByCourt = ref<BookedSlotCustomersByCourt>({});
     const isLoading = ref<boolean>(false);
 
     const fetchAvailability = async ({
@@ -53,11 +59,18 @@ export const useCourtAvailability = (): UseCourtAvailabilityReturn => {
         isLoading.value = true;
 
         try {
-            const { booked_slots: bookedSlots } = (await http.submit(
+            const {
+                booked_slots: bookedSlots,
+                booked_slot_customers: bookedCustomers,
+            } = (await http.submit(
                 availability({ query }),
-            )) as { booked_slots: BookedSlotsByCourt };
+            )) as {
+                booked_slots: BookedSlotsByCourt;
+                booked_slot_customers?: BookedSlotCustomersByCourt;
+            };
 
             bookedSlotsByCourt.value = bookedSlots ?? {};
+            bookedSlotCustomersByCourt.value = bookedCustomers ?? {};
         } catch {
             // Availability is an enhancement over the statically rendered
             // slots; leave the last known map in place on failure.
@@ -69,10 +82,23 @@ export const useCourtAvailability = (): UseCourtAvailabilityReturn => {
     const slotsForCourt = (courtId: number | string): string[] =>
         bookedSlotsByCourt.value[String(courtId)] ?? [];
 
+    const customerForSlot = (
+        courtId: number | string,
+        slot: string,
+    ): string | null => {
+        const courtMap = bookedSlotCustomersByCourt.value[String(courtId)];
+        if (!courtMap) {
+            return null;
+        }
+        return courtMap[slot] ?? courtMap[slot.trim()] ?? null;
+    };
+
     return {
         bookedSlotsByCourt,
+        bookedSlotCustomersByCourt,
         isLoading,
         fetchAvailability,
         slotsForCourt,
+        customerForSlot,
     };
 };

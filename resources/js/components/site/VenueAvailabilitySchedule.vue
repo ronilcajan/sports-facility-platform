@@ -84,6 +84,7 @@ const {
     isLoading,
     fetchAvailability: loadAvailability,
     slotsForCourt,
+    customerForSlot,
 } = useCourtAvailability();
 
 // Generate 14 upcoming days for quick selector
@@ -171,6 +172,10 @@ function isSlotBooked(courtId: number, slot: string): boolean {
     return getCourtBookedSlots(courtId).includes(slot);
 }
 
+function getSlotCustomer(courtId: number, slot: string): string | null {
+    return customerForSlot(courtId, slot);
+}
+
 const courtsToDisplay = computed<PublicCourt[]>(() => {
     if (!props.venue.courts || props.venue.courts.length === 0) return [];
     if (selectedCourtId.value) {
@@ -232,7 +237,7 @@ onMounted(() => {
                     </div>
                     <div class="flex items-center gap-2">
                         <span
-                            class="size-3 rounded-full border border-white/20 bg-surface-inverse/80"
+                            class="size-3 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"
                         />
                         <span class="text-content-muted"
                             >Booked / Reserved</span
@@ -452,7 +457,7 @@ onMounted(() => {
                                     class="relative flex flex-col items-center justify-between rounded-xl border p-2.5 text-center transition-all duration-200"
                                     :class="[
                                         isSlotBooked(court.id, slot)
-                                            ? 'border-line/40 bg-surface-inverse/80 text-content-muted opacity-75'
+                                            ? 'cursor-not-allowed border-line/40 bg-surface-inverse/85 text-content-muted'
                                             : 'group/slot cursor-pointer border-emerald-500/40 bg-surface-elevated text-content hover:scale-102 hover:border-emerald-500 hover:shadow-md',
                                     ]"
                                     @click="
@@ -481,7 +486,12 @@ onMounted(() => {
                                         }}
                                     </span>
                                     <span
-                                        class="mt-0.5 text-[10px] font-extrabold text-brand"
+                                        class="mt-0.5 text-[10px] font-extrabold"
+                                        :class="
+                                            isSlotBooked(court.id, slot)
+                                                ? 'text-slate-400 opacity-70'
+                                                : 'text-brand'
+                                        "
                                         >₱{{
                                             getSlotPriceForCourt(court, slot)
                                         }}</span
@@ -490,9 +500,11 @@ onMounted(() => {
                                     <!-- Status Pill -->
                                     <span
                                         v-if="isSlotBooked(court.id, slot)"
-                                        class="mt-1 inline-flex items-center gap-1 rounded-md border border-rose-500/30 bg-rose-500/15 px-2 py-0.5 text-[9px] font-bold text-rose-400"
+                                        class="mt-1 inline-flex items-center gap-1.5 rounded-md border border-rose-500/30 bg-rose-500/15 px-2 py-0.5 text-[9px] font-bold text-rose-400"
                                     >
-                                        <XCircle class="size-2.5" />
+                                        <span
+                                            class="size-1.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"
+                                        />
                                         <span>Booked</span>
                                     </span>
                                     <span
@@ -502,6 +514,21 @@ onMounted(() => {
                                         <CheckCircle class="size-2.5" />
                                         <span>Available</span>
                                     </span>
+
+                                    <!-- Customer Name for Booked Slots -->
+                                    <div
+                                        v-if="
+                                            isSlotBooked(court.id, slot) &&
+                                            getSlotCustomer(court.id, slot)
+                                        "
+                                        class="mt-2 w-full max-w-full truncate border-t border-white/10 pt-1.5 text-center text-[10px] leading-tight"
+                                        :title="`Customer: ${getSlotCustomer(court.id, slot)}`"
+                                    >
+                                        <span class="text-slate-400">Customer: </span>
+                                        <strong class="font-bold text-white">{{
+                                            getSlotCustomer(court.id, slot)
+                                        }}</strong>
+                                    </div>
                                 </div>
                             </div>
                         </div>

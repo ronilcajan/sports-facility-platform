@@ -78,3 +78,23 @@ test('a slot held by a rejected booking can be booked again by a customer', func
 
     expect(Booking::where('court_id', $court->id)->where('status', '!=', 'rejected')->count())->toBe(1);
 });
+
+test('the availability endpoint returns customer names for booked time slots', function (): void {
+    $court = Court::factory()->create();
+    $date = now()->addDay()->format('Y-m-d');
+
+    Booking::factory()->create([
+        'court_id' => $court->id,
+        'name' => 'Juan Dela Cruz',
+        'date' => $date,
+        'time_slots' => ['07:00 AM', '08:00 AM'],
+        'status' => 'confirmed',
+    ]);
+
+    $response = $this->getJson(route('site.bookings.availability', ['date' => $date, 'court_id' => $court->id]))
+        ->assertOk();
+
+    $response->assertJsonPath("booked_slots.{$court->id}", ['07:00 AM', '08:00 AM']);
+    $response->assertJsonPath("booked_slot_customers.{$court->id}.07:00 AM", 'Juan Dela Cruz');
+    $response->assertJsonPath("booked_slot_customers.{$court->id}.08:00 AM", 'Juan Dela Cruz');
+});

@@ -157,15 +157,26 @@ class BookingController extends Controller
             $query->where('id', '!=', $excludeBookingId);
         }
 
-        $bookings = $query->get(['court_id', 'time_slots']);
+        $bookings = $query->with('user:id,name')->get(['id', 'court_id', 'user_id', 'name', 'time_slots']);
 
         $bookedSlots = [];
+        $bookedSlotCustomers = [];
+
         foreach ($bookings as $b) {
             $cId = (string) $b->court_id;
             if (! isset($bookedSlots[$cId])) {
                 $bookedSlots[$cId] = [];
             }
-            $bookedSlots[$cId] = array_merge($bookedSlots[$cId], $b->time_slots ?? []);
+            if (! isset($bookedSlotCustomers[$cId])) {
+                $bookedSlotCustomers[$cId] = [];
+            }
+
+            $customerName = trim((string) ($b->name ?: $b->user?->name ?: 'Customer'));
+
+            foreach ($b->time_slots ?? [] as $slot) {
+                $bookedSlots[$cId][] = $slot;
+                $bookedSlotCustomers[$cId][$slot] = $customerName;
+            }
         }
 
         // Also fetch staff court unavailabilities. Slot-level blackouts map to a
@@ -192,6 +203,7 @@ class BookingController extends Controller
         return response()->json([
             'date' => $date,
             'booked_slots' => $bookedSlots,
+            'booked_slot_customers' => $bookedSlotCustomers,
         ]);
     }
 
