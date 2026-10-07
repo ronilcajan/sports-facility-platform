@@ -84,6 +84,33 @@ const editForm = useForm({
     status: '',
 });
 
+const remarksForm = useForm({
+    admin_notes: '',
+});
+
+watch(
+    () => props.booking,
+    (b) => {
+        if (b) {
+            remarksForm.admin_notes = b.admin_notes || '';
+            remarksForm.clearErrors();
+        }
+    },
+    { immediate: true },
+);
+
+function saveRemarks() {
+    if (!props.booking) return;
+    remarksForm.patch(`${props.updateRoutePrefix}/${props.booking.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            if (props.booking) {
+                props.booking.admin_notes = remarksForm.admin_notes;
+            }
+        },
+    });
+}
+
 function startEditing() {
     if (!props.booking) return;
     editForm.name = props.booking.name || props.booking.customer_name || '';
@@ -126,6 +153,10 @@ watch(() => props.isOpen, (newVal) => {
     if (!newVal) {
         isEditing.value = false;
         editForm.clearErrors();
+        remarksForm.clearErrors();
+    } else if (props.booking) {
+        remarksForm.admin_notes = props.booking.admin_notes || '';
+        remarksForm.clearErrors();
     }
 });
 
@@ -340,7 +371,7 @@ function statusClasses(s: string): string {
 
                         <div class="space-y-1.5">
                             <label class="block text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
-                                <StickyNote class="size-3.5 text-amber-600" /> Staff Notes
+                                <StickyNote class="size-3.5 text-amber-600" /> Note / Remarks
                             </label>
                             <p class="text-[11px] text-neutral-400">Internal only — the customer never sees this.</p>
                             <textarea
@@ -512,17 +543,37 @@ function statusClasses(s: string): string {
                             </p>
                         </div>
 
-                        <!-- Internal staff notes -->
-                        <div v-if="booking.admin_notes" class="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 p-4 space-y-1.5 shadow-sm">
-                            <div class="flex items-center gap-2">
-                                <StickyNote class="size-4 text-amber-600" />
-                                <h4 class="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider">
-                                    Staff Notes
-                                </h4>
-                                <span class="text-[10px] font-semibold text-amber-600/70 dark:text-amber-500/70">Internal</span>
+                        <!-- Note / Remarks for Super Admin / Staff -->
+                        <div class="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-3 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <StickyNote class="size-4 text-amber-600" />
+                                    <h4 class="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">
+                                        Note / Remarks
+                                    </h4>
+                                    <span class="text-[10px] font-semibold text-amber-600/70 dark:text-amber-500/70">Admin / Internal</span>
+                                </div>
+                                <button
+                                    v-if="canUpdate"
+                                    type="button"
+                                    @click="saveRemarks"
+                                    :disabled="remarksForm.processing"
+                                    class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-amber-700 disabled:opacity-50 cursor-pointer shadow-xs"
+                                >
+                                    <Save class="size-3" v-if="!remarksForm.processing" />
+                                    <span>{{ remarksForm.processing ? 'Saving...' : 'Save Note' }}</span>
+                                </button>
                             </div>
-                            <p class="text-xs leading-relaxed whitespace-pre-line text-neutral-700 dark:text-neutral-300">
-                                {{ booking.admin_notes }}
+
+                            <textarea
+                                v-model="remarksForm.admin_notes"
+                                :readonly="!canUpdate"
+                                rows="3"
+                                placeholder="Add notes, remarks, or special instructions for this booking..."
+                                class="w-full rounded-lg border border-amber-200 dark:border-amber-800 bg-white dark:bg-neutral-900 p-2.5 text-xs text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                            />
+                            <p v-if="remarksForm.errors.admin_notes" class="text-[11px] font-semibold text-red-600">
+                                {{ remarksForm.errors.admin_notes }}
                             </p>
                         </div>
 

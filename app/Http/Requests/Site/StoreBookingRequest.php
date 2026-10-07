@@ -24,12 +24,14 @@ class StoreBookingRequest extends FormRequest
      */
     public function rules(): array
     {
+        $minDate = now()->hour < 5 ? now()->subDay()->toDateString() : 'today';
+
         return [
             'court_id' => ['required', 'exists:courts,id'],
             'name' => ['required', 'string', 'min:3', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
-            'date' => ['required', 'date', 'after_or_equal:today'],
+            'date' => ['required', 'date', "after_or_equal:{$minDate}"],
             'time' => ['required', 'array', 'min:1'],
             'time.*' => ['required', 'string'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -64,6 +66,12 @@ class StoreBookingRequest extends FormRequest
                     ->all();
 
                 foreach ($requestedSlots as $slot) {
+                    if (Booking::isSlotInPast($date, $slot)) {
+                        $validator->errors()->add('time', "The time slot '{$slot}' has already passed.");
+
+                        return;
+                    }
+
                     if (in_array($slot, $bookedSlots)) {
                         $validator->errors()->add('time', "The slot '{$slot}' is already booked.");
 

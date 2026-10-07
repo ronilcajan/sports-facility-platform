@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import {
     Calendar,
@@ -18,7 +18,7 @@ import {
     DollarSign,
     RotateCcw,
 } from '@lucide/vue';
-import { formatSlotRange, getMergedTimeSlots } from '@/utils/timeSlots';
+import { formatSlotRange, getMergedTimeSlots, isSlotPassed } from '@/utils/timeSlots';
 
 interface CourtOption {
     id: number;
@@ -78,7 +78,55 @@ const timeSlots = computed(() => {
     return getMergedTimeSlots(bookedSlots);
 });
 
-const selectedDate = ref(props.filters.date || props.tableDates[0]?.dateStr || new Date().toISOString().split('T')[0]);
+function getLocalDateString(d: Date = new Date()): string {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+const currentNow = ref(new Date());
+let clockIntervalId: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+    clockIntervalId = setInterval(() => {
+        currentNow.value = new Date();
+    }, 1000);
+});
+
+onUnmounted(() => {
+    if (clockIntervalId) {
+        clearInterval(clockIntervalId);
+        clockIntervalId = null;
+    }
+});
+
+const currentLocalDateStr = computed(() => getLocalDateString(currentNow.value));
+
+const isEveningOrNight = computed(() => {
+    const hours = currentNow.value.getHours();
+    return hours >= 17 || hours < 5; // 5:00 PM (17:00) onwards through late-night hours before 5:00 AM
+});
+
+function isCurrentDate(d: TableDateHeader | string): boolean {
+    const dateStr = typeof d === 'string' ? d : d.dateStr;
+    const now = currentNow.value;
+    const opDate = new Date(now);
+    if (opDate.getHours() < 5) {
+        opDate.setDate(opDate.getDate() - 1);
+    }
+    const operatingDateStr = getLocalDateString(opDate);
+    return dateStr === operatingDateStr || dateStr === currentLocalDateStr.value;
+}
+
+function getDateHeaderLabel(d: TableDateHeader): string {
+    if (isCurrentDate(d)) {
+        return isEveningOrNight.value ? 'Tonight' : 'Today';
+    }
+    return d.dayName;
+}
+
+const selectedDate = ref(props.filters.date || props.tableDates[0]?.dateStr || getLocalDateString());
 const court_id = ref(props.filters.court_id || '');
 const status = ref(props.filters.status || '');
 const venue_id = ref(props.filters.venue_id || '');
@@ -98,7 +146,7 @@ function applyFilters() {
 }
 
 function clearFilters() {
-    selectedDate.value = new Date().toISOString().split('T')[0];
+    selectedDate.value = getLocalDateString();
     court_id.value = '';
     status.value = '';
     venue_id.value = '';
@@ -530,10 +578,10 @@ const grandTotals = computed(() => {
 
                     <button
                         type="button"
-                        @click="selectedDate = new Date().toISOString().split('T')[0]; applyFilters();"
+                        @click="selectedDate = getLocalDateString(); applyFilters();"
                         class="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:border-emerald-500 hover:text-emerald-600 transition-colors"
                     >
-                        Today
+                        {{ isEveningOrNight ? 'Tonight' : 'Today' }}
                     </button>
                 </div>
 
@@ -607,9 +655,9 @@ const grandTotals = computed(() => {
                 <thead>
                     <tr class="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/60 text-neutral-500">
                         <!-- First Column: Time Slots Header -->
-                        <th class="sticky left-0 z-20 bg-neutral-100 dark:bg-neutral-800 py-3.5 px-4 text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-700 min-w-[130px]">
-                            <div class="flex items-center gap-1.5">
-                                <Clock class="size-4 text-emerald-600" />
+                        <th class="sticky left-0 z-20 bg-neutral-100 dark:bg-neutral-800 py-3.5 px-4 text-sm font-black uppercase tracking-wider text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-700 min-w-[150px]">
+                            <div class="flex items-center gap-2">
+                                <Clock class="size-4.5 text-emerald-600 dark:text-emerald-400" />
                                 <span>Time Slot</span>
                             </div>
                         </th>
@@ -618,17 +666,31 @@ const grandTotals = computed(() => {
                         <th
                             v-for="d in tableDates"
                             :key="d.dateStr"
-                            class="py-3 px-3 text-center border-r border-neutral-200 dark:border-neutral-800 min-w-[140px]"
-                            :class="{ 'bg-emerald-50/50 dark:bg-emerald-950/20': d.isToday }"
+                            class="py-3 px-3 text-center transition-all min-w-[145px]"
+                            :class="[
+                                isCurrentDate(d)
+                                    ? 'bg-emerald-500/[0.04] dark:bg-emerald-500/[0.06] border-x border-emerald-500/20 dark:border-emerald-500/20'
+                                    : 'border-r border-neutral-200 dark:border-neutral-800',
+                            ]"
                         >
                             <div class="flex flex-col items-center">
-                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400">
-                                    {{ d.isToday ? 'Today' : d.dayName }}
+                                <span
+                                    v-if="isCurrentDate(d)"
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 mb-1"
+                                >
+                                    <span class="size-2 rounded-full bg-emerald-500" />
+                                    {{ getDateHeaderLabel(d) }}
                                 </span>
-                                <span class="text-sm font-black text-neutral-900 dark:text-white my-0.5">
+                                <span
+                                    v-else
+                                    class="text-xs font-extrabold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1"
+                                >
+                                    {{ getDateHeaderLabel(d) }}
+                                </span>
+                                <span class="text-base font-black my-0.5 text-neutral-900 dark:text-white">
                                     {{ d.monthName }} {{ d.dayNum }}
                                 </span>
-                                <span class="text-[9px] font-mono font-semibold text-neutral-400 opacity-75">
+                                <span class="text-[11px] font-mono font-medium text-neutral-400 dark:text-neutral-500">
                                     {{ d.dateStr }}
                                 </span>
                             </div>
@@ -638,7 +700,7 @@ const grandTotals = computed(() => {
                 <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800 text-xs">
                     <tr v-for="slot in timeSlots" :key="slot" class="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
                         <!-- Sticky Time Slot Column -->
-                        <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-3 px-4 font-mono font-bold text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-800 whitespace-nowrap">
+                        <td class="sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900 py-3.5 px-4 font-mono font-bold text-sm text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-800 whitespace-nowrap">
                             {{ formatSlotRange(slot, 60) }}
                         </td>
 
@@ -646,7 +708,12 @@ const grandTotals = computed(() => {
                         <td
                             v-for="d in tableDates"
                             :key="`${d.dateStr}-${slot}`"
-                            class="p-1.5 border-r border-neutral-100 dark:border-neutral-800/60 align-top min-h-16"
+                            class="p-1.5 align-top min-h-16 transition-colors"
+                            :class="[
+                                isCurrentDate(d)
+                                    ? 'bg-emerald-500/[0.025] dark:bg-emerald-500/[0.04] border-x border-emerald-500/15 dark:border-emerald-500/15'
+                                    : 'border-r border-neutral-100 dark:border-neutral-800/60',
+                            ]"
                         >
                             <div class="flex h-full min-h-14 w-full flex-col gap-1">
                                 <!-- Every booking on this hour, rejections included -->
@@ -671,9 +738,9 @@ const grandTotals = computed(() => {
                                     </div>
                                 </div>
 
-                                <!-- Still bookable when nothing here holds the hour -->
+                                <!-- Still bookable when nothing here holds the hour and slot is not passed -->
                                 <div
-                                    v-if="cellIsOpen(d.dateStr, slot)"
+                                    v-if="cellIsOpen(d.dateStr, slot) && !isSlotPassed(d.dateStr, slot, currentNow)"
                                     @click="emit('create-booking', { date: d.dateStr, slot })"
                                     class="group w-full rounded-xl border border-dashed border-emerald-300/40 dark:border-emerald-800/40 bg-emerald-50/20 dark:bg-emerald-950/10 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 flex flex-col items-center justify-center cursor-pointer transition-all duration-150"
                                     :class="bookingsForCell(d.dateStr, slot).length ? 'py-1.5' : 'flex-1 p-2'"
@@ -683,6 +750,18 @@ const grandTotals = computed(() => {
                                     </span>
                                     <span class="hidden group-hover:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
                                         <Plus class="size-3" /> Book
+                                    </span>
+                                </div>
+
+                                <!-- Past or already completed time slot: not available for creating a new booking -->
+                                <div
+                                    v-else-if="cellIsOpen(d.dateStr, slot) && isSlotPassed(d.dateStr, slot, currentNow)"
+                                    class="w-full rounded-xl border border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100/30 dark:bg-neutral-900/30 flex flex-col items-center justify-center cursor-not-allowed select-none opacity-50"
+                                    :class="bookingsForCell(d.dateStr, slot).length ? 'py-1.5' : 'flex-1 p-2'"
+                                    title="This time slot has already passed and cannot be booked."
+                                >
+                                    <span class="text-[9px] font-semibold text-neutral-400 dark:text-neutral-500">
+                                        Passed
                                     </span>
                                 </div>
                             </div>
@@ -735,20 +814,31 @@ const grandTotals = computed(() => {
                 <table class="w-full text-left border-collapse min-w-[900px]">
                     <thead>
                         <tr class="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100/70 dark:bg-neutral-800/80 text-neutral-500">
-                            <th class="sticky left-0 z-20 bg-neutral-100 dark:bg-neutral-800 py-3 px-4 text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-700 min-w-[130px]">
+                            <th class="sticky left-0 z-20 bg-neutral-100 dark:bg-neutral-800 py-3.5 px-4 text-sm font-black uppercase tracking-wider text-neutral-900 dark:text-white border-r border-neutral-200 dark:border-neutral-700 min-w-[150px]">
                                 Summary Metric
                             </th>
                             <th
                                 v-for="d in tableDates"
                                 :key="d.dateStr"
-                                class="py-2.5 px-3 text-center border-r border-neutral-200 dark:border-neutral-800 min-w-[140px]"
-                                :class="{ 'bg-emerald-50/40 dark:bg-emerald-950/20': d.isToday }"
+                                class="py-2.5 px-3 text-center min-w-[145px] transition-colors"
+                                :class="[
+                                    isCurrentDate(d)
+                                        ? 'bg-emerald-500/[0.04] dark:bg-emerald-500/[0.06] border-x border-emerald-500/20 dark:border-emerald-500/20'
+                                        : 'border-r border-neutral-200 dark:border-neutral-800',
+                                ]"
                             >
-                                <span class="text-xs font-bold text-neutral-900 dark:text-white block">
+                                <span class="text-sm font-bold text-neutral-900 dark:text-white block">
                                     {{ d.formatted }}
                                 </span>
-                                <span class="text-[9px] font-semibold text-neutral-400">
-                                    {{ d.isToday ? 'Today' : d.dayName }}
+                                <span
+                                    v-if="isCurrentDate(d)"
+                                    class="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                >
+                                    <span class="size-1 rounded-full bg-emerald-500" />
+                                    {{ getDateHeaderLabel(d) }}
+                                </span>
+                                <span v-else class="text-[10px] font-semibold text-neutral-400">
+                                    {{ getDateHeaderLabel(d) }}
                                 </span>
                             </th>
                         </tr>
@@ -760,7 +850,16 @@ const grandTotals = computed(() => {
                                 <span class="size-2.5 rounded-full bg-emerald-500" />
                                 Confirmed
                             </td>
-                            <td v-for="d in tableDates" :key="`conf-${d.dateStr}`" class="py-2.5 px-3 text-center border-r border-neutral-100 dark:border-neutral-800/60 font-bold">
+                            <td
+                                v-for="d in tableDates"
+                                :key="`conf-${d.dateStr}`"
+                                class="py-2.5 px-3 text-center font-bold transition-colors"
+                                :class="[
+                                    isCurrentDate(d)
+                                        ? 'bg-emerald-500/[0.025] dark:bg-emerald-500/[0.04] border-x border-emerald-500/15 dark:border-emerald-500/15'
+                                        : 'border-r border-neutral-100 dark:border-neutral-800/60',
+                                ]"
+                            >
                                 <span :class="getCountByStatus(d.dateStr, 'confirmed') > 0 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full text-xs font-black' : 'text-neutral-400'">
                                     {{ getCountByStatus(d.dateStr, 'confirmed') }}
                                 </span>
@@ -773,7 +872,16 @@ const grandTotals = computed(() => {
                                 <span class="size-2.5 rounded-full bg-amber-500" />
                                 Pending
                             </td>
-                            <td v-for="d in tableDates" :key="`pend-${d.dateStr}`" class="py-2.5 px-3 text-center border-r border-neutral-100 dark:border-neutral-800/60 font-bold">
+                            <td
+                                v-for="d in tableDates"
+                                :key="`pend-${d.dateStr}`"
+                                class="py-2.5 px-3 text-center font-bold transition-colors"
+                                :class="[
+                                    isCurrentDate(d)
+                                        ? 'bg-emerald-500/[0.025] dark:bg-emerald-500/[0.04] border-x border-emerald-500/15 dark:border-emerald-500/15'
+                                        : 'border-r border-neutral-100 dark:border-neutral-800/60',
+                                ]"
+                            >
                                 <span :class="getCountByStatus(d.dateStr, 'pending') > 0 ? 'text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-full text-xs font-black' : 'text-neutral-400'">
                                     {{ getCountByStatus(d.dateStr, 'pending') }}
                                 </span>
@@ -786,7 +894,16 @@ const grandTotals = computed(() => {
                                 <span class="size-2.5 rounded-full bg-rose-500" />
                                 Rejected
                             </td>
-                            <td v-for="d in tableDates" :key="`rej-${d.dateStr}`" class="py-2.5 px-3 text-center border-r border-neutral-100 dark:border-neutral-800/60 font-bold">
+                            <td
+                                v-for="d in tableDates"
+                                :key="`rej-${d.dateStr}`"
+                                class="py-2.5 px-3 text-center font-bold transition-colors"
+                                :class="[
+                                    isCurrentDate(d)
+                                        ? 'bg-emerald-500/[0.025] dark:bg-emerald-500/[0.04] border-x border-emerald-500/15 dark:border-emerald-500/15'
+                                        : 'border-r border-neutral-100 dark:border-neutral-800/60',
+                                ]"
+                            >
                                 <span :class="getCountByStatus(d.dateStr, 'rejected') > 0 ? 'text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-950/60 px-2 py-0.5 rounded-full text-xs font-black' : 'text-neutral-400'">
                                     {{ getCountByStatus(d.dateStr, 'rejected') }}
                                 </span>
@@ -798,7 +915,16 @@ const grandTotals = computed(() => {
                             <td class="sticky left-0 z-10 bg-neutral-100 dark:bg-neutral-800 py-2.5 px-4 text-neutral-900 dark:text-white uppercase tracking-wider text-[11px] border-r border-neutral-200 dark:border-neutral-700">
                                 Total Bookings
                             </td>
-                            <td v-for="d in tableDates" :key="`tot-${d.dateStr}`" class="py-2.5 px-3 text-center border-r border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white font-extrabold text-xs">
+                            <td
+                                v-for="d in tableDates"
+                                :key="`tot-${d.dateStr}`"
+                                class="py-2.5 px-3 text-center text-neutral-900 dark:text-white font-extrabold text-xs transition-colors"
+                                :class="[
+                                    isCurrentDate(d)
+                                        ? 'bg-emerald-500/[0.04] dark:bg-emerald-500/[0.06] border-x border-emerald-500/15 dark:border-emerald-500/15'
+                                        : 'border-r border-neutral-200 dark:border-neutral-700',
+                                ]"
+                            >
                                 {{ getTotalCountForDate(d.dateStr) }}
                             </td>
                         </tr>
@@ -809,7 +935,16 @@ const grandTotals = computed(() => {
                                 <Clock class="size-3.5 text-sky-600" />
                                 Hours Booked
                             </td>
-                            <td v-for="d in tableDates" :key="`hours-${d.dateStr}`" class="py-2 px-2 text-center border-r border-sky-200/60 dark:border-sky-900/40">
+                            <td
+                                v-for="d in tableDates"
+                                :key="`hours-${d.dateStr}`"
+                                class="py-2 px-2 text-center transition-colors"
+                                :class="[
+                                    isCurrentDate(d)
+                                        ? 'bg-sky-500/[0.04] dark:bg-sky-500/[0.06] border-x border-sky-500/20'
+                                        : 'border-r border-sky-200/60 dark:border-sky-900/40',
+                                ]"
+                            >
                                 <div class="inline-flex items-center justify-center gap-1 text-[11px]">
                                     <!-- Hours -->
                                     <div class="relative flex items-center">
@@ -875,7 +1010,16 @@ const grandTotals = computed(() => {
                                 <DollarSign class="size-3.5 text-emerald-600" />
                                 Total Revenue (₱)
                             </td>
-                            <td v-for="d in tableDates" :key="`price-${d.dateStr}`" class="py-2.5 px-2 text-center border-r border-emerald-200/60 dark:border-emerald-900/40">
+                            <td
+                                v-for="d in tableDates"
+                                :key="`price-${d.dateStr}`"
+                                class="py-2.5 px-2 text-center transition-colors"
+                                :class="[
+                                    isCurrentDate(d)
+                                        ? 'bg-emerald-500/[0.05] dark:bg-emerald-500/[0.07] border-x border-emerald-500/20'
+                                        : 'border-r border-emerald-200/60 dark:border-emerald-900/40',
+                                ]"
+                            >
                                 <div class="inline-flex items-center justify-center gap-1">
                                     <div class="relative flex items-center">
                                         <span class="pointer-events-none absolute left-2 text-xs font-black text-emerald-700/80 dark:text-emerald-400/80">₱</span>

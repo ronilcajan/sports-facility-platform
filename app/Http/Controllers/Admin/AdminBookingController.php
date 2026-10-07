@@ -188,6 +188,14 @@ class AdminBookingController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        foreach ($validated['time_slots'] as $slot) {
+            if (Booking::isSlotInPast($validated['date'], $slot)) {
+                return back()->withErrors([
+                    'time_slots' => "The time slot '{$slot}' has already passed.",
+                ]);
+            }
+        }
+
         // Scope the court to what the user may manage (venue admins → own venue).
         $court = Court::visibleTo($user)->findOrFail($validated['court_id']);
 
@@ -225,9 +233,9 @@ class AdminBookingController extends Controller
 
         $validated = $request->validate([
             'court_id' => ['sometimes', 'required', 'exists:courts,id'],
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255'],
-            'phone' => ['required', 'string', 'max:50'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'email' => ['sometimes', 'required', 'email', 'max:255'],
+            'phone' => ['sometimes', 'required', 'string', 'max:50'],
             'date' => ['sometimes', 'required', 'date'],
             'time_slots' => ['sometimes', 'required', 'array', 'min:1'],
             'time_slots.*' => ['required', 'string'],
@@ -242,6 +250,16 @@ class AdminBookingController extends Controller
 
         // Scope check for venue admins
         $court = Court::visibleTo($user)->findOrFail($courtId);
+
+        if (isset($validated['date']) || isset($validated['time_slots'])) {
+            foreach ($requestedSlots as $slot) {
+                if (Booking::isSlotInPast($date, $slot)) {
+                    return back()->withErrors([
+                        'time_slots' => "The time slot '{$slot}' has already passed.",
+                    ]);
+                }
+            }
+        }
 
         // Check for slot conflicts if court, date, or time_slots are being modified
         if (isset($validated['court_id']) || isset($validated['date']) || isset($validated['time_slots'])) {
@@ -271,13 +289,13 @@ class AdminBookingController extends Controller
 
         $booking->update([
             'court_id' => $courtId,
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'],
+            'name' => $validated['name'] ?? $booking->name,
+            'email' => $validated['email'] ?? $booking->email,
+            'phone' => $validated['phone'] ?? $booking->phone,
             'date' => $date,
             'time_slots' => $requestedSlots,
             'status' => $newStatus,
-            'notes' => $validated['notes'] ?? null,
+            'notes' => array_key_exists('notes', $validated) ? $validated['notes'] : $booking->notes,
             // Absent from the payload means "leave as is" — status-only edits must not wipe staff notes.
             'admin_notes' => array_key_exists('admin_notes', $validated) ? $validated['admin_notes'] : $booking->admin_notes,
             'total_price' => $totalPrice,

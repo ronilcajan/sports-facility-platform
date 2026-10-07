@@ -8,6 +8,7 @@ import {
     formatDuration,
     formatSlotRange,
     getMergedTimeSlots,
+    isSlotPassed,
 } from '@/utils/timeSlots';
 import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
@@ -511,13 +512,18 @@ function isSlotBooked(slot: string): boolean {
 
 function isCourtFullyBooked(court: PublicCourt): boolean {
     const booked = getCourtBookedSlots(court.id);
-    return booked.length >= availableTimeSlots.value.length;
+    const unavailable = availableTimeSlots.value.filter(
+        (slot) => booked.includes(slot) || isSlotPassed(form.value.date, slot),
+    );
+    return unavailable.length >= availableTimeSlots.value.length;
 }
 
-// Watch date changes to refresh server availability and unselect occupied slots
+// Watch date changes to refresh server availability and unselect occupied/passed slots
 watch([() => form.value.date, () => selectedCourtId.value], async () => {
     await fetchRealtimeAvailability();
-    form.value.time = form.value.time.filter((slot) => !isSlotBooked(slot));
+    form.value.time = form.value.time.filter(
+        (slot) => !isSlotBooked(slot) && !isSlotPassed(form.value.date, slot),
+    );
 });
 
 // Pre-fill user data and initialize selections when modal opens
@@ -580,7 +586,12 @@ watch(
                 weekOffset.value = 0;
             }
 
-            form.value.time = props.initialSlots ? [...props.initialSlots] : [];
+            form.value.time = props.initialSlots
+                ? props.initialSlots.filter(
+                      (s) =>
+                          !isSlotPassed(targetDateStr, s) && !isSlotBooked(s),
+                  )
+                : [];
             form.value.notes = '';
             form.value.transaction_code = '';
             summaryExpanded.value = false;
@@ -679,6 +690,15 @@ function validateStep1(): boolean {
     if (!form.value.time || form.value.time.length === 0) {
         errors.value.time = 'At least one preferred time slot is required.';
         isValid = false;
+    } else {
+        const passedSlots = form.value.time.filter((slot) =>
+            isSlotPassed(form.value.date, slot),
+        );
+        if (passedSlots.length > 0) {
+            errors.value.time =
+                'One or more selected time slots have already passed. Please select an upcoming slot.';
+            isValid = false;
+        }
     }
 
     return isValid;
@@ -1654,7 +1674,7 @@ async function downloadVoucher() {
                                                     :key="slot"
                                                     class="relative flex flex-col items-center justify-center rounded-lg border p-2 text-center transition-all select-none"
                                                     :class="[
-                                                        isSlotBooked(slot)
+                                                        isSlotBooked(slot) || isSlotPassed(form.date, slot)
                                                             ? 'pointer-events-none cursor-not-allowed border-line bg-surface/30 opacity-40'
                                                             : form.time.includes(
                                                                     slot,
@@ -1668,7 +1688,7 @@ async function downloadVoucher() {
                                                         :value="slot"
                                                         v-model="form.time"
                                                         :disabled="
-                                                            isSlotBooked(slot)
+                                                            isSlotBooked(slot) || isSlotPassed(form.date, slot)
                                                         "
                                                         class="sr-only"
                                                     />
@@ -1698,6 +1718,14 @@ async function downloadVoucher() {
                                                         class="mt-0.5 text-[8px] font-bold tracking-tight text-destructive uppercase"
                                                     >
                                                         Already Booked
+                                                    </span>
+                                                    <span
+                                                        v-else-if="
+                                                            isSlotPassed(form.date, slot)
+                                                        "
+                                                        class="mt-0.5 text-[8px] font-bold tracking-tight text-content-muted/70 uppercase"
+                                                    >
+                                                        Passed
                                                     </span>
                                                     <span
                                                         v-else

@@ -98,17 +98,27 @@ class StaffBookingController extends Controller
 
         $this->authorize('create', Booking::class);
 
+        $minDate = now()->hour < 5 ? now()->subDay()->toDateString() : 'today';
+
         $validated = $request->validate([
             'court_id' => ['required', 'exists:courts,id'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
-            'date' => ['required', 'date', 'after_or_equal:today'],
+            'date' => ['required', 'date', "after_or_equal:{$minDate}"],
             'time_slots' => ['required', 'array', 'min:1'],
             'time_slots.*' => ['string'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'total_price' => ['nullable', 'numeric', 'min:0'],
         ]);
+
+        foreach ($validated['time_slots'] as $slot) {
+            if (Booking::isSlotInPast($validated['date'], $slot)) {
+                return back()->withErrors([
+                    'time_slots' => "The time slot '{$slot}' has already passed.",
+                ]);
+            }
+        }
 
         $court = Court::visibleTo($user)->findOrFail($validated['court_id']);
 
@@ -132,6 +142,29 @@ class StaffBookingController extends Controller
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => __('Booking created successfully.'),
+        ]);
+
+        return back();
+    }
+
+    /**
+     * Update an existing booking's admin notes or remarks.
+     */
+    public function update(Request $request, Booking $booking): RedirectResponse
+    {
+        $this->authorize('update', $booking);
+
+        $validated = $request->validate([
+            'admin_notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $booking->update([
+            'admin_notes' => $validated['admin_notes'] ?? null,
+        ]);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Booking notes updated successfully.'),
         ]);
 
         return back();

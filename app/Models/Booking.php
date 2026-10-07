@@ -218,4 +218,90 @@ class Booking extends Model
             ]);
         }
     }
+
+    /**
+     * Parse the start minutes from midnight for a given time slot.
+     */
+    public static function parseSlotStartMinutes(string $slot): ?int
+    {
+        $trimmed = trim($slot);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        // Standard "07:00 AM" or range start "07:00-07:59 AM" or "07:00 AM - 08:00 AM"
+        if (preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM)?/i', $trimmed, $matches)) {
+            $h = (int) $matches[1];
+            $m = (int) $matches[2];
+            $period = isset($matches[3]) && $matches[3] !== '' ? strtoupper($matches[3]) : null;
+
+            if ($period === null) {
+                if (preg_match('/\b(AM|PM)\b/i', $trimmed, $periodMatches)) {
+                    $period = strtoupper($periodMatches[1]);
+                } else {
+                    $period = 'AM';
+                }
+            }
+
+            if ($period === 'PM' && $h !== 12) {
+                $h += 12;
+            } elseif ($period === 'AM' && $h === 12) {
+                $h = 0;
+            }
+
+            $total = ($h * 60) + $m;
+            // Late night slots (12:00 AM to 04:59 AM) belong to the late night shift following 11:00 PM
+            if ($h < 5) {
+                $total += 24 * 60;
+            }
+
+            return $total;
+        }
+
+        return null;
+    }
+
+    /**
+     * Determine if a date and slot have already passed based on current date and time.
+     */
+    public static function isSlotInPast(string|Carbon $date, string $slot, ?Carbon $now = null): bool
+    {
+        if ($now === null) {
+            $tz = request()?->header('X-Timezone') ?? request()?->input('timezone') ?? config('app.timezone');
+            try {
+                $now = Carbon::now($tz);
+            } catch (\Throwable) {
+                $now = Carbon::now();
+            }
+        }
+
+        $dateObj = $date instanceof Carbon ? $date->copy() : Carbon::parse($date);
+
+        // Operating day starts at 05:00 AM. Hours 00:00 to 04:59 belong to the previous day's shift.
+        $opNow = $now->copy();
+        $nowHour = $opNow->hour;
+        if ($nowHour < 5) {
+            $opNow->subDay();
+            $nowMinutes = ($nowHour + 24) * 60 + $opNow->minute;
+        } else {
+            $nowMinutes = ($nowHour * 60) + $opNow->minute;
+        }
+
+        $opDateString = $opNow->toDateString();
+
+        if ($dateObj->toDateString() < $opDateString) {
+            return true;
+        }
+
+        if ($dateObj->toDateString() > $opDateString) {
+            return false;
+        }
+
+        $startMinutes = self::parseSlotStartMinutes($slot);
+        if ($startMinutes === null) {
+            return false;
+        }
+
+        return $startMinutes <= $nowMinutes;
+    }
 }

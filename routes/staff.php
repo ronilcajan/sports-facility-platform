@@ -32,6 +32,7 @@ Route::middleware([
         Route::get('bookings', [StaffBookingController::class, 'index'])->name('bookings.index');
         Route::post('bookings', [StaffBookingController::class, 'store'])->name('bookings.store');
         Route::get('bookings/{booking}', [StaffBookingController::class, 'show'])->name('bookings.show');
+        Route::patch('bookings/{booking}', [StaffBookingController::class, 'update'])->name('bookings.update');
         Route::patch('bookings/{booking}/status', [StaffBookingController::class, 'updateStatus'])->name('bookings.update-status');
 
         // Schedules & Blackout Management

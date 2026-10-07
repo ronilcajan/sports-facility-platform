@@ -201,12 +201,14 @@ class BookingController extends Controller
     {
         $this->authorize('update', $booking);
 
+        $minDate = now()->hour < 5 ? now()->subDay()->toDateString() : 'today';
+
         $validated = $request->validate([
             'court_id' => ['sometimes', 'required', 'exists:courts,id'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
-            'date' => ['sometimes', 'required', 'date', 'after_or_equal:today'],
+            'date' => ['sometimes', 'required', 'date', "after_or_equal:{$minDate}"],
             'time' => ['sometimes', 'required', 'array', 'min:1'],
             'time.*' => ['required', 'string'],
             'time_slots' => ['sometimes', 'required', 'array', 'min:1'],
@@ -218,8 +220,21 @@ class BookingController extends Controller
         $date = $validated['date'] ?? $booking->date->toDateString();
         $requestedSlots = $validated['time'] ?? $validated['time_slots'] ?? $booking->time_slots;
 
-        // Double-booking check if court, date, or time slots are being modified
+        // Double-booking and past-time checks if court, date, or time slots are being modified
         if (isset($validated['court_id']) || isset($validated['date']) || isset($validated['time']) || isset($validated['time_slots'])) {
+            foreach ($requestedSlots as $slot) {
+                if (Booking::isSlotInPast($date, $slot)) {
+                    if ($request->header('X-Inertia')) {
+                        return back()->withErrors(['time' => "The time slot '{$slot}' has already passed."]);
+                    }
+
+                    return response()->json([
+                        'message' => "The time slot '{$slot}' has already passed.",
+                        'errors' => ['time' => ["The time slot '{$slot}' has already passed."]],
+                    ], 422);
+                }
+            }
+
             $conflictingBookings = Booking::query()
                 ->where('court_id', $courtId)
                 ->where('date', $date)

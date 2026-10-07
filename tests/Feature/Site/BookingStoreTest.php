@@ -3,6 +3,7 @@
 use App\Models\Booking;
 use App\Models\Court;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
@@ -150,4 +151,92 @@ test('booking validation fails if date is in the past', function (): void {
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['date']);
+});
+
+test('booking validation fails if time slot has already passed today', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-10-07 15:30:00'));
+    $court = Court::factory()->create();
+
+    // 03:00 PM slot (start time 15:00) has already passed when current time is 15:30
+    $responsePassed = $this->postJson(route('site.bookings.store'), [
+        'court_id' => $court->id,
+        'name' => 'Late Customer',
+        'email' => 'late@example.com',
+        'phone' => '09171112222',
+        'date' => '2026-10-07',
+        'time' => ['03:00 PM'],
+    ]);
+
+    $responsePassed->assertStatus(422)
+        ->assertJsonValidationErrors(['time']);
+
+    // 04:00 PM slot has not yet passed and can be booked
+    $responseFuture = $this->postJson(route('site.bookings.store'), [
+        'court_id' => $court->id,
+        'name' => 'Future Customer',
+        'email' => 'future@example.com',
+        'phone' => '09171112222',
+        'date' => '2026-10-07',
+        'time' => ['04:00 PM'],
+    ]);
+
+    $responseFuture->assertStatus(201);
+
+    Carbon::setTestNow();
+});
+
+test('late night operating slots from 12:00 AM to 02:00 AM remain available during night operating hours', function (): void {
+    // Current time is 10:30 PM on Oct 7
+    Carbon::setTestNow(Carbon::parse('2026-10-07 22:30:00'));
+    $court = Court::factory()->create();
+
+    // 10:00 PM has passed
+    $this->postJson(route('site.bookings.store'), [
+        'court_id' => $court->id,
+        'name' => 'Past Customer',
+        'email' => 'past@example.com',
+        'phone' => '09171112222',
+        'date' => '2026-10-07',
+        'time' => ['10:00 PM'],
+    ])->assertStatus(422)->assertJsonValidationErrors(['time']);
+
+    // 11:00 PM, 12:00 AM, 01:00 AM, 02:00 AM are all upcoming tonight and can be booked
+    $this->postJson(route('site.bookings.store'), [
+        'court_id' => $court->id,
+        'name' => 'Late Night Customer',
+        'email' => 'latenight@example.com',
+        'phone' => '09171112222',
+        'date' => '2026-10-07',
+        'time' => ['11:00 PM', '12:00 AM', '01:00 AM', '02:00 AM'],
+    ])->assertStatus(201);
+
+    Carbon::setTestNow();
+});
+
+test('late night slot is evaluated against operating day at 01:30 AM', function (): void {
+    // Current time is 01:30 AM on Oct 8 (part of Oct 7 operating day shift)
+    Carbon::setTestNow(Carbon::parse('2026-10-08 01:30:00'));
+    $court = Court::factory()->create();
+
+    // 01:00 AM has already passed
+    $this->postJson(route('site.bookings.store'), [
+        'court_id' => $court->id,
+        'name' => 'Passed Slot Customer',
+        'email' => 'passed@example.com',
+        'phone' => '09171112222',
+        'date' => '2026-10-07',
+        'time' => ['01:00 AM'],
+    ])->assertStatus(422)->assertJsonValidationErrors(['time']);
+
+    // 02:00 AM is upcoming and can still be booked
+    $this->postJson(route('site.bookings.store'), [
+        'court_id' => $court->id,
+        'name' => 'Active Night Customer',
+        'email' => 'active@example.com',
+        'phone' => '09171112222',
+        'date' => '2026-10-07',
+        'time' => ['02:00 AM'],
+    ])->assertStatus(201);
+
+    Carbon::setTestNow();
 });

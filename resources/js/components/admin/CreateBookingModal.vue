@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { formatSlotRange, getMergedTimeSlots } from '@/utils/timeSlots';
+import { formatSlotRange, getMergedTimeSlots, isSlotPassed } from '@/utils/timeSlots';
 import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
 interface CourtOption {
@@ -162,15 +162,15 @@ watch(
     () => form.date,
     () => {
         fetchRealtimeAvailability();
-        // Remove booked slots from selection
-        form.time_slots = form.time_slots.filter((s) => !isSlotBooked(s));
+        // Remove booked or passed slots from selection
+        form.time_slots = form.time_slots.filter((s) => !isSlotBooked(s) && !isSlotPassed(form.date, s));
     }
 );
 
 watch(
     () => form.court_id,
     () => {
-        form.time_slots = form.time_slots.filter((s) => !isSlotBooked(s));
+        form.time_slots = form.time_slots.filter((s) => !isSlotBooked(s) && !isSlotPassed(form.date, s));
     }
 );
 
@@ -217,7 +217,7 @@ watch(
 
             fetchRealtimeAvailability();
 
-            if (props.initialSlot && !isSlotBooked(props.initialSlot)) {
+            if (props.initialSlot && !isSlotBooked(props.initialSlot) && !isSlotPassed(form.date, props.initialSlot)) {
                 form.time_slots = [props.initialSlot];
             } else {
                 form.time_slots = [];
@@ -231,7 +231,11 @@ function validateStep1(): boolean {
     const e: typeof localErrors.value = {};
     if (!form.court_id) e.court = 'Please select a court.';
     if (!form.date) e.date = 'Booking date is required.';
-    if (form.time_slots.length === 0) e.time = 'Select at least one time slot.';
+    if (form.time_slots.length === 0) {
+        e.time = 'Select at least one time slot.';
+    } else if (form.time_slots.some((s) => isSlotPassed(form.date, s))) {
+        e.time = 'One or more selected time slots have already passed.';
+    }
     localErrors.value = e;
     return Object.keys(e).length === 0;
 }
@@ -413,7 +417,7 @@ function submit() {
                                                 :key="slot"
                                                 class="relative flex flex-col items-center justify-center rounded-xl border p-2.5 text-center transition-all select-none"
                                                 :class="[
-                                                    isSlotBooked(slot)
+                                                    isSlotBooked(slot) || isSlotPassed(form.date, slot)
                                                         ? 'border-neutral-200 dark:border-neutral-800 bg-neutral-100/60 dark:bg-neutral-800/40 text-neutral-400 dark:text-neutral-600 cursor-not-allowed opacity-60'
                                                         : form.time_slots.includes(slot)
                                                             ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 font-extrabold text-emerald-600 shadow-sm cursor-pointer'
@@ -424,11 +428,11 @@ function submit() {
                                                     type="checkbox"
                                                     :value="slot"
                                                     v-model="form.time_slots"
-                                                    :disabled="isSlotBooked(slot)"
+                                                    :disabled="isSlotBooked(slot) || isSlotPassed(form.date, slot)"
                                                     class="sr-only"
                                                 />
-                                                <span class="text-xs font-bold" :class="{ 'line-through text-neutral-400': isSlotBooked(slot) }">{{ formatSlotRange(slot, selectedCourt?.slot_duration_minutes || 60) }}</span>
-                                                <span class="mt-0.5 text-[9px] font-extrabold" :class="isSlotBooked(slot) ? 'text-neutral-400' : 'text-emerald-600 dark:text-emerald-400'">
+                                                <span class="text-xs font-bold" :class="{ 'line-through text-neutral-400': isSlotBooked(slot) || isSlotPassed(form.date, slot) }">{{ formatSlotRange(slot, selectedCourt?.slot_duration_minutes || 60) }}</span>
+                                                <span class="mt-0.5 text-[9px] font-extrabold" :class="isSlotBooked(slot) || isSlotPassed(form.date, slot) ? 'text-neutral-400' : 'text-emerald-600 dark:text-emerald-400'">
                                                     ₱{{ getSlotPriceForCourt(slot) }}
                                                 </span>
                                                 <span
@@ -436,6 +440,12 @@ function submit() {
                                                     class="mt-1 inline-flex items-center gap-1 rounded-md bg-rose-100 dark:bg-rose-950/60 px-1.5 py-0.5 text-[9px] font-bold text-rose-500"
                                                 >
                                                     Taken
+                                                </span>
+                                                <span
+                                                    v-else-if="isSlotPassed(form.date, slot)"
+                                                    class="mt-1 inline-flex items-center gap-1 rounded-md bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 text-[9px] font-bold text-neutral-500"
+                                                >
+                                                    Passed
                                                 </span>
                                                 <span
                                                     v-else

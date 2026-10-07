@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import {
     Calendar,
     Clock,
@@ -14,6 +14,7 @@ import {
     formatDuration,
     formatSlotRange,
     getMergedTimeSlots,
+    isSlotPassed,
 } from '@/utils/timeSlots';
 import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
@@ -48,7 +49,27 @@ function parseLocalDate(dateStr: string): Date {
     return new Date(dateStr);
 }
 
-const todayDateKey = computed(() => toDateKey(new Date()));
+const currentNow = ref(new Date());
+let clockIntervalId: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+    clockIntervalId = setInterval(() => {
+        currentNow.value = new Date();
+    }, 1000);
+});
+
+onUnmounted(() => {
+    if (clockIntervalId) {
+        clearInterval(clockIntervalId);
+        clockIntervalId = null;
+    }
+});
+
+const todayDateKey = computed(() => toDateKey(currentNow.value));
+const isEveningOrNight = computed(() => {
+    const hours = currentNow.value.getHours();
+    return hours >= 17; // 5:00 PM (17:00) onwards is Evening / Night (PM) period
+});
 const selectedDate = ref<string>(todayDateKey.value);
 const selectedCourtId = ref<number | null>(null);
 
@@ -96,7 +117,7 @@ const upcomingDays = computed(() => {
         monthName: string;
         isToday: boolean;
     }[] = [];
-    const base = new Date();
+    const base = new Date(currentNow.value);
     base.setHours(0, 0, 0, 0);
 
     for (let i = 0; i < 14; i++) {
@@ -243,6 +264,14 @@ onMounted(() => {
                             >Booked / Reserved</span
                         >
                     </div>
+                    <div class="flex items-center gap-2">
+                        <span
+                            class="size-3 rounded-full bg-neutral-400 dark:bg-neutral-600"
+                        />
+                        <span class="text-content-muted"
+                            >Passed</span
+                        >
+                    </div>
                 </div>
             </div>
 
@@ -292,7 +321,7 @@ onMounted(() => {
                         <span
                             class="text-[10px] font-extrabold tracking-wider uppercase opacity-80"
                         >
-                            {{ d.isToday ? 'Today' : d.dayName }}
+                            {{ d.isToday ? (isEveningOrNight ? 'Tonight' : 'Today') : d.dayName }}
                         </span>
                         <span class="my-0.5 text-lg font-black tracking-tight">
                             {{ d.dayNum }}
@@ -404,8 +433,11 @@ onMounted(() => {
                                     class="text-sm font-extrabold text-emerald-500"
                                 >
                                     {{
-                                        activeTimeSlots.length -
-                                        getCourtBookedSlots(court.id).length
+                                        activeTimeSlots.filter(
+                                            (s) =>
+                                                !isSlotBooked(court.id, s) &&
+                                                !isSlotPassed(selectedDate, s, currentNow),
+                                        ).length
                                     }}
                                     Slots
                                 </span>
@@ -458,10 +490,13 @@ onMounted(() => {
                                     :class="[
                                         isSlotBooked(court.id, slot)
                                             ? 'cursor-not-allowed border-line/40 bg-surface-inverse/85 text-content-muted'
-                                            : 'group/slot cursor-pointer border-emerald-500/40 bg-surface-elevated text-content hover:scale-102 hover:border-emerald-500 hover:shadow-md',
+                                            : isSlotPassed(selectedDate, slot, currentNow)
+                                              ? 'cursor-not-allowed border-line/30 bg-surface-elevated/40 text-content-muted/60 opacity-50'
+                                              : 'group/slot cursor-pointer border-emerald-500/40 bg-surface-elevated text-content hover:scale-102 hover:border-emerald-500 hover:shadow-md',
                                     ]"
                                     @click="
                                         !isSlotBooked(court.id, slot) &&
+                                        !isSlotPassed(selectedDate, slot, currentNow) &&
                                         emit(
                                             'book-court',
                                             court,
@@ -474,7 +509,8 @@ onMounted(() => {
                                         class="text-xs font-black tracking-tight"
                                         :class="{
                                             'text-slate-400 line-through':
-                                                isSlotBooked(court.id, slot),
+                                                isSlotBooked(court.id, slot) ||
+                                                isSlotPassed(selectedDate, slot, currentNow),
                                         }"
                                     >
                                         {{
@@ -488,7 +524,8 @@ onMounted(() => {
                                     <span
                                         class="mt-0.5 text-[10px] font-extrabold"
                                         :class="
-                                            isSlotBooked(court.id, slot)
+                                            isSlotBooked(court.id, slot) ||
+                                            isSlotPassed(selectedDate, slot, currentNow)
                                                 ? 'text-slate-400 opacity-70'
                                                 : 'text-brand'
                                         "
@@ -506,6 +543,14 @@ onMounted(() => {
                                             class="size-1.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"
                                         />
                                         <span>Booked</span>
+                                    </span>
+                                    <span
+                                        v-else-if="
+                                            isSlotPassed(selectedDate, slot, currentNow)
+                                        "
+                                        class="mt-1 inline-flex items-center gap-1 rounded-md border border-line/40 bg-surface-elevated/80 px-2 py-0.5 text-[9px] font-bold text-content-muted/70"
+                                    >
+                                        <span>Passed</span>
                                     </span>
                                     <span
                                         v-else

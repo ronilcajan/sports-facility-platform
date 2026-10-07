@@ -2,7 +2,7 @@
 import { Link, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import { FileText, Dumbbell, Edit2, AlertCircle, Calendar } from '@lucide/vue';
-import { formatSlotRange, getMergedTimeSlots } from '@/utils/timeSlots';
+import { formatSlotRange, getMergedTimeSlots, isSlotPassed } from '@/utils/timeSlots';
 import { useCourtAvailability } from '@/composables/useCourtAvailability';
 
 export interface CourtItem {
@@ -128,6 +128,10 @@ function submitEdit() {
     if (!selectedBooking.value) return;
     if (editForm.time.length === 0) {
         editForm.setError('time', 'Please select at least one time slot.');
+        return;
+    }
+    if (editForm.time.some((s) => isSlotPassed(editForm.date, s))) {
+        editForm.setError('time', 'One or more selected time slots have already passed.');
         return;
     }
     editForm.patch(`/bookings/${selectedBooking.value.id}`, {
@@ -403,17 +407,18 @@ function cancelBooking(bookingId: number) {
                                     v-for="slot in availableTimeSlots"
                                     :key="slot"
                                     type="button"
-                                    :disabled="isSlotBooked(slot)"
+                                    :disabled="isSlotBooked(slot) || isSlotPassed(editForm.date, slot)"
                                     @click="toggleTimeSlot(slot)"
                                     class="py-1.5 px-2 text-[11px] rounded-lg font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 border"
                                     :class="{
-                                        'bg-neutral-100 text-neutral-400 border-neutral-200 line-through opacity-50 dark:bg-neutral-800 dark:text-neutral-600 dark:border-neutral-800 cursor-not-allowed': isSlotBooked(slot),
-                                        'bg-emerald-600 text-white border-emerald-600 shadow-sm': !isSlotBooked(slot) && editForm.time.includes(slot),
-                                        'bg-white text-neutral-700 border-neutral-200 hover:border-emerald-500 dark:bg-neutral-800 dark:text-neutral-200 dark:border-neutral-700': !isSlotBooked(slot) && !editForm.time.includes(slot)
+                                        'bg-neutral-100 text-neutral-400 border-neutral-200 line-through opacity-50 dark:bg-neutral-800 dark:text-neutral-600 dark:border-neutral-800 cursor-not-allowed': isSlotBooked(slot) || isSlotPassed(editForm.date, slot),
+                                        'bg-emerald-600 text-white border-emerald-600 shadow-sm': !isSlotBooked(slot) && !isSlotPassed(editForm.date, slot) && editForm.time.includes(slot),
+                                        'bg-white text-neutral-700 border-neutral-200 hover:border-emerald-500 dark:bg-neutral-800 dark:text-neutral-200 dark:border-neutral-700': !isSlotBooked(slot) && !isSlotPassed(editForm.date, slot) && !editForm.time.includes(slot)
                                     }"
                                 >
                                     <span>{{ formatSlotRange(slot, selectedCourt?.slot_duration_minutes || 60) }}</span>
                                     <span v-if="isSlotBooked(slot)" class="text-[8px] no-underline uppercase tracking-tight text-rose-500">Booked</span>
+                                    <span v-else-if="isSlotPassed(editForm.date, slot)" class="text-[8px] no-underline uppercase tracking-tight text-neutral-400">Passed</span>
                                     <span v-else-if="editForm.time.includes(slot)" class="text-[8px] uppercase tracking-tight text-emerald-200">Selected</span>
                                 </button>
                             </div>
