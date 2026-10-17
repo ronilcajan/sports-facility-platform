@@ -137,6 +137,16 @@ class Venue extends Model
     }
 
     /**
+     * Expenses recorded for this venue.
+     *
+     * @return HasMany<Expense, $this>
+     */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    /**
      * Gallery photos that belong to this venue.
      *
      * @return HasMany<VenueImage, $this>

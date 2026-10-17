@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Court;
+use App\Models\Expense;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -36,6 +37,29 @@ class AdminReportController extends Controller
         $approvedBookings = (clone $bookingsQuery)->whereIn('status', Booking::REVENUE_STATUSES)->count();
         $rejectedBookings = (clone $bookingsQuery)->where('status', 'rejected')->count();
         $cancelledBookings = (clone $bookingsQuery)->where('status', 'cancelled')->count();
+
+        // Expenses in the selected period
+        $expensesQuery = Expense::whereBetween('date', [$startDate, $endDate]);
+        if ($user->isVenueScopedAdmin()) {
+            $expensesQuery->where('venue_id', $user->venue_id);
+        }
+
+        $totalExpenses = (float) (clone $expensesQuery)->sum('amount');
+        $netProfit = (float) ($totalRevenue - $totalExpenses);
+
+        $expenseCategories = (clone $expensesQuery)
+            ->selectRaw('category, SUM(amount) as total_amount, COUNT(*) as count')
+            ->groupBy('category')
+            ->orderByDesc('total_amount')
+            ->get()
+            ->map(fn ($row): array => [
+                'category' => $row->category,
+                'label' => Expense::categoryLabel($row->category),
+                'total_amount' => (float) $row->total_amount,
+                'count' => (int) $row->count,
+            ])
+            ->values()
+            ->all();
 
         // Breakdown by court (scoped to the venue for admins), aggregated in SQL
         // rather than loading every booking of every court into memory.
@@ -70,10 +94,13 @@ class AdminReportController extends Controller
                 'endDate' => $endDate,
                 'totalBookings' => $totalBookings,
                 'totalRevenue' => (float) $totalRevenue,
+                'totalExpenses' => (float) $totalExpenses,
+                'netProfit' => (float) $netProfit,
                 'approvedBookings' => $approvedBookings,
                 'rejectedBookings' => $rejectedBookings,
                 'cancelledBookings' => $cancelledBookings,
                 'courtBreakdown' => $courtBreakdown,
+                'expenseCategories' => $expenseCategories,
             ],
         ]);
     }

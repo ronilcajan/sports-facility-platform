@@ -108,6 +108,16 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
+     * Expenses recorded by this user.
+     *
+     * @return HasMany<Expense, $this>
+     */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    /**
      * Get loyalty summary payload for frontend UI.
      *
      * @return array<string, mixed>

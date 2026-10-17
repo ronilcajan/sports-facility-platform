@@ -13,6 +13,7 @@ import {
     Dumbbell,
     Settings,
     Gift,
+    Receipt,
 } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -85,6 +86,11 @@ const navGroups = computed<NavGroup[]>(() => {
                             title: 'Customers',
                             href: '/admin/users',
                             icon: Users,
+                        },
+                        {
+                            title: 'Expenses',
+                            href: '/admin/expenses',
+                            icon: Receipt,
                         },
                         {
                             title: 'Freebies & Rewards',

@@ -4,6 +4,7 @@ use App\Enums\RoleName;
 use App\Http\Controllers\Admin\AdminBookingController;
 use App\Http\Controllers\Admin\AdminCourtImageController;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminExpenseController;
 use App\Http\Controllers\Admin\AdminReportController;
 use App\Http\Controllers\Admin\AdminRewardController;
 use App\Http\Controllers\Admin\AdminStaffController;
@@ -98,5 +99,8 @@ Route::middleware([
             // Appearance / Branding Settings
             Route::get('appearance', [AppearanceController::class, 'index'])->name('appearance.index');
             Route::post('appearance/branding', [AppearanceController::class, 'updateBranding'])->name('appearance.branding');
+
+            // Facility Expenses Management
+            Route::resource('expenses', AdminExpenseController::class)->except(['create', 'show', 'edit']);
         });
     });
