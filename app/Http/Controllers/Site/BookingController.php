@@ -84,6 +84,9 @@ class BookingController extends Controller
             $staffMember->notify(new BookingStatusNotification($booking, 'created'));
         }
 
+        // Send booking confirmation email (pending approval) to customer
+        $booking->sendReceivedEmail();
+
         return response()->json([
             'success' => true,
             'booking' => [

@@ -35,7 +35,7 @@ class BookingConfirmedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Booking Confirmed — '.$this->referenceCode(),
+            subject: 'Booking Confirmed (Approved) — '.$this->referenceCode(),
         );
     }
 

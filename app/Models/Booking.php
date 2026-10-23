@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use App\Mail\BookingConfirmedMail;
+use App\Mail\BookingApprovedMail;
+use App\Mail\BookingReceivedMail;
 use Database\Factories\BookingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,6 +29,8 @@ use Illuminate\Support\Facades\Mail;
  * @property string|null $receipt_path
  * @property string|null $transaction_code
  * @property string $status
+ * @property Carbon|null $confirmation_email_sent_at
+ * @property Carbon|null $approved_email_sent_at
  * @property-read float $total_hours
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -46,6 +49,8 @@ use Illuminate\Support\Facades\Mail;
     'receipt_path',
     'transaction_code',
     'status',
+    'confirmation_email_sent_at',
+    'approved_email_sent_at',
 ])]
 class Booking extends Model
 {
@@ -86,6 +91,8 @@ class Booking extends Model
             'date' => 'date:Y-m-d',
             'time_slots' => 'array',
             'total_price' => 'decimal:2',
+            'confirmation_email_sent_at' => 'datetime',
+            'approved_email_sent_at' => 'datetime',
         ];
     }
 
@@ -201,21 +208,66 @@ class Booking extends Model
     }
 
     /**
-     * Send booking confirmation email to customer.
+     * Send booking received / pending confirmation email to customer upon booking submission.
      */
-    public function sendConfirmationEmail(): void
+    public function sendReceivedEmail(): void
     {
         if (empty($this->email)) {
             return;
         }
 
+        if ($this->confirmation_email_sent_at !== null) {
+            return;
+        }
+
         try {
-            Mail::to($this->email)->send(new BookingConfirmedMail($this));
+            Mail::to($this->email)->send(new BookingReceivedMail($this));
+            $this->forceFill(['confirmation_email_sent_at' => now()])->saveQuietly();
         } catch (\Throwable $e) {
-            Log::warning('Booking confirmation email failed to send.', [
+            Log::warning('Booking received email failed to send.', [
                 'booking_id' => $this->id,
                 'error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Send booking approval email to customer once approved.
+     */
+    public function sendApprovalEmail(): void
+    {
+        if (empty($this->email)) {
+            return;
+        }
+
+        if (! in_array($this->status, ['approved', 'confirmed'])) {
+            return;
+        }
+
+        if ($this->approved_email_sent_at !== null) {
+            return;
+        }
+
+        try {
+            Mail::to($this->email)->send(new BookingApprovedMail($this));
+            $this->forceFill(['approved_email_sent_at' => now()])->saveQuietly();
+        } catch (\Throwable $e) {
+            Log::warning('Booking approval email failed to send.', [
+                'booking_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send email based on booking status (for backward compatibility).
+     */
+    public function sendConfirmationEmail(): void
+    {
+        if (in_array($this->status, ['approved', 'confirmed'])) {
+            $this->sendApprovalEmail();
+        } else {
+            $this->sendReceivedEmail();
         }
     }
 

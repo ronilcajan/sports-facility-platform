@@ -218,7 +218,7 @@ class StaffBookingController extends Controller
         $booking->update($updateData);
 
         if (in_array($validated['status'], ['approved', 'confirmed']) && ! in_array($previousStatus, ['approved', 'confirmed'])) {
-            $booking->sendConfirmationEmail();
+            $booking->sendApprovalEmail();
         }
 
         Inertia::flash('toast', [

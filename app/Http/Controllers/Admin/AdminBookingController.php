@@ -212,7 +212,7 @@ class AdminBookingController extends Controller
             'status' => 'approved',
         ]);
 
-        $booking->sendConfirmationEmail();
+        $booking->sendApprovalEmail();
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -302,7 +302,7 @@ class AdminBookingController extends Controller
         ]);
 
         if (in_array($newStatus, ['approved', 'confirmed']) && ! in_array($previousStatus, ['approved', 'confirmed'])) {
-            $booking->sendConfirmationEmail();
+            $booking->sendApprovalEmail();
         }
 
         Inertia::flash('toast', [
@@ -347,7 +347,7 @@ class AdminBookingController extends Controller
         ]);
 
         if (in_array($validated['status'], ['approved', 'confirmed']) && ! in_array($previousStatus, ['approved', 'confirmed'])) {
-            $booking->sendConfirmationEmail();
+            $booking->sendApprovalEmail();
         }
 
         Inertia::flash('toast', [

@@ -3,14 +3,19 @@
     <img src="{{ $message->embed($logoPath) }}" alt="{{ config('app.name') }}" height="48" style="height:48px; border-radius:8px;">
 </p>
 
-# Booking Confirmed
+# Booking Approved!
 
-Hi {{ $customerName }}, your booking has been approved and confirmed! Here are your reservation details:
+Hi {{ $customerName }},
+
+Great news! Your booking has been **approved and confirmed**. We have reserved your court and look forward to seeing you.
+
+### Reservation Details
 
 <x-mail::table>
 | &nbsp; | &nbsp; |
 | :--- | :--- |
 | **Reference** | {{ $reference }} |
+| **Status** | ✅ Approved |
 | **Location** | {{ $venueName }} |
 | **Court** | {{ $courtName }} |
 | **Date** | {{ $date }} |
@@ -30,7 +35,7 @@ Hi {{ $customerName }}, your booking has been approved and confirmed! Here are y
 </p>
 
 <x-mail::panel>
-✅ **Your booking is confirmed!** We look forward to seeing you. Please present the QR code above or your booking reference upon arrival.
+✅ **Your booking is officially approved!** Please arrive a few minutes prior to your time slot. Present the QR code above or your reference code upon arrival.
 </x-mail::panel>
 
 <x-mail::button :url="$trackUrl">

@@ -1,5 +1,6 @@
 <?php
 
+use App\Mail\BookingReceivedMail;
 use App\Models\Booking;
 use App\Models\Court;
 use Illuminate\Http\UploadedFile;
@@ -11,7 +12,7 @@ beforeEach(function (): void {
     Storage::fake('public');
 });
 
-test('no confirmation email is sent to the customer immediately upon booking submission', function (): void {
+test('booking confirmation email is sent to the customer immediately upon booking submission indicating pending approval', function (): void {
     Mail::fake();
     $court = Court::factory()->create();
 
@@ -24,7 +25,13 @@ test('no confirmation email is sent to the customer immediately upon booking sub
         'time' => ['08:00 AM'],
     ])->assertStatus(201);
 
-    Mail::assertNothingSent();
+    Mail::assertSent(BookingReceivedMail::class, function (BookingReceivedMail $mail) {
+        return $mail->hasTo('alice@example.com')
+            && str_contains($mail->envelope()->subject, 'Pending Approval');
+    });
+
+    $booking = Booking::where('email', 'alice@example.com')->first();
+    expect($booking->confirmation_email_sent_at)->not->toBeNull();
 });
 
 test('a guest can successfully book a court and save it to the database', function (): void {

@@ -21,6 +21,10 @@ class QrCodePng
         $moduleSize = max(1, (int) floor($targetSize / ($count + $margin * 2)));
         $imageSize = ($count + $margin * 2) * $moduleSize;
 
+        if (! function_exists('imagecreatetruecolor')) {
+            return (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', true);
+        }
+
         $image = imagecreatetruecolor($imageSize, $imageSize);
         $white = imagecolorallocate($image, 255, 255, 255);
         $dark = imagecolorallocate($image, 17, 24, 39);
